@@ -1,0 +1,10 @@
+**node_modules
+**.DS_Store
+**dist
+**lib
+**build
+**set_vars.sh
+
+packages/api
+packages/worker
+packages/webapp
