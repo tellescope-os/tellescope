@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "authentication" },
+    { "path": "chat" },
+    { "path": "components" }
+  ],
+  "exclude": [
+    "**/lib",
+  ]
+}

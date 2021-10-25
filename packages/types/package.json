@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/types",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "description": "Types for Tellescope models and other shared utility types",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -23,18 +23,16 @@
   },
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "devDependencies": {
-    "@types/express": "^4.17.13",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
+    "bson": "^4.5.3",
     "eslint": "^7.32.0",
     "eslint-plugin-react": "^7.26.1",
-    "express": "^4.17.1",
-    "mongodb": "^4.1.2",
     "nodemon": "^2.0.13",
     "typescript": "^4.4.3"
   },
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "daa7c7bb851cfd1a68bf26a615b9cfb32fbf2004"
+  "gitHead": "8093dbf4015d6196a234e4922564ddce3df0a9a7"
 }

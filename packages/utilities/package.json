@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/utilities",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "description": "Shared JS code for common actions across API and browser",
   "main": "./lib/cjs/utils.js",
   "module": "./lib/esm/utils.js",
@@ -10,7 +10,7 @@
     "build": "npm run-script build:esm && npm run-script build:cjs",
     "build:esm": "tsc",
     "build:cjs": "tsc --module commonjs --outDir lib/cjs",
-    "watch": "nodemon --ignore lib --ext ts --exec npm run-script build"
+    "watch:cjs": "tsc --module commonjs --outDir lib/cjs --watch"
   },
   "repository": {
     "type": "git",
@@ -23,12 +23,13 @@
   },
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "dependencies": {
-    "@tellescope/types": "^0.0.2",
+    "@tellescope/types": "^0.0.5",
     "mongodb": "^4.1.2"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
+    "bson": "^4.5.3",
     "eslint": "^7.32.0",
     "nodemon": "^2.0.13",
     "typescript": "^4.4.3"
@@ -36,5 +37,5 @@
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "daa7c7bb851cfd1a68bf26a615b9cfb32fbf2004"
+  "gitHead": "8093dbf4015d6196a234e4922564ddce3df0a9a7"
 }

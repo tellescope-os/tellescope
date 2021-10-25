@@ -1,0 +1,14 @@
+{
+  "name": "@tellescope/react",
+  "private": true,
+  "version": "0.0.5",
+  "description": "",
+  "main": ".eslintrc.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "gitHead": "8093dbf4015d6196a234e4922564ddce3df0a9a7"
+}

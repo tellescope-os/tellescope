@@ -1,5 +1,5 @@
 import "@tellescope/types"
-import { ObjectId } from "mongodb"
+import { ObjectId } from "bson"
 
 export const first_letter_capitalized = (s='') => s.charAt(0).toUpperCase() + s.slice(1)
 export const first_letter_lowercase = (s='') => s.charAt(0).toUpperCase() + s.slice(1)

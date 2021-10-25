@@ -1,5 +1,10 @@
 import "@tellescope/types"
 
+export const PRIMARY_HEX = "1564bf"
+export const SECONDARY_HEX = "#1c4378"
+export const ERROR_HEX = "#bf2c15"
+export const WARNING_HEX = "#bfab15"
+
 export const BUSINESS_TYPE = "Business"
 export const CREATOR_ONLY_ACCESS = 'creatorOnly'
 export const DEFAULT_OPERATIONS: { [K in Operation]: { title?: string, description?: string, sideEffects?: [] }} = {

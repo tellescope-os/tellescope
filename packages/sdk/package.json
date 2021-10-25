@@ -1,21 +1,23 @@
 {
   "name": "@tellescope/sdk",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "description": "Code for interacting with the Tellescope API",
   "main": "./lib/cjs/sdk.js",
   "module": "./lib/esm/sdk.js",
   "types": "./lib/esm/sdk.d.ts",
   "scripts": {
-    "test": "npm run-script build:cjs && npm run-script retest-sockets && npm run-script retest-api",
-    "retest": "npm run-script retest-sockets && npm run-script retest-api",
+    "test": "npm run-script build:cjs && npm run-script retest",
+    "retest": "npm run-script retest-sockets && npm run-script retest-api && npm run-script retest-public-api",
     "test-api": "npm run-script build:cjs && npm run-script retest-api",
     "retest-api": "node lib/cjs/tests/tests.js",
+    "test-public-api": "npm run-script build:cjs && npm run-script retest-public-api",
+    "retest-public-api": "node lib/cjs/tests/public_endpoint_tests.js",
     "test-sockets": "npm run-script build:cjs && npm run-script retest-sockets",
     "retest-sockets": "node lib/cjs/tests/socket_tests.js",
     "build": "npm run-script build:esm && npm run-script build:cjs",
     "build:esm": "tsc",
     "build:cjs": "tsc --module commonjs --outDir lib/cjs",
-    "watch": "nodemon --ignore lib --ext ts --exec npm run-script build"
+    "watch:cjs": "tsc --module commonjs --outDir lib/cjs --watch"
   },
   "repository": {
     "type": "git",
@@ -28,14 +30,15 @@
   },
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "dependencies": {
-    "@tellescope/constants": "^0.0.2",
-    "@tellescope/schema": "^0.0.2",
-    "@tellescope/testing": "^0.0.2",
-    "@tellescope/types": "^0.0.2",
-    "@tellescope/utilities": "^0.0.2",
-    "@tellescope/validation": "^0.0.2",
+    "@tellescope/constants": "^0.0.5",
+    "@tellescope/schema": "^0.0.5",
+    "@tellescope/testing": "^0.0.5",
+    "@tellescope/types-client": "^0.0.5",
+    "@tellescope/types-models": "^0.0.5",
+    "@tellescope/utilities": "^0.0.5",
+    "@tellescope/validation": "^0.0.5",
     "@types/axios": "^0.14.0",
-    "axios": "^0.22.0",
+    "axios": "^0.21.1",
     "socket.io-client": "^4.2.0",
     "source-map-support": "^0.5.20"
   },
@@ -49,5 +52,5 @@
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "daa7c7bb851cfd1a68bf26a615b9cfb32fbf2004"
+  "gitHead": "8093dbf4015d6196a234e4922564ddce3df0a9a7"
 }

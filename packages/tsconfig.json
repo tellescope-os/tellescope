@@ -1,0 +1,16 @@
+{
+  "files": [],
+  "references": [
+    { "path": "constants" },
+    { "path": "react" },
+    { "path": "schema" },
+    { "path": "sdk" },
+    { "path": "testing" },
+    { "path": "types" },
+    { "path": "utilities" },
+    { "path": "validation" }
+  ],
+  "exclude": [
+    "**/lib",
+  ]
+}

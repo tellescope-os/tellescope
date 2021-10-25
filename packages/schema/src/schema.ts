@@ -1,3 +1,6 @@
+import "@tellescope/types"
+// import "@tellescope/types-server"
+
 import {
   booleanValidator,
   dateValidator,
@@ -17,7 +20,7 @@ import {
   stringValidator,
   stringValidator100,
   listOfStringsValidator,
-  listOfMongoIdValidator,
+  //listOfMongoIdValidator,
   emailEncodingValidator,
   numberToDateValidator,
   SMSMessageValidator,
@@ -36,6 +39,123 @@ import {
   DEFAULT_OPERATIONS,
   PLACEHOLDER_ID,
 } from "@tellescope/constants"
+
+// type RelationshipConstraint<T> = {
+//   explanation: string; // human readable, for documentation purposes
+//   evaluate: (v: T, dependencies: Indexable<Partial<DatabaseModel>>) => string | void;
+// }
+
+// type DependencyAccessConstraint <T> = { type: 'dependency', foreignModel: ModelName, foreignField: string, accessField: keyof T  }
+
+// type AccessConstraint <T> = { type: 'creatorOnly' } 
+//   | { type: 'filter', field: string }
+//   | DependencyAccessConstraint<T>
+
+// type UniqueArrayConstraint <T> = { array: keyof T, itemKey?: string }
+
+// type Constraint <T> = {
+//   unique: (keyof T & string | UniqueArrayConstraint<T>)[];
+//   globalUnique?: (keyof T)[];
+//   relationship: RelationshipConstraint<Partial<T>>[];
+//   access?: AccessConstraint<T>[];
+// }
+
+// type Initializer <T, R> = (a: T, s: ConfiguredSession) => R
+
+// type EndpointOptions = {
+//   // parameters used for endpoint that aren't stored in the model
+//   parameters?: { [index: string]: EscapeBuilder<any> }, 
+// }
+
+// type DependencyDeletionAction = 'delete' | 'unset' | 'setNull' | 'nop'
+// type DependecyRelationship = 'foreignKey' | 'value'
+
+// type Dependency <T=DatabaseRecord> = {
+//   dependsOn: ModelName[], // list of => OR, multiple dependency records => AND
+//   dependencyField: string,
+//   relationship: DependecyRelationship,
+//   onDependencyDelete: DependencyDeletionAction,
+//   getDependentValues?: (t: T) => JSONType[], // for accessing the values of a Dependency 
+//   filterByDependency?: (foreignValue: JSONType, foreignModel?: DatabaseModel) => { // for filtering against a Dependency
+//     field: string,
+//     value: JSONType | 'any',
+//   },
+// }
+
+// type ModelFieldInfo <T, R> = {
+//   validator: EscapeBuilder<R>,
+//   readonly?:  boolean,
+//   required?:  boolean,
+//   updatesDisabled?: boolean,
+//   examples?:  JSONType[],
+//   initializer?: Initializer<Partial<T>, R>, // should include the required fields of T, not just partial
+//   dependencies?: Dependency<Partial<T>>[],
+// }
+
+// export type ModelFields<T> = {
+//   [K in keyof T]: ModelFieldInfo<T, T[K]>
+// }
+// type extractFields<Type> = Type extends ModelFields<infer X> ? X : never
+
+// type ArgumentInfo = {
+//   description?: string;
+// }
+
+// type ActionInfo = {
+//   name?: string,
+//   description?: string,
+//   notes?: string[],
+//   warnings?: string[],
+// }
+
+// type CustomAction <P=any, R=any> = {
+//   op: Operation | 'custom',
+//   access: CRUD,
+//   // parameters: InputValidation<P>,
+//   parameters: ModelFields<P>,
+//   returns: ModelFields<R>,
+//   path?: string,
+//   method?: HTTPMethod,
+// } & ActionInfo
+
+// type CustomActionsForModel = {
+//   [K in ModelName]: { [index: string]: CustomAction }
+// }
+
+// type ReadFilter <T> = { [K in keyof T]?: { required: boolean } }
+
+
+// // m is the original model (or undefined, if create)
+// // allows for easier event handling based on specific updates (by comparing args to pre-update model)
+// type SideEffectHandler <T, O=any> = (args: Partial<T>[], m: (Partial<T> | undefined)[] | undefined, n: (Partial<T> & { _id: ObjectId })[], s: ConfiguredSession, o: O) => Promise<ErrorInfo[]>;
+
+// type SideEffect = {
+//   name: string;
+//   description: string;
+// }
+
+// export type Model<T, N extends ModelName> = {
+//   info: { 
+//     name?: string, 
+//     description?: string, 
+//     sideEffects?: { [K in Operation]?: SideEffect[] }
+//   },
+//   fields: ModelFields<T>,
+//   constraints: Constraint<T>,
+//   defaultActions: { [K in Operation]?: ActionInfo },
+//   customActions: CustomActionsForModel[N],
+//   readFilter?: ReadFilter<T>,
+//   options?: {
+//     create?: EndpointOptions,
+//   }
+// }
+// type extractModelType<Type> = Type extends Model<infer T, infer N> ? T : never
+
+// type DatabaseModelForName = ToServerModels<ModelForName>
+
+// type Schema = {
+//   [N in keyof DatabaseModelForName]: Model<DatabaseModelForName[N], ModelName>
+// }
 
 const sideEffects = {
   trackJourneyEngagement: {
@@ -84,11 +204,28 @@ export type CustomActions = {
   },
   endusers: {
     set_password: CustomAction<{ id: string, password: string }, { }>,
-    login: CustomAction<{ id?: string, email?: string, phone?: string, password: string }, { authToken: string }>,
+    is_authenticated: CustomAction<
+      { id: string, authToken: string }, 
+      { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
+    >,
   }
+} 
+
+export type PublicActions = {
+  endusers: {
+    login: CustomAction<{ id?: string, email?: string, phone?: string, password: string }, { authToken: string }>,
+  },
 }
 
-export type SchemaV1 = Schema & { [K in keyof CustomActions]: { customActions: CustomActions[K] } }
+export type SchemaV1 = Schema & { 
+  [K in keyof CustomActions]: { 
+    customActions: CustomActions[K] 
+  }
+} & {
+  [K in keyof PublicActions]: { 
+    publicActions: PublicActions[K] 
+  }
+}
 
 export const schema: SchemaV1 = {
   endusers: {
@@ -110,10 +247,26 @@ export const schema: SchemaV1 = {
         },
         returns: { } //authToken: { validator: stringValidator5000 } },
       },
+      is_authenticated: {
+        op: "custom", access: 'read', method: "get",
+        name: 'Check enduser authentication',
+        path: '/enduser-is-authenticated',
+        description: "Checks the validity of an enduser's authToken",
+        parameters: { 
+          id: { validator: mongoIdStringValidator, required: true },
+          authToken: { validator: stringValidator5000, required: true },
+        },
+        returns: { 
+          isAuthenticated: { validator: booleanValidator, required: true }, 
+          enduser: { validator:  'enduser' }, 
+        } as any // add enduser eventually, when validator defined
+      },
+    },
+    publicActions: {
       login: {
         op: "custom", access: 'read', method: "post",
         name: 'Login enduser',
-        path: '/set-enduser-password',
+        path: '/login-enduser',
         description: "Generates an authentication token for access to enduser-facing endpoints",
         parameters: { 
           id: { validator: mongoIdStringValidator },
@@ -422,7 +575,7 @@ export const schema: SchemaV1 = {
         validator: mongoIdStringValidator,
         examples: [PLACEHOLDER_ID],
         readonly: true, 
-        initializer: (a, s) => s.userId,
+        initializer: (a, s) => (s as UserSession).userId,
       },
       subject: {
         validator: stringValidator,
@@ -542,7 +695,7 @@ export const schema: SchemaV1 = {
       businessUserId: {
         validator: mongoIdStringValidator,
         readonly: true, // default to only self-sending, for now
-        initializer: (_, s) => s.userId,
+        initializer: (a, s) => (s as UserSession).userId,
         dependencies: [{
           dependsOn: ['users'],
           dependencyField: '_id',
@@ -609,6 +762,7 @@ export const schema: SchemaV1 = {
       }
     },
     defaultActions: DEFAULT_OPERATIONS,
+    enduserActions: { create: {}, read: {}, readMany: {} },
     customActions: {},
   },
   chats: {
@@ -635,7 +789,7 @@ export const schema: SchemaV1 = {
       senderId: { 
         validator: mongoIdStringValidator,
         readonly: true, // create a separate endpoint for storing enduser chats
-        initializer: (_, s) => s.userId,
+        initializer: (a, s) => (s as UserSession).userId ?? (s as EnduserSession).enduserId,
         examples: [PLACEHOLDER_ID],
         dependencies: [{ // can be userId or enduserId
           dependsOn: ['users', 'endusers'],
@@ -667,6 +821,7 @@ export const schema: SchemaV1 = {
     readFilter: {
       roomId: { required: true },
     },
+    enduserActions: { create: {}, read: {}, readMany: {} },
     customActions: {},
   },
   users: {

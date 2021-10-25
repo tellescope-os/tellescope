@@ -1,6 +1,4 @@
-type ObjectId = { // fixes monorepo (lerna)-related type issues
-  toString: () => string,
-} & import('mongodb').ObjectId
+type ObjectId = import('bson').ObjectID
 
 type SortOption = "oldFirst" | "newFirst"
 
@@ -130,6 +128,8 @@ interface Session {
   type: "user" | "enduser",
   iat: number,
   exp: number,
+  wasAutomated?: boolean,
+  verifiedEmail?: boolean,
 }
 
 type SessionType = "user" | "enduser"
@@ -512,7 +512,7 @@ type Constraint <T> = {
   access?: AccessConstraint<T>[];
 }
 
-type Initializer <T, R> = (a: T, s: ConfiguredSession) => R
+type Initializer <T, R> = (a: T, s: ConfiguredSession | EnduserSession) => R
 
 type EndpointOptions = {
   // parameters used for endpoint that aren't stored in the model
@@ -570,6 +570,10 @@ type CustomAction <P=any, R=any> = {
   method?: HTTPMethod,
 } & ActionInfo
 
+type EnduserAction = {
+  field?: string,
+} & ActionInfo
+
 type CustomActionsForModel = {
   [K in ModelName]: { [index: string]: CustomAction }
 }
@@ -579,7 +583,7 @@ type ReadFilter <T> = { [K in keyof T]?: { required: boolean } }
 
 // m is the original model (or undefined, if create)
 // allows for easier event handling based on specific updates (by comparing args to pre-update model)
-type SideEffectHandler <T, O=any> = (args: Partial<T>[], m: (Partial<T> | undefined)[] | undefined, n: (Partial<T> & { _id: ObjectId })[], s: ConfiguredSession, o: O) => Promise<ErrorInfo[]>;
+type SideEffectHandler <T, O=any> = (args: Partial<T>[], m: (Partial<T> | undefined)[] | undefined, n: (Partial<T> & { _id: ObjectId })[], s: ConfiguredSession | EnduserSession, o: O) => Promise<ErrorInfo[]>;
 
 type SideEffect = {
   name: string;
@@ -594,7 +598,8 @@ type Model<T, N extends ModelName> = {
   },
   fields: ModelFields<T>,
   constraints: Constraint<T>,
-  defaultActions: { [K in Operation]?: ActionInfo },
+  defaultActions: { [k in Operation]?: ActionInfo },
+  enduserActions?: { [k in Operation]?: EnduserAction },
   customActions: CustomActionsForModel[N],
   readFilter?: ReadFilter<T>,
   options?: {

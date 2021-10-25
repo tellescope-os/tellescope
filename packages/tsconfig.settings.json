@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        // Always include these settings for TS Project References
+        "composite": true,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+
+        "module": "esnext",
+        "esModuleInterop": true,
+        "target": "es5",
+        "moduleResolution": "node",
+        "noImplicitAny": true,
+        "lib": ["esnext"],
+        "jsx": "react-jsx",
+        "skipLibCheck": true,
+        "strict": true
+    }
+}

@@ -1,30 +1,42 @@
-import "@tellescope/types"
+import { io } from 'socket.io-client'
 
-import { Session, SessionOptions } from "./session"
+import {
+  JourneyState, 
+  UserSession,
+} from "@tellescope/types-models"
+
+import {
+  ClientModelForName,
+  ClientModelForName_readonly,
+  ClientModelForName_required,
+  ClientModelForName_updatesDisabled,
+  Enduser,
+} from "@tellescope/types-client"
 import { url_safe_path } from "@tellescope/utilities"
 
-type Filter<T> = { [K in keyof T]: T[K] }
-type Session_T = ReturnType<typeof Session>
+import { Session as SessionManager, SessionOptions, Filter } from "./session"
+
+export * from "./public"
+export * from "./enduser"
 
 export interface APIQuery<
-  N extends ModelName, 
-  T=ModelForName[N], 
-  Req=ModelForName_required[N], 
-  CREATE=Omit<Req & Partial<T>, keyof ModelForName_readonly[N]>, 
-  UPDATE=Omit<Partial<T>, keyof (ModelForName_readonly[N] & ModelForName_updatesDisabled[N])>,
-  RETURN=ToClient<T>
+  N extends keyof ClientModelForName, 
+  T=ClientModelForName[N], 
+  Req=ClientModelForName_required[N], 
+  CREATE=Omit<Req & Partial<T>, keyof ClientModelForName_readonly[N]>, 
+  UPDATE=Omit<Partial<T>, keyof (ClientModelForName_readonly[N] & ClientModelForName_updatesDisabled[N])>,
 > 
 {
-  createOne: (t: CREATE) => Promise<RETURN>;
-  createSome: (ts: CREATE[]) => Promise<{ created: RETURN[], errors: object[] }>;
-  getOne: (id: string, filter?: Filter<Partial<T>>) => Promise<RETURN>;
-  getSome: (o?: { lastId?: string, limit?: number, sort?: SortOption, threadKey?: string }, f?: Filter<Partial<T>>) => Promise<RETURN[]>
+  createOne: (t: CREATE) => Promise<T>;
+  createSome: (ts: CREATE[]) => Promise<{ created: T[], errors: object[] }>;
+  getOne: (id: string, filter?: Filter<Partial<T>>) => Promise<T>;
+  getSome: (o?: { lastId?: string, limit?: number, sort?: SortOption, threadKey?: string }, f?: Filter<Partial<T>>) => Promise<T[]>
   updateOne: (id: string, updates: UPDATE, options?: CustomUpdateOptions) => Promise<void>;
   deleteOne: (id: string) => Promise<void>;
 }
 
-const defaultQueries = <N extends ModelName>(
-  s: Session_T, n: keyof ModelForName_required
+export const defaultQueries = <N extends keyof ClientModelForName>(
+  s: SessionManager, n: keyof ClientModelForName_required
 ): APIQuery<N> => {
 
   const safeName = url_safe_path(n)
@@ -40,7 +52,7 @@ const defaultQueries = <N extends ModelName>(
   }
 }
 
-const loadDefaultQueries = (s: Session_T): { [K in keyof ModelForName] : APIQuery<K> } => ({
+const loadDefaultQueries = (s: SessionManager): { [K in keyof ClientModelForName] : APIQuery<K> } => ({
   endusers: defaultQueries(s, 'endusers'),
   engagement_events: defaultQueries(s, 'engagement_events'),
   journeys: defaultQueries(s, 'journeys'),
@@ -54,44 +66,72 @@ const loadDefaultQueries = (s: Session_T): { [K in keyof ModelForName] : APIQuer
   templates: defaultQueries(s, 'templates') ,
 })
 
-type Queries = { [K in ModelName]: APIQuery<K> } & {
+type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   journeys: {
     updateState: (id: string, name: string, updates: JourneyState) => Promise<void>
+  },
+  endusers: {
+    setPassword: (id: string, password: string) => Promise<void>,
+    isAuthenticated: (id: string, authToken: string) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
   }
 }
 
-export const createSession = (o?: SessionOptions) => {
-  const s = Session(o)
+export class Session extends SessionManager{
+  api: Queries;
+  userInfo: UserSession;
 
-  const queries = loadDefaultQueries(s) as Queries
-  queries.journeys.updateState = (id, name, updates) => s.PATCH(`/v1/journey/${id}/state/${name}`, { updates })
+  constructor(o?: SessionOptions) {
+    super(o)
+    this.userInfo = {} as UserSession
+    const queries = loadDefaultQueries(this) as Queries
 
-  const subscribe = (rooms: { [index: string]: ModelName } ) => s.EMIT('join-rooms', { rooms })
+    queries.journeys.updateState = (id, name, updates) => this.PATCH(`/v1/journey/${id}/state/${name}`, { updates })
+    queries.endusers.setPassword = (id, password) => this.POST(`/v1/set-enduser-password`, { id, password })
+    queries.endusers.isAuthenticated = (id, authToken) => this.GET(`/v1/enduser-is-authenticated`, { id, authToken })
 
-  const handle_events = ( handlers: { [index: string]: (a: any) => void } ) => {
-    for (const handler in handlers) s.ON(handler, handlers[handler])
+    this.api = queries
+  }
+
+
+  handle_new_session = async ({ authToken, ...userInfo }:   UserSession & { authToken: string }) => {
+    this.setAuthToken(authToken)
+    this.userInfo = userInfo
+
+    this.socket = io(`${this.host}/${userInfo.organization}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
+    this.socket.on('disconnect', () => { this.socketAuthenticated = false })
+    this.socket.on('authenticated', () => { this.socketAuthenticated = true })
+
+    this.socket.emit('authenticate', authToken)
+
+    return { authToken, ...userInfo }
+  }
+
+  refresh_session = async () => {
+    const { userInfo, authToken } = await this.GET<{}, { userInfo: UserSession } & { authToken: string }>('/refresh-session')
+    await this.handle_new_session({ ...userInfo, authToken })
+  }
+
+  authenticate = async (email: string, password: string, url?: string) => {
+    if (url) this.host = url
+
+    return this.handle_new_session(
+      await this.POST<{email: string, password: string },  UserSession & { authToken: string }>('/submit-login', { email, password })
+    ) 
+  }
+
+  subscribe = (rooms: { [index: string]: keyof ClientModelForName } ) => this.EMIT('join-rooms', { rooms })
+
+  handle_events = ( handlers: { [index: string]: (a: any) => void } ) => {
+    for (const handler in handlers) this.ON(handler, handlers[handler])
   } 
 
-  const unsubscribe = (roomIds: string[]) => s.EMIT('leave-rooms', { roomIds })
+  unsubscribe = (roomIds: string[]) => this.EMIT('leave-rooms', { roomIds })
 
-  return {
-    get_userInfo: s.get_userInfo,
-    authenticate: s.authenticate,
-    refresh_session: s.refresh_session,
-    socket_is_authenticated: s.socket_is_authenticated,
-    authenticate_socket: s.authenticate_socket,
-    logout: () => s.POST('/logout-api'),
-    reset_db: () => s.POST('/reset-demo'),
-    test_online: () => s.GET<{}, string>('/v1'),
-    test_authenticated: () => s.GET<{}, string>('/v1/test-authenticated'),
-    subscribe, handle_events, unsubscribe,
-    ...queries
-  }
+  socket_is_authenticated = () => this.socketAuthenticated
+  logout = () => this.POST('/logout-api')
+  reset_db = () => this.POST('/reset-demo')
+  test_online = () => this.GET<{}, string>('/v1')
+  test_authenticated = () => this.GET<{}, string>('/v1/test-authenticated')
 }
 
-// initialize queries for every model defined in the schema
-// requires casting as is, but avoids needing to manually define every new type when added
-// let n: keyof ModelForName;
-// for (n in schema) {
-//   (queries as Indexable)[n] = defaultQueries(n, (schema as Indexable)[n])
-// }
+export { SessionOptions }

@@ -1,4 +1,5 @@
-import "@tellescope/types"
+//import "@tellescope/types"
+import { ObjectId } from "bson"
 
 import {
   RequestHandler,
@@ -24,12 +25,49 @@ import {
   to_object_id,
 } from "@tellescope/utilities"
 
+// type EscapeWithOptions<R=any> = (o: ValidatorOptions) => (v: JSONType) => R
+// type EscapeFunction<R=any> = (v: JSONType) => R
+// type EscapeToList<R=any> = EscapeFunction<R[]>
+
+// interface ValidatorOptions {
+//   maxLength?: number;
+//   minLength?: number; 
+//   shouldTruncate?: boolean; 
+//   toLower?: boolean;
+//   isOptional?: boolean; 
+//   emptyStringOk?: boolean; 
+//   emptyListOk?: boolean; 
+//   nullOk?: boolean;
+//   isObject?: boolean; 
+//   isNumber?: boolean; 
+//   listOf?: boolean; 
+//   isBoolean?: boolean;
+//   errorMessage?: string;
+//   trim?: boolean;
+// }  
+// interface ValidatorOptionsForValue extends ValidatorOptions {
+//   listOf?: false;
+// }
+// interface ValidatorOptionsForList extends ValidatorOptions {
+//   listOf: true;
+// }
+// type ValidatorOptionsUnion = ValidatorOptionsForValue | ValidatorOptionsForList
+
+// export type EscapeBuilder <R=any> = {
+//   (o?: ValidatorOptionsForValue): EscapeFunction<R>;
+//   (o?: ValidatorOptionsForList):  EscapeFunction<R[]>;
+// }
+// type ComplexEscapeBuilder <C,R=any> = (customization: C) => EscapeBuilder<R>
+
+// type InputValues <T> = { [K in keyof T]: JSONType }
+// export type InputValidation<T> = { [K in keyof T]: EscapeFunction }
+
 const DEFAULT_MAX_LENGTH = 5000
 type BuildValidator_T = {
   (escapeFunction: EscapeFunction, options: ValidatorOptionsForList): EscapeToList;
   (escapeFunction: EscapeFunction, options: ValidatorOptionsForValue): EscapeFunction;
 }
-const build_validator: BuildValidator_T = (escapeFunction, options={} as ValidatorOptionsUnion): EscapeToList | EscapeFunction => {
+export const build_validator: BuildValidator_T = (escapeFunction, options={} as ValidatorOptionsUnion): EscapeToList | EscapeFunction => {
   const { 
     shouldTruncate, isOptional, toLower,
     emptyStringOk, emptyListOk, nullOk,
@@ -109,7 +147,7 @@ const build_validator: BuildValidator_T = (escapeFunction, options={} as Validat
   }
 }
 
-export const fieldsToValidation = <T>(fs: ModelFields<T>): InputValidation<T> => {
+export const fieldsToValidation = <T>(fs: { [K in keyof T]: { validator: EscapeBuilder, required?: boolean } }): InputValidation<T> => {
   const validation = {} as InputValidation<T>
 
   for (const f in fs) {
