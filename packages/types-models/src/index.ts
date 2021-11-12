@@ -246,13 +246,17 @@ export interface SMSMessage extends SMSMessage_readonly, SMSMessage_required, SM
 export type ChatRoomType = 'internal' | 'external'
 export type ChatRoomTopic = 'enduser' | 'task'
 
-export interface ChatRoom_readonly extends ClientRecord {}
+export interface ChatRoom_readonly extends ClientRecord {
+  recentMessage?: string,
+  recentSender?: string,
+}
 export interface ChatRoom_required {
   type: ChatRoomType; 
   userIds: string[];
 }
 export interface ChatRoom_updatesDisabled {}
 export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom_updatesDisabled {
+  title?: string
   topic?: ChatRoomTopic;
   topicId?: string;
   enduserIds?: string[];

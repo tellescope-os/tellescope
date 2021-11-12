@@ -629,3 +629,8 @@ const _MESSAGE_TEMPLATE_TYPES: { [K in MessageTemplateType]: any } = {
 export const MESSAGE_TEMPLATE_TYPES = Object.keys(_MESSAGE_TEMPLATE_TYPES) as MessageTemplateType[]
 export const messageTemplateTypeValidator = exactMatchValidator<MessageTemplateType>(MESSAGE_TEMPLATE_TYPES)
 
+export const listOfDisplayNameInfo = listValidator(objectValidator<{ fname: string, lname: string, id: string }>({ 
+  fname: nameValidator(), 
+  lname: nameValidator(),
+  id: listOfMongoIdStringValidator(),
+})())

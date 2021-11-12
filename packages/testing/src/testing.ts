@@ -122,28 +122,6 @@ export const assert = (assertion: boolean, message: string, title='') => {
   })
 }
 
-export const objects_equivalent = (o1?: Indexable, o2?: Indexable) => {
-  if (o1 === null || o2 === null) return o1 === o2 // null is base case for typeof === object
-  if (typeof o1 !== "object" || typeof o2 !== 'object') return o1 === o2 // base case  
-
-  const k1 = Object.keys(o1), k2 = Object.keys(o2);
-  for (const k of k1) { // keys must be equal sets
-    if (!k2.includes(k)) return false
-  }
-  for (const k of k2) { // keys must be equal sets
-    if (!k1.includes(k)) return false
-  }
-  
-  for (const k of k1) { // recurse in case 
-    if (!objects_equivalent(o1[k], o2[k])) {
-      console.log(o1[k], o2[k]) 
-      return false
-    }
-  }
-
-  return true
-}
-
 export const wait = (f?: Promise<void>, ms=1000) => new Promise<void>((resolve, reject) => {
   setTimeout(() => f ? f.then(resolve).catch(reject) : resolve(), ms)
 })

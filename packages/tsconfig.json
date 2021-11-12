@@ -7,10 +7,15 @@
     { "path": "sdk" },
     { "path": "testing" },
     { "path": "types" },
+    { "path": "types-client" },
+    { "path": "types-server" },
+    { "path": "types-models" },
+    { "path": "types-utilities" },
     { "path": "utilities" },
     { "path": "validation" }
   ],
   "exclude": [
     "**/lib",
+    "**/NativeTests",
   ]
 }

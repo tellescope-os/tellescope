@@ -11,7 +11,7 @@
         "target": "es5",
         "moduleResolution": "node",
         "noImplicitAny": true,
-        "lib": ["esnext"],
+        "lib": ["esnext", "dom", "dom.iterable"],
         "jsx": "react-jsx",
         "skipLibCheck": true,
         "strict": true

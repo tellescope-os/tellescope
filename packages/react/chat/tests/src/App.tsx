@@ -7,17 +7,20 @@ import {
 } from "react-router-dom"
 
 import {
-  EnduserLogin,
-  UserLogin,
-  WithSession,
-  WithEnduserSession,
+  ErrorBoundary,
   useSession,
   useEnduserSession,
-} from "@tellescope/authentication"
+  // useEndusers,
+  Flex,
+  UserProvider,
+  EnduserProvider,
+  EnduserLogin,
+  UserLogin,
+} from "@tellescope/react-components"
 
 import {
-  ChatsFromEndusersSidebar,
-  ChatsFromUsersSidebar,
+  EnduserChatSplit,
+  UserChatSplit,
 } from "@tellescope/chat"
 
 const ViewSelector = () => {
@@ -46,29 +49,40 @@ const Routing = () => (
   </Router>
 )
 
-function App() {
+export const App = () => {
   return (
-    <WithEnduserSession sessionOptions={{ host: "http://localhost:8080" }}>
-    <WithSession sessionOptions={{ host: "http://localhost:8080" }}>
-      <Routing/>
-    </WithSession>
-    </WithEnduserSession>
+    <Flex style={{ height: '100vh' }}> 
+      <ErrorBoundary>
+        <Routing/>
+      </ErrorBoundary>
+    </Flex>
   );
 }
 
 
-const ChatsForUser = () => {
+const ChatsForUser = () => (
+  <UserProvider sessionOptions={{ host: 'http://localhost:8080' }}>
+    <ChatsForUserWithProvider/> 
+  </UserProvider>
+)
+
+const ChatsForUserWithProvider = () => {
   const session = useSession()
   if (!session.authToken) return <UserLogin/>
 
-  return <ChatsFromEndusersSidebar/>
+  return <UserChatSplit/>
 }
 
-const ChatsForEnduser = () => {
+const ChatsForEnduser = () => (
+  <EnduserProvider sessionOptions={{ host: 'http://localhost:8080' }}>
+    <ChatsForEnduserWithProvider/>
+  </EnduserProvider>
+)
+const ChatsForEnduserWithProvider = () => {
   const session = useEnduserSession()
   if (!session.authToken) return <EnduserLogin/>
 
-  return <ChatsFromUsersSidebar/>
+  return <EnduserChatSplit/>
 }
 
 const routes = {

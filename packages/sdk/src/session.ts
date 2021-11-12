@@ -1,5 +1,5 @@
 import axios from "axios"
-import { Socket } from 'socket.io-client'
+import { Socket, io } from 'socket.io-client'
 
 import {  } from "@tellescope/types-models"
 import { ClientModelForName_required, ClientModelForName_readonly, ClientModelForName_updatesDisabled } from "@tellescope/types-client"
@@ -11,6 +11,8 @@ export interface SessionOptions {
   apiKey?: string;
   authToken?: string;
   host?: string;
+  cacheKey?: string;
+  handleUnauthenticated?: () => Promise<void>;
 }
 
 export type Filter<T> = { [K in keyof T]: T[K] }
@@ -59,31 +61,77 @@ const parseError = (err: any) => {
   return err
 }
 
+const DEFAULT_AUTHTOKEN_KEY = 'tellescope_authToken'
+const has_local_storage = () => typeof window !== 'undefined' && !!window.localStorage
+const set_cache = (key: string, authToken: string) => has_local_storage() && (window.localStorage[key] = authToken)
+const access_cache = (key=DEFAULT_AUTHTOKEN_KEY) => has_local_storage() ? window.localStorage[key] : undefined
+
 export class Session {
   host: string;
   authToken: string;
+  cacheKey: string;
   apiKey?: string;
   socket?: Socket;
+  handleUnauthenticated?: SessionOptions['handleUnauthenticated']
   socketAuthenticated: boolean;
+  userInfo: { businessId?: string };
 
   config: { headers: { Authorization: string }};
 
   constructor(o={} as SessionOptions) {
     this.host= o.host ?? DEFAULT_HOST
-    this.authToken = o.authToken ?? '';
-    this.config = { headers: { Authorization: generateBearer(o.authToken ?? '') } }
     this.apiKey = o.apiKey ?? '';
     this.socket = undefined as Socket | undefined
     this.socketAuthenticated = false
+    this.handleUnauthenticated = o.handleUnauthenticated
+
+    this.cacheKey = o.cacheKey || DEFAULT_AUTHTOKEN_KEY
+    this.authToken = o.authToken ?? access_cache(o.cacheKey) ?? '';
+    this.userInfo = JSON.parse(access_cache(o.cacheKey + 'userInfo') || '{}');
+    if (this.authToken) { 
+      set_cache(this.cacheKey, this.authToken)
+      this.authenticate_socket()
+    }
+    this.config = { headers: { Authorization: generateBearer(this.authToken ?? '') } } // initialize after authToken
   }
+  
+  resolve_field = async <T>(p: () => Promise<T>, field: keyof T) => (await p())[field]
 
   setAuthToken = (a: string) => { 
     this.authToken = a; 
     this.config.headers.Authorization = generateBearer(a);
+    set_cache(this.cacheKey, a)
   }
-  // setApiKey    = (k: string) => apiKey = k
+
+  setUserInfo = (u: { businessId: string }) => { 
+    this.userInfo = u; 
+    set_cache(this.cacheKey + 'userInfo', JSON.stringify(u))
+  }
+  
+  clearCache = () => {
+    set_cache(this.cacheKey, '')
+    set_cache(this.cacheKey + 'userInfo', '')
+  }
+
+  clearState = () => {
+    this.apiKey = ''
+    this.authToken = ''
+    this.userInfo = { }
+    this.clearCache()
+  }
 
   getAuthInfo = (requiresAuth?: boolean) => requiresAuth && this.apiKey ? { apiKey: this.apiKey } : { }
+  
+  errorHandler = async (_err: any) => {
+    const err = parseError(_err)
+    if (err === 'Unauthenticated') {
+      this.authToken = ''
+      this.clearCache()
+      await this.handleUnauthenticated?.()
+    }
+
+    return err
+  }
 
   POST = async <A,R=void>(endpoint: string, args?: A, authenticated=true) => {
     try {
@@ -92,7 +140,7 @@ export class Session {
         { ...args, ...this.getAuthInfo(authenticated) }, 
         this.config)
       ).data as R
-    } catch(err) { throw parseError(err) }
+    } catch(err) { throw await this.errorHandler(err) }
   }
 
   GET = async <A,R=void>(endpoint: string, params?: A, authenticated=true) => {
@@ -102,7 +150,7 @@ export class Session {
         { params: { ...params, ...this.getAuthInfo(authenticated)  }, 
         headers: this.config.headers })
       ).data as R
-    } catch(err) { throw parseError(err) }
+    } catch(err) { throw await this.errorHandler(err) }
   }
 
   PATCH = async <A,R=void>(endpoint: string, params?: A, authenticated=true) => {
@@ -112,7 +160,7 @@ export class Session {
         { ...params, ...this.getAuthInfo(authenticated)  }, 
         this.config)
       ).data as R
-    } catch(err) { throw parseError(err) }
+    } catch(err) { throw await this.errorHandler(err) }
   }
 
   DELETE = async <A,R=void>(endpoint: string, args?: A, authenticated=true) => {
@@ -122,7 +170,7 @@ export class Session {
         { data: { ...args, ...this.getAuthInfo(authenticated)  }, 
         headers: this.config.headers })
       ).data as R
-    } catch(err) { throw parseError(err) }
+    } catch(err) { throw await this.errorHandler(err) }
   }
 
   EMIT = async (route: string, args: object, authenticated=true) => {
@@ -131,5 +179,23 @@ export class Session {
 
   ON = <T={}>(s: string, callback: (a: T) => void) => this.socket?.on(s, callback)
 
-  authenticate_socket = () => !!this.socket?.emit('authenticate', this.authToken) 
+  subscribe = (rooms: { [index: string]: keyof ClientModelForName }, handlers?: { [index: string]: (a: any) => void } ) => {
+    if (handlers) { this.handle_events(handlers) }
+    this.EMIT('join-rooms', { rooms })
+  }
+
+  handle_events = ( handlers: { [index: string]: (a: any) => void } ) => {
+    for (const handler in handlers) this.ON(handler, handlers[handler])
+  } 
+
+  unsubscribe = (roomIds: string[]) => this.EMIT('leave-rooms', { roomIds })
+  removeAllSocketListeners = (s: string) => this.socket?.removeAllListeners(s)
+
+  authenticate_socket = () => {
+    this.socket = io(`${this.host}/${this.userInfo.businessId}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
+    this.socket.on('disconnect', () => { this.socketAuthenticated = false })
+    this.socket.on('authenticated', () => { this.socketAuthenticated = true })
+
+    this.socket.emit('authenticate', this.authToken)
+  }
 }

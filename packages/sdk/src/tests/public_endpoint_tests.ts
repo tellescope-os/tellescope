@@ -2,9 +2,11 @@ import {
   assert,
   async_test,
   log_header,
-  objects_equivalent,
   wait,
 } from "@tellescope/testing"
+import {
+  objects_equivalent,
+} from "@tellescope/utilities"
 import { Session, /* APIQuery */ } from "../sdk"
 import { PublicEndpoints } from "../public"
 

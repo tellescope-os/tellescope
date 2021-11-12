@@ -1,7 +1,6 @@
 {
   "files": [],
   "references": [
-    { "path": "authentication" },
     { "path": "chat" },
     { "path": "components" }
   ],

@@ -1,6 +1,6 @@
 import "@tellescope/types"
 
-export const PRIMARY_HEX = "1564bf"
+export const PRIMARY_HEX = "#1564bf"
 export const SECONDARY_HEX = "#1c4378"
 export const ERROR_HEX = "#bf2c15"
 export const WARNING_HEX = "#bfab15"

@@ -39,6 +39,7 @@
     "@tellescope/sdk": "^0.0.5",
     "@tellescope/types-client": "^0.0.5",
     "@tellescope/types-utilities": "^0.0.5",
+    "@tellescope/utilities": "^0.0.5",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "eslint": "^7.32.0",

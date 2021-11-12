@@ -73,35 +73,32 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   endusers: {
     setPassword: (id: string, password: string) => Promise<void>,
     isAuthenticated: (id: string, authToken: string) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
-  }
+  },
+  users: {
+    display_names: () => Promise<{ fname: string, lname: string, id: string }[]>
+  },
 }
 
 export class Session extends SessionManager{
   api: Queries;
-  userInfo: UserSession;
+  userInfo!: UserSession;
 
   constructor(o?: SessionOptions) {
-    super(o)
-    this.userInfo = {} as UserSession
+    super({ ...o, cacheKey: o?.cacheKey || "tellescope_user" })
     const queries = loadDefaultQueries(this) as Queries
 
     queries.journeys.updateState = (id, name, updates) => this.PATCH(`/v1/journey/${id}/state/${name}`, { updates })
     queries.endusers.setPassword = (id, password) => this.POST(`/v1/set-enduser-password`, { id, password })
     queries.endusers.isAuthenticated = (id, authToken) => this.GET(`/v1/enduser-is-authenticated`, { id, authToken })
+    queries.users.display_names = () => this.GET<{}, { fname: string, lname: string, id: string }[]>(`/v1/user-display-names`),
 
     this.api = queries
   }
-
-
+ 
   handle_new_session = async ({ authToken, ...userInfo }:   UserSession & { authToken: string }) => {
     this.setAuthToken(authToken)
-    this.userInfo = userInfo
-
-    this.socket = io(`${this.host}/${userInfo.organization}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
-    this.socket.on('disconnect', () => { this.socketAuthenticated = false })
-    this.socket.on('authenticated', () => { this.socketAuthenticated = true })
-
-    this.socket.emit('authenticate', authToken)
+    this.setUserInfo(userInfo)
+    this.authenticate_socket()
 
     return { authToken, ...userInfo }
   }
@@ -118,17 +115,11 @@ export class Session extends SessionManager{
       await this.POST<{email: string, password: string },  UserSession & { authToken: string }>('/submit-login', { email, password })
     ) 
   }
+  logout = async () => {
+    this.clearState()
+    this.POST('/logout-api').catch(console.error)
+  }
 
-  subscribe = (rooms: { [index: string]: keyof ClientModelForName } ) => this.EMIT('join-rooms', { rooms })
-
-  handle_events = ( handlers: { [index: string]: (a: any) => void } ) => {
-    for (const handler in handlers) this.ON(handler, handlers[handler])
-  } 
-
-  unsubscribe = (roomIds: string[]) => this.EMIT('leave-rooms', { roomIds })
-
-  socket_is_authenticated = () => this.socketAuthenticated
-  logout = () => this.POST('/logout-api')
   reset_db = () => this.POST('/reset-demo')
   test_online = () => this.GET<{}, string>('/v1')
   test_authenticated = () => this.GET<{}, string>('/v1/test-authenticated')

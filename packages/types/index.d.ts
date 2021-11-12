@@ -333,13 +333,17 @@ interface SMSMessage extends SMSMessage_readonly, SMSMessage_required, SMSMessag
 type ChatRoomType = 'internal' | 'external'
 type ChatRoomTopic = 'enduser' | 'task'
 
-interface ChatRoom_readonly extends DatabaseRecord {}
+interface ChatRoom_readonly extends DatabaseRecord {
+  recentMessage?: string,
+  recentSender?: string,
+}
 interface ChatRoom_required {
   type: ChatRoomType; 
   userIds: string[];
 }
 interface ChatRoom_updatesDisabled {}
 interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom_updatesDisabled {
+  title?: string;
   topic?: ChatRoomTopic;
   topicId?: string;
   enduserIds?: string[];
@@ -565,7 +569,7 @@ type CustomAction <P=any, R=any> = {
   access: CRUD,
   // parameters: InputValidation<P>,
   parameters: ModelFields<P>,
-  returns: ModelFields<R>,
+  returns: R extends Array<any> ? ModelFieldInfo<any, R> : ModelFields<R>,
   path?: string,
   method?: HTTPMethod,
 } & ActionInfo
@@ -599,7 +603,7 @@ type Model<T, N extends ModelName> = {
   fields: ModelFields<T>,
   constraints: Constraint<T>,
   defaultActions: { [k in Operation]?: ActionInfo },
-  enduserActions?: { [k in Operation]?: EnduserAction },
+  enduserActions?: { [index: string]: EnduserAction },
   customActions: CustomActionsForModel[N],
   readFilter?: ReadFilter<T>,
   options?: {

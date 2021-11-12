@@ -1,9 +1,12 @@
 import {
   assert,
+  async_test,
   log_header,
-  objects_equivalent,
   wait,
 } from "@tellescope/testing"
+import {
+  objects_equivalent,
+} from "@tellescope/utilities"
 import { EnduserSession } from "../enduser"
 import { Session, /* APIQuery */ } from "../sdk"
 
@@ -23,8 +26,7 @@ if (!(email && password && email2 && password2)) {
 const basic_tests = async () => {
   const socket_events: Indexable[] = []
 
-  user2.subscribe({ 'endusers': 'endusers' })
-  user2.handle_events({
+  user2.subscribe({ 'endusers': 'endusers' }, {
     'created-endusers': es => socket_events.push(es),
     'updated-endusers': es => socket_events.push(es),
     'deleted-endusers': es => socket_events.push(es),
@@ -116,11 +118,10 @@ const access_tests = async () => {
 }
 
 const enduser_tests = async () => {
-  const enduser = await user1.api.endusers.createOne({ email: "sockettest@tellescope.com" })
-  await user1.api.endusers.setPassword(enduser.id, 'enduserpassword')
+  const enduser = await user1.api.endusers.createOne({ email: "enduser@tellescope.com" })
+  await user1.api.endusers.setPassword(enduser.id, 'enduserPassword!')
 
-  await enduserSDK.authenticate(enduser.email as string, 'enduserpassword')
-  enduserSDK.authenticate_socket()
+  await enduserSDK.authenticate(enduser.email as string, 'enduserPassword!')
   await wait(undefined, 25)
 
   const userEvents = [] as ChatMessage[]
@@ -140,18 +141,31 @@ const enduser_tests = async () => {
 
   user1.handle_events({
     'created-chats': rs => userEvents.push(...rs),
-    'updated-chats': rs => enduserEvents.push(...rs),
+  }) 
+  enduserSDK.handle_events({
+    'created-chats': rs => enduserEvents.push(...rs),
   }) 
 
   const messageToEnduser = await user1.api.chats.createOne({ roomId: room.id, message: "Hello!" })
   const messageToUser    = await enduserSDK.api.chats.createOne({ roomId: room.id, message: "Hello right back!" })
+  await wait(undefined, 25)
 
-  console.log(userEvents, enduserEvents)
+  assert(objects_equivalent(userEvents[0], messageToUser), 'no message on socket', 'push message to user')
+  assert(objects_equivalent(enduserEvents[0], messageToEnduser), 'no message on socket', 'push message to enduser')
+  
+  // test enduser logout
+  await enduserSDK.api.endusers.logout()
+  await async_test(
+    `verify enduser logout works`, 
+    () => enduserSDK.api.chats.getSome({}), 
+    { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+  )
 
+  // keep these models around for front-end testing
   // cleanup
-  await user1.api.endusers.deleteOne(enduser.id)
-  await user1.api.chats.deleteOne(messageToEnduser.id)
-  await user1.api.chats.deleteOne(messageToUser.id)
+  // await user1.api.endusers.deleteOne(enduser.id) 
+  // await user1.api.chats.deleteOne(messageToEnduser.id)
+  // await user1.api.chats.deleteOne(messageToUser.id)
 }
 
 (async () => {
@@ -160,10 +174,11 @@ const enduser_tests = async () => {
   try {
     await user1.authenticate(email, password, host)
     await user1.reset_db()
-    await user2.authenticate(email2, password2, host) // generate authToken + socket connection for API key
-    
+    await user2.authenticate(email2, password2, host) // generate authToken + socket connection for API keyj
+    await wait(undefined, 25)
+
     let loopCount = 0
-    while (!(user1.socket_is_authenticated() && user2.socket_is_authenticated()) && ++loopCount < 10) {
+    while (!(user1.socketAuthenticated && user2.socketAuthenticated) && ++loopCount < 10) {
       user2.authenticate_socket()
       await wait(undefined, 100)
     }
@@ -171,7 +186,7 @@ const enduser_tests = async () => {
       console.log("Failed to authenticate")
       process.exit()
     }
-
+    
     await enduser_tests()
     await basic_tests()
     await access_tests()

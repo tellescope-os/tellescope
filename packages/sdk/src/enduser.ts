@@ -15,7 +15,14 @@ export interface EnduserSessionOptions extends SessionOptions {}
 
 type EnduserAccessibleModels = "chat_rooms" | 'chats' 
 
-type Queries = { [K in EnduserAccessibleModels]: APIQuery<K> }
+type Queries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
+  endusers: {
+    logout: () => Promise<void>;
+  },
+  users: {
+    display_names: () => Promise<{ fname: string, lname: string, id: string }[]>
+  },
+}
 
 const loadDefaultQueries = (s: Session): { [K in EnduserAccessibleModels] : APIQuery<K> } => ({
   chat_rooms: defaultQueries(s, 'chat_rooms'),
@@ -24,22 +31,27 @@ const loadDefaultQueries = (s: Session): { [K in EnduserAccessibleModels] : APIQ
 
 
 export class EnduserSession extends Session {
-  session = new Session();
-  enduser: Enduser; 
+  userInfo!: Enduser; 
   api: Queries;
 
   constructor(o?: EnduserSessionOptions) {
-    super(o)
-    this.enduser = {} as Enduser
-
+    super({ ...o, cacheKey: o?.cacheKey || "tellescope_enduser" })
+    
     this.api = loadDefaultQueries(this) as Queries
+
+    this.api.endusers = {
+      logout: () => this.POST('/v1/logout-enduser')
+    }
+    this.api.users = { 
+      display_names: () => this.GET<{}, { fname: string, lname: string, id: string }[] >(`/v1/user-display-names`),
+    }
   }
 
   handle_new_session = async ({ authToken, enduser }: { authToken: string, enduser: Enduser }) => {
     this.setAuthToken(authToken)
-    this.enduser = enduser
+    this.setUserInfo(enduser)
 
-    this.socket = io(`${this.host}/${enduser.businessId}/${enduser.id}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
+    this.socket = io(`${this.host}/${enduser.businessId}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
     this.socket.on('disconnect', () => { this.socketAuthenticated = false })
     this.socket.on('authenticated', () => { this.socketAuthenticated = true })
 
@@ -51,12 +63,8 @@ export class EnduserSession extends Session {
   authenticate = async (email: string, password: string) => this.handle_new_session(
     await this.POST<{email: string, password: string }, { authToken: string, enduser: Enduser }>('/v1/login-enduser', { email, password })
   )
-
-  subscribe = (rooms: { [index: string]: keyof ClientModelForName } ) => this.EMIT('join-rooms', { rooms })
-
-  handle_events = ( handlers: { [index: string]: (a: any) => void } ) => {
-    for (const handler in handlers) this.ON(handler, handlers[handler])
-  } 
-
-  unsubscribe = (roomIds: string[]) => this.EMIT('leave-rooms', { roomIds })
+  logout = async () => {
+    this.clearState()
+    this.api.endusers.logout().catch(console.error)
+  }
 }

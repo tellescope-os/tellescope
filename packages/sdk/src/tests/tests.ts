@@ -17,7 +17,7 @@ import {
   // InputValidation,
 } from "@tellescope/validation"
 
-import { Session, APIQuery } from "../sdk"
+import { Session, APIQuery, EnduserSession } from "../sdk"
 import { url_safe_path } from "@tellescope/utilities"
 import { DEFAULT_OPERATIONS } from "@tellescope/constants"
 import { 
@@ -30,9 +30,12 @@ import {
   assert,
   async_test,
   log_header,
-  objects_equivalent,
   wait,
 } from "@tellescope/testing"
+
+import {
+  objects_equivalent,
+} from "@tellescope/utilities"
 
 
 const host = process.env.TEST_URL || 'http://localhost:8080'
@@ -41,8 +44,28 @@ const [email2, password2] = [process.env.TEST_EMAIL_2, process.env.TEST_PASSWORD
 
 const userId = '60398b0231a295e64f084fd9'
 
+// const example_SDK_usage = async () => {
+//   // initialize SDK and authenticate a user
+//   const sdk = new Session()
+//   await sdk.authenticate("user-email", 'user-password')
+
+//   // create a record, using Enduser model as example
+//   const enduser = await sdk.api.endusers.createOne({ email: "enduser1@tellescope.com" })
+
+//   // update an existing record
+//   await sdk.api.endusers.updateOne(enduser.id, { phone: "+15555555555" })
+
+//   // fetch a record by id, or a list of recent records
+//   const existingEnduser: Enduser = await sdk.api.endusers.getOne(enduser.id)  
+//   const existingEndusers: Enduser[] = await sdk.api.endusers.getSome({ limit: 5, lastId: enduser.id })  
+
+//   // delete an individual record
+//   await sdk.api.endusers.deleteOne(enduser.id)
+// }
+
 const sdk = new Session()
 const sdkOther = new Session({ host, apiKey: "ba745e25162bb95a795c5fa1af70df188d93c4d3aac9c48b34a5c8c9dd7b80f7" })
+const enduserSDK = new EnduserSession({ host })
 // const sdkOtherEmail = "sebass@tellescope.com"
 
 if (!(email && password && email2 && password2)) {
@@ -783,6 +806,65 @@ const chat_tests = async() => {
   )
 }
 
+const enduserAccessTests = async () => {
+  const email = 'enduser@tellescope.com'
+  const password = 'testpassword'
+
+  const enduser = await sdk.api.endusers.createOne({ email })
+  await sdk.api.endusers.setPassword(enduser.id, password).catch(console.error)
+  await enduserSDK.authenticate(email, password).catch(console.error)
+
+  for (const n in schema) {
+    const endpoint = url_safe_path(n)
+    const model = schema[n as keyof typeof schema]
+
+    if (!model?.enduserActions?.read && (model.defaultActions.read || model.customActions.read)) {
+      await async_test(
+        `no-enduser-access getOne (${endpoint})`,
+        () => enduserSDK.GET(`/v1/${endpoint.substring(0, endpoint.length - 1)}/:id`), 
+        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+      )
+    } 
+    if (!model.enduserActions?.readMany && (model.defaultActions.readMany || model.customActions.readMany)) {
+      await async_test(
+        `no-enduser-access getSome (${endpoint})`,
+        () => enduserSDK.GET(`/v1/${endpoint}`), 
+        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+      )
+    } 
+    if (!model.enduserActions?.create && (model.defaultActions.create || model.customActions.create)) {
+      await async_test(
+        `no-enduser-access createOne (${endpoint})`,
+        () => enduserSDK.POST(`/v1/${endpoint.substring(0, endpoint.length - 1)}`), 
+        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+      )
+    } 
+    if (!model.enduserActions?.createMany && (model.defaultActions.createMany || model.customActions.createMany)) {
+      await async_test(
+        `no-enduser-access createMany (${endpoint})`,
+        () => enduserSDK.POST(`/v1/${endpoint}`), 
+        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+      )
+    } 
+    if (!model.enduserActions?.update && (model.defaultActions.update || model.customActions.update)) {
+      await async_test(
+        `no-enduser-access update (${endpoint})`,
+        () => enduserSDK.PATCH(`/v1/${endpoint.substring(0, endpoint.length - 1)}/:id`), 
+        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+      )
+    } 
+    if (!model.enduserActions?.delete && (model.defaultActions.delete || model.customActions.delete)) {
+      await async_test(
+        `no-enduser-access delete (${endpoint})`,
+        () => enduserSDK.DELETE(`/v1/${endpoint.substring(0, endpoint.length - 1)}/:id`), 
+        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+      )
+    } 
+  }
+
+  await sdk.api.endusers.deleteOne(enduser.id)
+}
+
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -802,6 +884,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
 
   log_header("API")
   await setup_tests()
+  await enduserAccessTests()
   await multi_tenant_tests() // should come right after setup tests
   await threadKeyTests()
 

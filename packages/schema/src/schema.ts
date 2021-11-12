@@ -32,6 +32,7 @@ import {
   messageTemplateTypeValidator,
   stringValidator250,
   stringValidator5000,
+  listOfDisplayNameInfo,
 } from "@tellescope/validation"
 
 import {
@@ -169,6 +170,10 @@ const sideEffects = {
   sendSMSMessages: {
     name: "sendSMSMessages",
     description: "Sends emails if logOnly is not true"
+  },
+  updateChatroomCache: {
+    name: "updateChatroomCache",
+    description: "Updates the chatroom with a preview of the recent message and sender"
   }
 }
 export type SideEffectNames = keyof typeof sideEffects
@@ -208,6 +213,10 @@ export type CustomActions = {
       { id: string, authToken: string }, 
       { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
     >,
+    logout: CustomAction<{ }, { }>,
+  },
+  users: {
+    display_names: CustomAction<{ }, { fname: string, lname: string, id: string }[]> 
   }
 } 
 
@@ -261,7 +270,16 @@ export const schema: SchemaV1 = {
           enduser: { validator:  'enduser' }, 
         } as any // add enduser eventually, when validator defined
       },
+      logout: {
+        op: "custom", access: 'update', method: "post",
+        name: 'Logout enduser',
+        path: '/logout-enduser',
+        description: "Logs out an enduser",
+        parameters: {},
+        returns: {},
+      },
     },
+    enduserActions: { logout: {} },
     publicActions: {
       login: {
         op: "custom", access: 'read', method: "post",
@@ -740,6 +758,9 @@ export const schema: SchemaV1 = {
     },
     fields: {
       ...BuiltInFields,
+      title: {
+        validator: stringValidator100,
+      },
       type: {
         validator: chatRoomTypeValidator,
         initializer: () => 'internal'
@@ -759,6 +780,16 @@ export const schema: SchemaV1 = {
       enduserIds: {
         validator: listOfMongoIdStringValidator,
         // add pull dependency for enduser deletion?
+      },
+      recentMessage: {
+        validator: stringValidator,
+        initializer: () => '',
+        readonly: true,
+      },
+      recentSender: {
+        validator: mongoIdStringValidator,
+        initializer: () => '',
+        readonly: true,
       }
     },
     defaultActions: DEFAULT_OPERATIONS,
@@ -766,7 +797,11 @@ export const schema: SchemaV1 = {
     customActions: {},
   },
   chats: {
-    info: {},
+    info: {
+      sideEffects: {
+        create: [sideEffects.updateChatroomCache]
+      }
+    },
     constraints: { 
       unique: [], 
       relationship: [],
@@ -817,7 +852,7 @@ export const schema: SchemaV1 = {
         validator: idStringToDateValidator,
       },
     },
-    defaultActions: DEFAULT_OPERATIONS,
+    defaultActions: { create: {}, read: {}, readMany: {}, delete: {} }, // avoid createMany for now
     readFilter: {
       roomId: { required: true },
     },
@@ -832,7 +867,19 @@ export const schema: SchemaV1 = {
       relationship: [],
     },
     defaultActions: { read: {}, readMany: {} },
-    customActions: {},
+    customActions: {
+      display_names: {
+        op: "custom", access: 'read', method: "get",
+        name: 'User Display Names',
+        path: '/user-display-names',
+        description: "Gets display names for users, accessible by endusers",
+        parameters: {},
+        returns: { 
+          validator: listOfDisplayNameInfo
+        },
+      },
+    },
+    enduserActions: { display_names: {} },
     fields: {
       ...BuiltInFields, 
       email: {
