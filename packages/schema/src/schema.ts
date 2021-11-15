@@ -213,10 +213,12 @@ export type CustomActions = {
       { id: string, authToken: string }, 
       { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
     >,
+    refresh_session: CustomAction<{}, { enduser: Enduser, authToken: string }>,
     logout: CustomAction<{ }, { }>,
   },
   users: {
-    display_names: CustomAction<{ }, { fname: string, lname: string, id: string }[]> 
+    display_names: CustomAction<{ }, { fname: string, lname: string, id: string }[]>,
+    refresh_session: CustomAction<{}, { user: UserSession, authToken: string }>,
   }
 } 
 
@@ -270,6 +272,17 @@ export const schema: SchemaV1 = {
           enduser: { validator:  'enduser' }, 
         } as any // add enduser eventually, when validator defined
       },
+      refresh_session: {
+        op: "custom", access: 'update', method: "post",
+        name: 'Refresh enduser authentication',
+        path: '/refresh-enduser-session',
+        description: "When called by an authenticated enduser, generates a new session",
+        parameters: { },
+        returns: { 
+          authToken: { validator: stringValidator, required: true }, 
+          enduser: { validator:  'enduser' }, 
+        } as any // add enduser eventually, when validator defined
+      },
       logout: {
         op: "custom", access: 'update', method: "post",
         name: 'Logout enduser',
@@ -279,7 +292,7 @@ export const schema: SchemaV1 = {
         returns: {},
       },
     },
-    enduserActions: { logout: {} },
+    enduserActions: { logout: {}, refresh_session: {} },
     publicActions: {
       login: {
         op: "custom", access: 'read', method: "post",
@@ -807,6 +820,12 @@ export const schema: SchemaV1 = {
       relationship: [],
       access: [{ type: 'dependency', foreignModel: 'chat_rooms', foreignField: '_id', accessField: 'roomId' }]
     },
+    defaultActions: { create: {}, read: {}, readMany: {}, delete: {} }, // avoid createMany for now
+    readFilter: {
+      roomId: { required: true },
+    },
+    enduserActions: { create: {}, read: {}, readMany: {} },
+    customActions: {},
     fields: {
       ...BuiltInFields,
       roomId: {
@@ -852,12 +871,6 @@ export const schema: SchemaV1 = {
         validator: idStringToDateValidator,
       },
     },
-    defaultActions: { create: {}, read: {}, readMany: {}, delete: {} }, // avoid createMany for now
-    readFilter: {
-      roomId: { required: true },
-    },
-    enduserActions: { create: {}, read: {}, readMany: {} },
-    customActions: {},
   },
   users: {
     info: {},
@@ -878,6 +891,18 @@ export const schema: SchemaV1 = {
           validator: listOfDisplayNameInfo
         },
       },
+      refresh_session: {
+        op: "custom", access: 'update', method: "post",
+        name: 'Refresh enduser authentication',
+        path: '/refresh-session',
+        description: "When called by an authenticated user, generates a new session",
+        parameters: { },
+        returns: { 
+          authToken: { validator: stringValidator, required: true }, 
+          enduser: { validator:  'user' }, 
+        } as any // add enduser eventually, when validator defined
+      },
+
     },
     enduserActions: { display_names: {} },
     fields: {

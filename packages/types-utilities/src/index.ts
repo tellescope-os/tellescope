@@ -19,3 +19,5 @@ export type APIError = {
 }
 
 export type SessionType = "user" | "enduser"
+
+export type SortOption = "oldFirst" | "newFirst"

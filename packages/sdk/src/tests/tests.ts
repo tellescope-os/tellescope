@@ -322,7 +322,7 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
   )
   await async_test(
     `get-${safeName}`, 
-    () => queries.getSome({}, filter), 
+    () => queries.getSome({ filter }), 
     { onResult: ([d, /*...others */]) => {
         // if (others.length !== 0) return false // some collections are not reset during testing, like API keys
         if (!d?.id) return false
@@ -724,7 +724,7 @@ const chat_tests = async() => {
   )
   await async_test(
     `get-chats (with filter)`, 
-    () => sdk.api.chats.getSome({}, { roomId: room.id }), 
+    () => sdk.api.chats.getSome({ filter: { roomId: room.id } }), 
     { onResult: c => c?.length === 2 }
   )
 
@@ -735,25 +735,27 @@ const chat_tests = async() => {
   )
   await async_test(
     `get-chats not allowed`, 
-    () => sdk2.api.chats.getSome({}, { roomId: room.id }), 
+    () => sdk2.api.chats.getSome({ filter: { roomId: room.id } }), 
     { shouldError: true, onError: e => e.message === 'You do not have permission to access this resource' }
   )
-  await async_test(
-    `update-chat not allowed`, 
-    () => sdk2.api.chats.updateOne(chat.id, { message: 'Hi' }), 
-    { shouldError: true, onError: e => e.message === 'You do not have permission to access this resource' }
-  )
+  // currently disabled endpoint altogether
+  // await async_test(
+  //   `update-chat not allowed`, 
+  //   () => sdk2.api.chats.updateOne(chat.id, { message: 'Hi' }), 
+  //   { shouldError: true, onError: e => e.message === 'You do not have permission to access this resource' }
+  // )
   await async_test(
     `delete-chat not allowed`, 
     () => sdk2.api.chats.deleteOne(chat.id), 
     { shouldError: true, onError: e => e.message === 'You do not have permission to access this resource' }
   )
 
-  await async_test(
-    `update-chat can't update roomId`, 
-    () => sdk.api.chats.updateOne(chat.id, { roomId: room.id } as any), // cast to any to allow calling with bad argument, but typing should catch this too
-    { shouldError: true, onError: e => e.message === 'Error parsing field updates: roomId is not valid for updates' }
-  )
+  // currently disabled endpoint altogether
+  // await async_test(
+  //   `update-chat can't update roomId`, 
+  //   () => sdk.api.chats.updateOne(chat.id, { roomId: room.id } as any), // cast to any to allow calling with bad argument, but typing should catch this too
+  //   { shouldError: true, onError: e => e.message === 'Error parsing field updates: roomId is not valid for updates' }
+  // )
 
   await sdk.api.chat_rooms.deleteOne(room.id)
   await wait(undefined, 25)
@@ -783,12 +785,12 @@ const chat_tests = async() => {
   )
   await async_test(
     `get-chats (shared, user1)`,
-    () => sdk.api.chats.getSome({}, { roomId: sharedRoom.id }), 
+    () => sdk.api.chats.getSome({ filter: { roomId: sharedRoom.id } }, ), 
     { onResult: cs => cs.length === 2 && !!cs.find(c => c.id === sharedChat.id) && !!cs.find(c => c.id === sharedChat2.id) }
   )
   await async_test(
     `get-chats (shared, user2)`,
-    () => sdk2.api.chats.getSome({}, { roomId: sharedRoom.id }), 
+    () => sdk2.api.chats.getSome({ filter: { roomId: sharedRoom.id } }), 
     { onResult: cs => cs.length === 2 && !!cs.find(c => c.id === sharedChat.id) && !!cs.find(c => c.id === sharedChat2.id) }
   )
 

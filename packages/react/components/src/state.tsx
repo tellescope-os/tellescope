@@ -144,7 +144,7 @@ export const useChatRooms = (type: SessionType) => {
 
 export const useChats = (roomId: string, type: SessionType) => {
   const session = useResolvedSession(type)
-  const toReturn = useStateManagerForMappedList(roomId, () => session.api.chats.getSome({}, { roomId }))
+  const toReturn = useStateManagerForMappedList(roomId, () => session.api.chats.getSome({ filter:  { roomId }}))
   const [_, { update: updateChatRoom }] = useChatRooms(type)  
 
 

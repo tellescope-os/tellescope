@@ -1,9 +1,8 @@
 import axios from "axios"
 import { Socket, io } from 'socket.io-client'
 
-import {  } from "@tellescope/types-models"
+import { SortOption  } from "@tellescope/types-utilities"
 import { ClientModelForName_required, ClientModelForName_readonly, ClientModelForName_updatesDisabled } from "@tellescope/types-client"
-import { url_safe_path } from "@tellescope/utilities"
 
 export const DEFAULT_HOST = 'https://api.tellescope.com'
 
@@ -13,6 +12,10 @@ export interface SessionOptions {
   host?: string;
   cacheKey?: string;
   handleUnauthenticated?: () => Promise<void>;
+}
+
+interface RequestOptions {
+  refresh_session?: () => Promise<any>,
 }
 
 export type Filter<T> = { [K in keyof T]: T[K] }
@@ -31,23 +34,6 @@ export interface APIQuery<
   getSome: (o?: { lastId?: string, limit?: number, sort?: SortOption, threadKey?: string }, f?: Filter<Partial<T>>) => Promise<T[]>
   updateOne: (id: string, updates: UPDATE, options?: CustomUpdateOptions) => Promise<void>;
   deleteOne: (id: string) => Promise<void>;
-}
-
-export const defaultQueries = <N extends keyof ClientModelForName>(
-  s: Session, n: keyof ClientModelForName_required
-): APIQuery<N> => {
-
-  const safeName = url_safe_path(n)
-  const singularName = (safeName).substring(0, safeName.length - 1)
-
-  return {
-    createOne: o => s.POST(`/v1/${singularName}`, o),
-    createSome: os => s.POST(`/v1/${safeName}`, { create: os }),
-    getOne: (id, filter) => s.GET(`/v1/${singularName}/${id}`, { filter }),
-    getSome: (o, filter) => s.GET(`/v1/${safeName}`, { ...o, filter }),
-    updateOne: (id, updates, options) => s.PATCH(`/v1/${singularName}/${id}`, { updates, options }),
-    deleteOne: id => s.DELETE(`/v1/${singularName}/${id}`),
-  }
 }
 
 const generateBearer = (authToken: string) => `Bearer ${authToken}`
@@ -75,10 +61,12 @@ export class Session {
   handleUnauthenticated?: SessionOptions['handleUnauthenticated']
   socketAuthenticated: boolean;
   userInfo: { businessId?: string };
+  sessionStart = Date.now();
+  AUTO_REFRESH_MS = 3600000 // 1hr elapsed
 
   config: { headers: { Authorization: string }};
 
-  constructor(o={} as SessionOptions) {
+  constructor(o={} as SessionOptions & RequestOptions) {
     this.host= o.host ?? DEFAULT_HOST
     this.apiKey = o.apiKey ?? '';
     this.socket = undefined as Socket | undefined
@@ -132,7 +120,6 @@ export class Session {
 
     return err
   }
-
   POST = async <A,R=void>(endpoint: string, args?: A, authenticated=true) => {
     try {
       return (await axios.post(
@@ -173,7 +160,7 @@ export class Session {
     } catch(err) { throw await this.errorHandler(err) }
   }
 
-  EMIT = async (route: string, args: object, authenticated=true) => {
+  EMIT = async (route: string, args: object, authenticated=true, options={} as RequestOptions) => {
     this.socket?.emit(route, { ...args, ...authenticated ? { authToken: this.authToken } : {} } )
   }
 

@@ -35,6 +35,7 @@
     "@tellescope/testing": "^0.0.5",
     "@tellescope/types-client": "^0.0.5",
     "@tellescope/types-models": "^0.0.5",
+    "@tellescope/types-utilities": "^0.0.5",
     "@tellescope/utilities": "^0.0.5",
     "@tellescope/validation": "^0.0.5",
     "@types/axios": "^0.14.0",

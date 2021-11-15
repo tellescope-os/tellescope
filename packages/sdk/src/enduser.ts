@@ -1,12 +1,11 @@
 import { io } from 'socket.io-client'
 
-import { Session, SessionOptions, APIQuery, defaultQueries } from "./session"
-import {
-  PublicEndpoints,
-} from "./public"
+import { Session, SessionOptions, APIQuery } from "./session"
+import { url_safe_path } from "@tellescope/utilities"
 
 import {
   ClientModelForName,
+  ClientModelForName_required,
   Enduser,
 } from "@tellescope/types-client"
 import { stringValidator } from "@tellescope/validation";
@@ -14,6 +13,23 @@ import { stringValidator } from "@tellescope/validation";
 export interface EnduserSessionOptions extends SessionOptions {}
 
 type EnduserAccessibleModels = "chat_rooms" | 'chats' 
+
+export const defaultQueries = <N extends keyof ClientModelForName>(
+  s: EnduserSession, n: keyof ClientModelForName_required
+): APIQuery<N> => {
+
+  const safeName = url_safe_path(n)
+  const singularName = (safeName).substring(0, safeName.length - 1)
+
+  return {
+    createOne: o => s._POST(`/v1/${singularName}`, o),
+    createSome: os => s._POST(`/v1/${safeName}`, { create: os }),
+    getOne: (id, filter) => s._GET(`/v1/${singularName}/${id}`, { filter }),
+    getSome: (o) => s._GET(`/v1/${safeName}`, o),
+    updateOne: (id, updates, options) => s._PATCH(`/v1/${singularName}/${id}`, { updates, options }),
+    deleteOne: id => s._DELETE(`/v1/${singularName}/${id}`),
+  }
+}
 
 type Queries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
   endusers: {
@@ -24,7 +40,8 @@ type Queries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
   },
 }
 
-const loadDefaultQueries = (s: Session): { [K in EnduserAccessibleModels] : APIQuery<K> } => ({
+
+const loadDefaultQueries = (s: EnduserSession): { [K in EnduserAccessibleModels] : APIQuery<K> } => ({
   chat_rooms: defaultQueries(s, 'chat_rooms'),
   chats: defaultQueries(s, 'chats'),
 })
@@ -40,14 +57,37 @@ export class EnduserSession extends Session {
     this.api = loadDefaultQueries(this) as Queries
 
     this.api.endusers = {
-      logout: () => this.POST('/v1/logout-enduser')
+      logout: () => this._POST('/v1/logout-enduser')
     }
     this.api.users = { 
-      display_names: () => this.GET<{}, { fname: string, lname: string, id: string }[] >(`/v1/user-display-names`),
+      display_names: () => this._GET<{}, { fname: string, lname: string, id: string }[] >(`/v1/user-display-names`),
     }
+
+    if (this.authToken) this.refresh_session()
+  }
+
+  _POST = async <A,R=void>(endpoint: string, args?: A, authenticated=true) => {
+    await this.refresh_session_if_expiring_soon()
+    return await this.POST<A,R>(endpoint, args, authenticated)
+  }
+
+  _GET = async <A,R=void>(endpoint: string, params?: A, authenticated=true) => {
+    await this.refresh_session_if_expiring_soon()
+    return await this.GET<A,R>(endpoint, params, authenticated)
+  }
+
+  _PATCH = async <A,R=void>(endpoint: string, params?: A, authenticated=true) => {
+    await this.refresh_session_if_expiring_soon()
+    return await this.PATCH<A,R>(endpoint, params, authenticated)
+  }
+
+  _DELETE = async <A,R=void>(endpoint: string, args?: A, authenticated=true) => {
+    await this.refresh_session_if_expiring_soon()
+    return await this.DELETE<A,R>(endpoint, args, authenticated)
   }
 
   handle_new_session = async ({ authToken, enduser }: { authToken: string, enduser: Enduser }) => {
+    this.sessionStart = Date.now()
     this.setAuthToken(authToken)
     this.setUserInfo(enduser)
 
@@ -63,6 +103,20 @@ export class EnduserSession extends Session {
   authenticate = async (email: string, password: string) => this.handle_new_session(
     await this.POST<{email: string, password: string }, { authToken: string, enduser: Enduser }>('/v1/login-enduser', { email, password })
   )
+
+  refresh_session = async () => {
+    const { enduser, authToken } = await this.POST<{}, { enduser: Enduser } & { authToken: string }>('/v1/refresh-enduser-session')
+    await this.handle_new_session({ authToken, enduser })
+  }
+
+  refresh_session_if_expiring_soon = async () => {
+    const elapsedSessionMS =  Date.now() - (this.sessionStart || Date.now())
+    
+    if (this.AUTO_REFRESH_MS < elapsedSessionMS) { 
+      return await this.refresh_session()
+    }
+  }
+
   logout = async () => {
     this.clearState()
     this.api.endusers.logout().catch(console.error)
