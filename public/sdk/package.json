@@ -1,0 +1,57 @@
+{
+  "name": "@tellescope/sdk",
+  "version": "0.0.7",
+  "description": "Code for interacting with the Tellescope API",
+  "main": "./lib/cjs/sdk.js",
+  "module": "./lib/esm/sdk.js",
+  "types": "./lib/esm/sdk.d.ts",
+  "scripts": {
+    "test": "npm run-script build:cjs && npm run-script retest",
+    "retest": "npm run-script retest-sockets && npm run-script retest-api && npm run-script retest-public-api",
+    "test-api": "npm run-script build:cjs && npm run-script retest-api",
+    "retest-api": "node lib/cjs/tests/tests.js",
+    "test-public-api": "npm run-script build:cjs && npm run-script retest-public-api",
+    "retest-public-api": "node lib/cjs/tests/public_endpoint_tests.js",
+    "test-sockets": "npm run-script build:cjs && npm run-script retest-sockets",
+    "retest-sockets": "node lib/cjs/tests/socket_tests.js",
+    "build": "npm run-script build:esm && npm run-script build:cjs",
+    "build:esm": "tsc",
+    "build:cjs": "tsc --module commonjs --outDir lib/cjs",
+    "watch:cjs": "tsc --module commonjs --outDir lib/cjs --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tellescope-os/tellescope.git"
+  },
+  "author": "Sebastian Coates",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tellescope-os/tellescope/issues"
+  },
+  "homepage": "https://github.com/tellescope-os/tellescope#readme",
+  "dependencies": {
+    "@tellescope/constants": "^0.0.7",
+    "@tellescope/schema": "^0.0.7",
+    "@tellescope/testing": "^0.0.7",
+    "@tellescope/types-client": "^0.0.7",
+    "@tellescope/types-models": "^0.0.7",
+    "@tellescope/types-utilities": "^0.0.7",
+    "@tellescope/utilities": "^0.0.7",
+    "@tellescope/validation": "^0.0.7",
+    "@types/axios": "^0.14.0",
+    "axios": "^0.21.1",
+    "socket.io-client": "^4.2.0",
+    "source-map-support": "^0.5.20"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.33.0",
+    "@typescript-eslint/parser": "^4.33.0",
+    "eslint": "^7.32.0",
+    "nodemon": "^2.0.13",
+    "typescript": "^4.4.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "gitHead": "8093dbf4015d6196a234e4922564ddce3df0a9a7"
+}
