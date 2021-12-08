@@ -31,3 +31,6 @@ export const ACCESS_ACTION_FOR_OPERATION: { [K in Operation]: AccessAction} = {
 }
 
 export const PLACEHOLDER_ID = "60398bb15da8abef87ef41f5"
+
+export const USER_SESSION_TYPE = 'user'
+export const ENDUSER_SESSION_TYPE = 'enduser'

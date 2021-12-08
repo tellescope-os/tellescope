@@ -25,7 +25,7 @@ import {
 
 import { Session, APIQuery, EnduserSession } from "../sdk"
 import {  } from "@tellescope/utilities"
-import { DEFAULT_OPERATIONS } from "@tellescope/constants"
+import { DEFAULT_OPERATIONS, PLACEHOLDER_ID } from "@tellescope/constants"
 import { 
   schema, 
   Model, 
@@ -216,6 +216,20 @@ const filterTests = async () => {
 
   await sdk.api.endusers.deleteOne(enduser.id)
   await sdk.api.endusers.deleteOne(otherEnduser.id)
+}
+
+const updatesTests = async () => {
+  const enduser = await sdk.api.endusers.createOne({ email: 'test@tellescope.com', phone: '+15555555555' })
+  await sdk.api.endusers.updateOne(enduser.id, { phone: '+15555555552' }) // update to new phone number 
+  await sdk.api.endusers.updateOne(enduser.id, { phone: '+15555555552' }) // update to same phone number
+  assert(!!enduser, '', 'Updated phone number')
+
+  const task = await sdk.api.tasks.createOne({ text: "do the thing", completed: false })
+  await sdk.api.tasks.updateOne(task.id, { completed: false }) // test setting false (falsey value) on update
+  assert(!!task, '', 'Set completed false')
+
+  await sdk.api.tasks.deleteOne(task.id)
+  await sdk.api.endusers.deleteOne(enduser.id)
 }
 
 const instanceForModel = <N extends ModelName, T=ClientModelForName[N], REQ=ClientModelForName_required[N]>(model: Model<T, N>, i=0) => {
@@ -899,6 +913,31 @@ const enduserAccessTests = async () => {
     } 
   }
 
+  const ticketAccessible = await sdk.api.tickets.createOne({ enduserId: enduser.id, title: "Accessible ticket" })
+  const ticketInaccessible = await sdk.api.tickets.createOne({ enduserId: PLACEHOLDER_ID, title: "Inaccessible ticket" })
+  await async_test(
+    `enduser cannot create ticket for another enduser`,
+    () => enduserSDK.api.tickets.createOne({ enduserId: sdk.userInfo.id, title: "Error on Creation" }),
+    { shouldError: true, onError: e => e.message === "enduserId does not match creator id for enduser session" }
+  )
+  await async_test(
+    `enduser-access default, no access constraints, matching enduserId`,
+    () => enduserSDK.api.tickets.getOne(ticketAccessible.id),
+    { onResult: t => t.id === ticketAccessible.id }
+  )
+  await async_test(
+    `no-enduser-access default, no access constraints, non-matching enduserId`,
+    () => enduserSDK.api.tickets.getOne(ticketInaccessible.id),
+    { shouldError: true, onError: e => e.message.startsWith("Could not find")}
+  )
+  await async_test(
+    `no-enduser-access default, no access constraints, get many`,
+    () => enduserSDK.api.tickets.getSome(),
+    { onResult: ts => ts.length === 1 }
+  )
+
+  await sdk.api.tickets.deleteOne(ticketAccessible.id)
+  await sdk.api.tickets.deleteOne(ticketInaccessible.id)
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
@@ -915,17 +954,28 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   users: () => {},
   templates: () => {},
   files: () => {},
+  tickets: () => {},
+  meetings: () => {},
 };
 
 (async () => {
   await sdk.authenticate(email, password, host)
 
   log_header("API")
-  await setup_tests()
-  await multi_tenant_tests() // should come right after setup tests
-  await filterTests()
-  await threadKeyTests()
-  await enduserAccessTests()
+  
+  try {
+    await setup_tests()
+    await multi_tenant_tests() // should come right after setup tests
+    await filterTests()
+    await updatesTests()
+    await threadKeyTests()
+    await enduserAccessTests()
+  } catch(err) {
+    console.error("Failed during custom test")
+    console.error(err)
+    process.exit()
+  }
+
 
   let n: keyof typeof schema;
   for (n in schema) {

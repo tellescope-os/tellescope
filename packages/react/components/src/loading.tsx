@@ -18,7 +18,8 @@ interface LoadingElement <T>{
 }
 
 export const LoadingLinear = <T,>({ data, render, onError }: LoadingElement<T>) => {
-  if (data.status === LoadingStatus.Loading) return <LinearProgress/>
+  if (data.status === LoadingStatus.Unloaded) return <LinearProgress/>
+  if (data.status === LoadingStatus.Fetching) return <LinearProgress/>
   if (data.status === LoadingStatus.Error) return onError?.(data.value) ?? null
 
   return render(data.value)

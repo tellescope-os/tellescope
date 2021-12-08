@@ -1,14 +1,17 @@
 export interface Indexable<T=any> { [index: string] : T }
 export enum LoadingStatus {
-  Loading,
+  Unloaded,
+  Fetching,
   Error,
   Loaded,
 }
-export const LOADING: { status: LoadingStatus.Loading, value: undefined } = { 
-  status: LoadingStatus.Loading, value: undefined 
+export const UNLOADED: { status: LoadingStatus.Unloaded, value: undefined } = { 
+  status: LoadingStatus.Unloaded, 
+  value: undefined,
 }
 
-export type LoadedData<T=any> = typeof LOADING
+export type LoadedData<T=any> = typeof UNLOADED
+  | { status: LoadingStatus.Fetching, value: undefined }
   | { status: LoadingStatus.Error, value: APIError } 
   | { status: LoadingStatus.Loaded, value: T } 
 
@@ -46,4 +49,9 @@ export interface FileBlob extends Blob {
 export interface S3PresignedPost {
   url: string,
   fields: Indexable,
+}
+
+export type UserIdentity = {
+  type: SessionType,
+  id: string,
 }

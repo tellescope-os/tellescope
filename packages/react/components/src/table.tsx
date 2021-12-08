@@ -1,11 +1,18 @@
 import React, { useCallback, useState, CSSProperties, JSXElementConstructor } from "react"
 
 import {
+  Button,
   Elevated,  
   Styled,
   Paper,
   Typography,
+
+  NavigateBeforeIcon,
+  NavigateNextIcon,
 } from "./mui"
+import {
+  LabeledIconButton,
+} from "./controls"
 import {  
   Flex,
   withHover,
@@ -105,6 +112,7 @@ export const TableRow = <T extends Item>({ item, fields, onClick, onPress, hover
     >
       {fields.map(({ key, width=defaultWidthForFields(fields.length), textAlign='left', render }) => (
         <Flex flex={1} key={key} 
+          justifyContent={textAlign === "right" ? 'flex-end' : 'flex-start'}
           style={{ 
             textAlign, width: width, 
             color: DARKER_GRAY, fontSize, 
@@ -118,11 +126,12 @@ export const TableRow = <T extends Item>({ item, fields, onClick, onPress, hover
   ))
 )
 
-export interface PaginantionOptions {
+export interface PaginationOptions {
+  paginated?: boolean; // defaults to true
   pageSize?: number;
   initialPage?: number;
 }
-export interface PaginationProps<T> extends PaginantionOptions {
+export interface PaginationProps<T> extends PaginationOptions {
   items: T[];
 }
 export const usePagination = <T,>({ items, pageSize=10, initialPage }: PaginationProps<T>) => {
@@ -158,18 +167,120 @@ export const usePagination = <T,>({ items, pageSize=10, initialPage }: Paginatio
     goToPrevious,
     goToPage,
     mapSelectedItems,
+    previousDisabled: selectedPage === 0,
+    nextDisabled: selectedPage === numPages - 1
   }
 }
 
 export interface TableFooterProps extends Styled, HorizontalPadded, ReturnType<typeof usePagination> {}
-export const TableFooter = ({ horizontalPadding, style } : TableFooterProps) => {
+export const TableFooter = ({ horizontalPadding, style, previousDisabled, nextDisabled, selectedPage, numPages, goToNext, goToPrevious } : TableFooterProps) => {
   return (
-    <Flex flex={1} style={{ paddingLeft: horizontalPadding, paddingRight: horizontalPadding, ...style }}>
-
+    <Flex flex={1} alignItems="center"
+      style={{ 
+        paddingLeft: horizontalPadding, paddingRight: horizontalPadding, 
+        borderTop: BORDER_STYLE,
+        ...style,
+      }}
+    >
+      {numPages > 1 && 
+        <>
+        <LabeledIconButton Icon={NavigateBeforeIcon} label="Previous" placement="bottom" color="primary"
+          onClick={goToPrevious} disabled={previousDisabled} 
+        />
+        <LabeledIconButton Icon={NavigateNextIcon} label="Next" placement="bottom" color="primary"
+          onClick={goToNext} disabled={nextDisabled}
+        />
+        </>
+      }
+      <Typography style={{ fontSize: 12, marginLeft: 'auto' }}>
+        Page {selectedPage + 1} of {numPages}
+      </Typography>
     </Flex>
   )
 }
 
+// returns diaply numbers, not index
+const resolve_middle_page_numbers = (selectedPage: number, numPages: number): [undefined | number, undefined | number, undefined | number] => {
+  if (numPages <= 2) return [undefined, undefined, undefined]
+  if (numPages === 3) return [undefined, 2, undefined]
+  if (numPages === 4) return [2, 3, undefined]
+
+  if (selectedPage <= 2) return [2, 3, 4]
+  if (selectedPage >= numPages - 2) return [numPages - 3, numPages - 2, numPages - 1]
+
+  return [selectedPage, selectedPage + 1, selectedPage + 2]
+}
+
+const FOOTER_BUTTON_SIZE = 30
+export const TableFooterNumbered = ({ horizontalPadding, style, previousDisabled, nextDisabled, selectedPage, numPages, goToNext, goToPrevious, goToPage } : TableFooterProps) => {
+  const [middleLeft, middle, middleRight] = resolve_middle_page_numbers(selectedPage, numPages)
+
+  const buttonProps = { 
+    color: "primary" as "primary", 
+    variant: "contained" as "contained", 
+    style: { 
+      minHeight: FOOTER_BUTTON_SIZE, 
+      height: FOOTER_BUTTON_SIZE, 
+      minWidth: FOOTER_BUTTON_SIZE, 
+      width: FOOTER_BUTTON_SIZE, 
+      marginTop: 3,
+      marginBottom: 3,
+      marginRight: 1,
+    } 
+  }
+                    
+  return (
+    <Flex flex={1} alignItems="center"
+      style={{ 
+        paddingLeft: horizontalPadding, paddingRight: horizontalPadding, 
+        borderTop: BORDER_STYLE,
+        ...style,
+      }}
+    >
+      {numPages > 1 && 
+        <>
+        <Button disabled={previousDisabled} {...buttonProps} onClick={goToPrevious}>
+          <NavigateBeforeIcon/>
+        </Button>
+        <Button disabled={previousDisabled} { ...buttonProps } onClick={() => goToPage(0)}>
+          1
+        </Button>
+
+        {/* index is 1 below display number */}
+        {middleLeft !== undefined && 
+          <Button disabled={selectedPage === middleLeft - 1} {...buttonProps} onClick={() => goToPage(middleLeft - 1)}>
+            {middleLeft}
+          </Button> 
+        }
+        {middle !== undefined && 
+          <Button disabled={selectedPage === middle - 1} {...buttonProps} onClick={() => goToPage(middle - 1)}>
+            {middle}
+          </Button> 
+        }
+        {middleRight !== undefined && 
+          <Button disabled={selectedPage === middleRight - 1} {...buttonProps} onClick={() => goToPage(middleRight - 1)}> 
+            {middleRight}
+          </Button> 
+        }
+
+        <Button disabled={nextDisabled} {...buttonProps} onClick={() => goToPage(numPages - 1)}>
+          {numPages}
+        </Button>
+
+        <Button disabled={nextDisabled} {...buttonProps} onClick={goToNext}>
+          <NavigateNextIcon/>
+        </Button>
+        </>
+      }
+
+      <Typography style={{ fontSize: 12, marginLeft: 'auto' }}>
+        Page {selectedPage + 1} of {numPages}
+      </Typography>
+    </Flex>
+  )
+}
+
+const BORDER_STYLE = `1px solid ${GRAY}`
 export type WithTitle = {
   title?: string; 
   TitleComponent?: JSXElementConstructor<TableTitleProps>;
@@ -192,14 +303,15 @@ export interface TableProps<T extends Item> extends WithTitle, WithHeader<T>, Wi
 {
   items: T[],
   fields: TableHeaderProps<T>['fields']; // make fields required
-  pageOptions?: PaginantionOptions,
+  pageOptions?: PaginationOptions,
   paddingHorizontal?: number,
   headerFontSize?: CSSProperties['fontSize'],
   rowFontSize?: CSSProperties['fontSize'],
+  footerStyle?: 'numbered' | 'prev-next' 
 }
 export const Table = <T extends Item>({
   items,
-  pageOptions,
+  pageOptions={ paginated: true },
   style={},
   horizontalPadding=20,
   elevation=3,
@@ -214,10 +326,13 @@ export const Table = <T extends Item>({
   HeaderComponent=TableHeader,
   hoverColor,
   RowComponent=TableRow,
-  FooterComponent=TableFooter,
+  footerStyle='numbered',
+  FooterComponent=footerStyle === 'numbered' ? TableFooterNumbered : TableFooter, 
 }: TableProps<T> & Styled) => {
+  const paginated = pageOptions.paginated !== false // default to true
   const { ...paginationProps } = usePagination({ items, ...pageOptions, })
   RowComponent = RowComponent ?? TableRow // don't allow to be undefined 
+
 
   return (
     <Paper style={style} elevation={elevation}>
@@ -228,17 +343,23 @@ export const Table = <T extends Item>({
         }
         <List items={paginationProps.mapSelectedItems(i => i)} 
           renderProps={{ horizontalPadding }}
-          render={(item, index) => (
+          render={(item, { index }) => (
             <RowComponent key={item.id} item={item} fields={fields} fontSize={rowFontSize} hoverColor={hoverColor}
               horizontalPadding={horizontalPadding}
               style={{
-                // borderTop
+                borderBottom: (
+                  index < items.length - 1 && 
+                  (pageOptions.pageSize === undefined || index < pageOptions.pageSize - 1)) 
+                    ? BORDER_STYLE 
+                    : undefined,
               }}
               onClick={onClick} onPress={onPress} 
             />
           )
         } />
-        {FooterComponent && <FooterComponent {...paginationProps } horizontalPadding={horizontalPadding}/>}
+        {paginated && FooterComponent && 
+          <FooterComponent {...paginationProps } {...pageOptions} horizontalPadding={horizontalPadding}/>
+        }
       </Flex>
     </Paper>
   )

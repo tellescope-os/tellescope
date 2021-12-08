@@ -3,7 +3,11 @@ import { io } from 'socket.io-client'
 import { Session, SessionOptions, APIQuery } from "./session"
 import { url_safe_path } from "@tellescope/utilities"
 
-import { S3PresignedPost } from "@tellescope/types-utilities"
+import { S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
+import { 
+  AttendeeInfo, 
+  Meeting,
+} from "@tellescope/types-models"
 import {
   ClientModelForName,
   ClientModelForName_required,
@@ -14,7 +18,7 @@ import { stringValidator } from "@tellescope/validation";
 
 export interface EnduserSessionOptions extends SessionOptions {}
 
-type EnduserAccessibleModels = "chat_rooms" | 'chats' | 'files'
+type EnduserAccessibleModels = "chat_rooms" | 'chats' | 'files' | 'tickets'
 
 export const defaultQueries = <N extends keyof ClientModelForName>(
   s: EnduserSession, n: keyof ClientModelForName_required
@@ -44,6 +48,10 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
     prepare_file_upload: (args: { name: string, size: number, type: string }) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
     file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
   },
+  meetings: {
+    attendee_info: (args: { id: string }) => Promise<{ attendee: AttendeeInfo, others: UserIdentity[] }>,
+    my_meetings: () => Promise<Meeting[]>,
+  },
 }
 
 
@@ -51,6 +59,7 @@ const loadDefaultQueries = (s: EnduserSession): { [K in EnduserAccessibleModels]
   chat_rooms: defaultQueries(s, 'chat_rooms'),
   chats: defaultQueries(s, 'chats'),
   files: defaultQueries(s, 'files'),
+  tickets: defaultQueries(s, 'tickets'),
 })
 
 
@@ -68,6 +77,10 @@ export class EnduserSession extends Session {
     }
     this.api.users = { 
       display_names: () => this._GET<{}, { fname: string, lname: string, id: string }[] >(`/v1/user-display-names`),
+    }
+    this.api.meetings = { 
+      attendee_info: a => this._GET('/v1/attendee-info', a),
+      my_meetings: () => this._GET('/v1/my-meetings')
     }
 
     // files have defaultQueries

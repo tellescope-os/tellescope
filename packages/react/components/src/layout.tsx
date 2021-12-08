@@ -31,6 +31,7 @@ export interface Flex_T {
   alignContent?: CSSProperties['alignContent'] & ViewStyle['alignContent'],
   justifyContent?: CSSProperties['justifyContent'] & ViewStyle['justifyContent'],
   alignSelf?: CSSProperties['alignSelf'] & ViewStyle['alignSelf'],
+  component?: "div",
 }
 
 interface Flex_Web extends Flex_T, Styled, ClickableWeb {

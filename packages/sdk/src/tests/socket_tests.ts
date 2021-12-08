@@ -15,6 +15,7 @@ import {
 } from "@tellescope/types-utilities"
 import { EnduserSession } from "../enduser"
 import { Session, /* APIQuery */ } from "../sdk"
+import { PLACEHOLDER_ID } from "@tellescope/constants"
 
 
 const host = process.env.TEST_URL || 'http://localhost:8080'
@@ -62,14 +63,14 @@ const access_tests = async () => {
   // const user2Deletions: string[] = []
 
   user1.handle_events({
-    'created-chat-rooms': rs => user1Events.push(...rs),
-    'updated-chat-rooms': rs => user1Events.push(...rs),
-    'deleted-chat-rooms': rs => user1Events.push(...rs),
+    'created-chat_rooms': rs => user1Events.push(...rs),
+    // 'updated-chat_rooms': rs => user1Events.push(...rs), sent message will create update event as cached messagepreview/sender updated
+    // 'deleted-chat_rooms': rs => user1Events.push(...rs),
   })
   user2.handle_events({
-    'created-chat-rooms': rs => user2Events.push(...rs),
-    'updated-chat-rooms': rs => user2Events.push(...rs),
-    'deleted-chat-rooms': rs => user2Events.push(...rs),
+    'created-chat_rooms': rs => user2Events.push(...rs),
+    // 'updated-chat_rooms': rs => user2Events.push(...rs),
+    // 'deleted-chat_rooms': rs => user2Events.push(...rs),
   })
 
   const user1Id = user1.userInfo.id
@@ -83,6 +84,13 @@ const access_tests = async () => {
 
   assert(user1Events.length === 0, 'bad event distribution for filter', 'verify filter socket no self')
   assert(user2Events.length === 1 && sharedRoom.id === user2Events[0].id, 'bad event distribution for filter', 'verify filter socket push')
+
+  user1.removeAllSocketListeners('created-chat_rooms')
+  user1.removeAllSocketListeners('update-chat_rooms')
+  user1.removeAllSocketListeners('deleted-chat_rooms')
+  user2.removeAllSocketListeners('created-chat_rooms')
+  user2.removeAllSocketListeners('update-chat_rooms')
+  user2.removeAllSocketListeners('deleted-chat_rooms')
 
   user1.subscribe({ [room.id]: 'chats' })
   await wait(undefined, 10)
@@ -115,7 +123,7 @@ const access_tests = async () => {
   await wait(undefined, 25)
   const sharedChat2 = await user2.api.chats.createOne({ roomId: sharedRoom.id, message: "Hello there!", })
   await wait(undefined, 25)
-
+  
   assert(user1Events.length === 1 && user1Events[0].id === sharedChat2.id, 'bad chats subscription', 'verify chat received')
   assert(
     user2Events.length === 2 && user2Events[1].id === sharedChat.id, 
@@ -141,15 +149,18 @@ const enduser_tests = async () => {
   await wait(undefined, 25)
 
   user1.subscribe({ [room.id]: 'chats' })
+  user1.subscribe({ tickets: 'tickets' })
   await wait(undefined, 10)
   enduserSDK.subscribe({ [room.id]: 'chats' }) 
   await wait(undefined, 10)
 
   user1.handle_events({
     'created-chats': rs => userEvents.push(...rs),
+    'created-tickets': rs => userEvents.push(...rs),
   }) 
   enduserSDK.handle_events({
     'created-chats': rs => enduserEvents.push(...rs),
+    'created-tickets': rs => enduserEvents.push(...rs),
   }) 
 
   const messageToEnduser = await user1.api.chats.createOne({ roomId: room.id, message: "Hello!" })
@@ -158,7 +169,20 @@ const enduser_tests = async () => {
 
   assert(objects_equivalent(userEvents[0], messageToUser), 'no message on socket', 'push message to user')
   assert(objects_equivalent(enduserEvents[0], messageToEnduser), 'no message on socket', 'push message to enduser')
+
+  const unusedTicket = await user1.api.tickets.createOne({ enduserId: PLACEHOLDER_ID, title: "For Noone" }) // should not get pushed to enduser
+  const ticketForEnduser  = await user1.api.tickets.createOne({ enduserId: enduser.id, title: "For enduser" })
+  const ticketFromEnduser = await enduserSDK.api.tickets.createOne({ enduserId: enduser.id, title: "By enduser" })
+  await wait(undefined, 25)
+
+  assert(objects_equivalent(userEvents[1], ticketFromEnduser), 'no ticket on socket for user', 'push ticket to user')
+  assert(objects_equivalent(enduserEvents[1], ticketForEnduser), 'no ticket on socket for enduser', 'push ticket to enduser')
+  assert(enduserEvents[2] === undefined, 'enduser got an orgwide ticket', 'enduser does not receive org-wide ticket')
   
+  await user1.api.tickets.deleteOne(unusedTicket.id)
+  await user1.api.tickets.deleteOne(ticketForEnduser.id)
+  await user1.api.tickets.deleteOne(ticketFromEnduser.id)
+
   // test enduser logout
   await enduserSDK.api.endusers.logout()
   await async_test(

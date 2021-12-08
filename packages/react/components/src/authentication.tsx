@@ -63,14 +63,14 @@ export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptio
   )
 }
 
-export const UserProvider = (props: { sessionOptions?: SessionOptions, children: React.ReactNode }) => (
-  <WithUserState sessionOptions={props.sessionOptions}>
+export const UserProvider = (props: { children: React.ReactNode }) => (
+  <WithUserState>
       {props.children}
   </WithUserState>
 )
 
-export const EnduserProvider = (props: { sessionOptions?: SessionOptions, children: React.ReactNode }) => (
-  <WithEnduserState sessionOptions={props.sessionOptions}>
+export const EnduserProvider = (props: { children: React.ReactNode }) => (
+  <WithEnduserState>
       {props.children}
   </WithEnduserState>
 )

@@ -16,6 +16,10 @@ import {
   ChatRoomType,
   AccountType,
   MessageTemplateType,
+  MeetingStatus,
+  SessionType,
+  AttendeeInfo,
+  MeetingInfo,
 } from "@tellescope/types-models"
 
 import {
@@ -204,9 +208,9 @@ export const objectValidator = <T extends object>(i: InputValidation<Required<T>
     for (const field in i) {
       const value = (object as Indexable)[field] 
       const escaped = i[field](value) // may be required
-      if (escaped) { // omit undefined, optional arguments
-        validated[field] = escaped
-      }
+      if (escaped === undefined) continue
+
+      validated[field] = escaped
     }
 
     return validated
@@ -268,6 +272,7 @@ export const listValidator = <T>(b: EscapeFunction<T>): EscapeBuilder<T[]> => o 
 )
 
 export const listOfStringsValidator = listValidator(stringValidator()) 
+export const listOfObjectAnyFieldsValidator = listValidator(objectAnyFieldsValidator())
 
 export const booleanValidator: EscapeBuilder<boolean> = (options={}) => build_validator(
   boolean => {
@@ -659,8 +664,57 @@ const _MESSAGE_TEMPLATE_TYPES: { [K in MessageTemplateType]: any } = {
 export const MESSAGE_TEMPLATE_TYPES = Object.keys(_MESSAGE_TEMPLATE_TYPES) as MessageTemplateType[]
 export const messageTemplateTypeValidator = exactMatchValidator<MessageTemplateType>(MESSAGE_TEMPLATE_TYPES)
 
+const _MEETING_STATUSES: { [K in MeetingStatus]: any } = {
+  ended: '',
+  live: '',
+  scheduled: '',
+}
+export const MEETING_STATUSES = Object.keys(_MEETING_STATUSES) as MeetingStatus[]
+export const meetingStatusValidator = exactMatchValidator<MeetingStatus>(MEETING_STATUSES)
+
+export const sessionTypeValidator = exactMatchValidator<SessionType>(['user', 'enduser'])
+
 export const listOfDisplayNameInfo = listValidator(objectValidator<{ fname: string, lname: string, id: string }>({ 
   fname: nameValidator(), 
   lname: nameValidator(),
   id: listOfMongoIdStringValidator(),
+})())
+
+export const attendeeInfoValidator = objectValidator<AttendeeInfo>({
+  AttendeeId: stringValidator(),
+  ExternalUserId: mongoIdStringValidator(),
+  JoinToken: stringValidator(),
+})
+
+export const attendeeValidator = objectValidator<{
+  type: SessionType,
+  id: string,
+  info: { Attendee: AttendeeInfo },
+}>({ 
+  type: sessionTypeValidator(),
+  id: mongoIdStringValidator(),
+  info: attendeeInfoValidator(),
+}) 
+export const listOfAttendeesValidator = listValidator(attendeeValidator())
+export const meetingInfoValidator = objectValidator<{ Meeting: MeetingInfo }>({ 
+  Meeting: objectAnyFieldsValidator(),
+}) 
+
+export const userIdentityValidator = objectValidator<{
+  type: SessionType,
+  id: string,
+}>({ 
+  type: sessionTypeValidator(),
+  id: mongoIdStringValidator(),
+}) 
+export const listOfUserIndentitiesValidator = listValidator(userIdentityValidator())
+
+export const meetingsListValidator = listValidator(objectValidator<{
+  id: string,
+  updatedAt: string,
+  status: MeetingStatus,
+}>({
+  id: mongoIdStringValidator(),
+  updatedAt: stringValidator(),
+  status: meetingStatusValidator(),
 })())

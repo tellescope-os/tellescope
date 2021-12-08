@@ -11,10 +11,21 @@ import MuiLinearProgress from "@mui/material/LinearProgress"
 import MuiIconButton from "@mui/material/IconButton"
 import MuiTooltip from "@mui/material/Tooltip"
 
-import SendIconMui from "@mui/icons-material/Send"
-
 import { AutoComplete } from "./forms"
 import { DEFAULT_ICON_SIZE  } from "./constants"
+
+import SendIconMui from "@mui/icons-material/Send"
+import NavigateBeforeIconMui from '@mui/icons-material/NavigateBefore';
+import NavigateNextIconMui from '@mui/icons-material/NavigateNext';
+import VideoIconMui from '@mui/icons-material/Videocam';
+
+const Icon = ({ Component, size, ...props } : IconBuilderProps) => (
+  <Component style={{ fontSize: size ?? DEFAULT_ICON_SIZE }}/>
+)
+export const SendIcon = (p : IconProps) => <Icon {...p} Component={SendIconMui}/>
+export const NavigateBeforeIcon = (p : IconProps) => <Icon {...p} Component={NavigateBeforeIconMui}/>
+export const NavigateNextIcon = (p : IconProps) => <Icon {...p} Component={NavigateNextIconMui}/>
+export const VideoIcon = (p : IconProps) => <Icon {...p} Component={VideoIconMui}/>
 
 export type Styled = {
   style?: CSSProperties,
@@ -86,10 +97,6 @@ export interface IconProps {
 interface IconBuilderProps extends IconProps {
   Component: React.JSXElementConstructor<Styled>
 }
-const Icon = ({ Component, size, ...props } : IconBuilderProps) => (
-  <Component style={{ fontSize: size ?? DEFAULT_ICON_SIZE }}/>
-)
-export const SendIcon = (p : IconProps) => <Icon {...p} Component={SendIconMui}/>
 
 export type IconButtonProps = {
   children: React.ReactNode;
@@ -201,7 +208,7 @@ export interface TooltipProps {
   enterDelay?: number;
   enterNextDelay?: number,
 }
-export const Tooltip = ({ label, placement, arrow=true, open, children, enterDelay, enterNextDelay=enterDelay } : TooltipProps) => {
+export const Tooltip = ({ label, placement, arrow=true, open, children, enterDelay, enterNextDelay=enterDelay, ...props } : TooltipProps) => {
   return (
     <MuiTooltip title={label} placement={placement} arrow={arrow} open={open}
       enterDelay={enterDelay} enterNextDelay={enterNextDelay}
@@ -211,8 +218,12 @@ export const Tooltip = ({ label, placement, arrow=true, open, children, enterDel
         ...placement === 'bottom' ? { bottom: 5 } : {},
         ...placement === 'right' ? { right: 5 } : {},
       }}
+      {...props}
     >
-      {children}
+      {/* Wrap with div for hover to work properly */}
+      <div>
+        {children}
+      </div>
     </MuiTooltip>
   )
 }

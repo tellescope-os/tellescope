@@ -1,6 +1,10 @@
 import {
+  AttendeeInfo,
   JourneyState, 
+  MeetingStatus, 
+  Meeting,
   UserSession,
+  MeetingInfo,
 } from "@tellescope/types-models"
 
 import {
@@ -11,7 +15,7 @@ import {
   Enduser,
   File,
 } from "@tellescope/types-client"
-import { CustomUpdateOptions, SortOption, S3PresignedPost } from "@tellescope/types-utilities"
+import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"
 
 import { Session as SessionManager, SessionOptions, Filter } from "./session"
@@ -65,6 +69,8 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   users: defaultQueries(s, 'users'),
   templates: defaultQueries(s, 'templates'),
   files: defaultQueries(s, 'files'),
+  tickets: defaultQueries(s, 'tickets'),
+  meetings: defaultQueries(s, 'meetings'),
 })
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
@@ -82,6 +88,13 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     prepare_file_upload: (args: { name: string, size: number, type: string }) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
     file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
   },
+  meetings: {
+    start_meeting: () => Promise<{ id: string, meeting: { Meeting: MeetingInfo }, host: { Attendee: AttendeeInfo } }>, 
+    end_meeting: (args: { id: string }) => Promise<void>, 
+    add_attendees_to_meeting: (args: { id: string, attendees: UserIdentity[] }) => Promise<void>, 
+    my_meetings: () => Promise<Meeting[]>,
+    attendee_info: (args: { id: string }) => Promise<{ attendee: AttendeeInfo, others: UserIdentity[] }>,
+  },
 }
 
 export class Session extends SessionManager {
@@ -98,6 +111,12 @@ export class Session extends SessionManager {
     queries.users.display_names = () => this._GET<{}, { fname: string, lname: string, id: string }[]>(`/v1/user-display-names`),
     queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args),
     queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a),
+
+    queries.meetings.start_meeting = () => this._POST('/v1/start-meeting')
+    queries.meetings.end_meeting = a => this._POST('/v1/end-meeting', a)
+    queries.meetings.add_attendees_to_meeting = a => this._POST('/v1/add-attendees-to-meeting', a)
+    queries.meetings.attendee_info = a => this._GET('/v1/attendee-info', a)
+    queries.meetings.my_meetings = () => this._GET('/v1/my-meetings')
 
     this.api = queries
 
@@ -134,7 +153,6 @@ export class Session extends SessionManager {
   }
 
   refresh_session = async () => {
-    console.log('refreshing session')
     const { user, authToken } = await this.POST<{}, { user: UserSession } & { authToken: string }>('/v1/refresh-session')
     await this.handle_new_session({ ...user, authToken })
     return { user, authToken }

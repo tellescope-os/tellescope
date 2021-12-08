@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 // import DefaultIcon from '@mui/icons-material/Info';
 
 import {
+  Button,
+  ButtonProps,
   Tooltip,
   IconButton,
   CircularProgress,
@@ -48,7 +50,7 @@ export const LabeledIconButton = ({
   size=30,
   offsetX=0,
   offsetY=0,
-  enterDelay,
+  enterDelay=0,
   enterNextDelay=enterDelay,
 } : LabeledIconButton_T) => 
 {
@@ -77,26 +79,51 @@ export const LabeledIconButton = ({
 
 const CircularProgressIcon = ({ style } : Styled) => <Flex style={style}><CircularProgress style={style}/></Flex>
 
-interface AsyncAction <T>{
+interface AsyncAction <T=any>{
   action: () => Promise<T>,
-  onSuccess: (v: T) => void,
+  staysMounted?: boolean,
+  onSuccess?: (v: T) => void,
   onError?: (e: any) => void,
   onChange?: (processing: boolean) => void;
 }
-export const AsyncIconButton = <T,>({ action, onSuccess, onError, onChange, Icon, ...props } : LabeledIconButton_T & AsyncAction<T>) => {
+export const useAsyncAction = <T,>({ action, staysMounted=true, onSuccess, onError, onChange }: AsyncAction<T>) => {
   const [performingAction, setPerformingAction] = useState(false)
 
-  const handleClick = () => {
+  const handlePerformAction = () => {
     setPerformingAction(true)
     onChange?.(true)
 
     action()
     .then(onSuccess)
     .catch(onError ?? console.error)
-    .finally(() => { setPerformingAction(false); onChange?.(false) })
+    .finally(() => { 
+      if (staysMounted) {
+        setPerformingAction(false); 
+        onChange?.(false);
+      }
+    })
   }  
 
-  return <LabeledIconButton {...props} disabled={props.disabled ?? performingAction} onClick={handleClick}
+  return { performingAction, handlePerformAction }
+}
+export const AsyncIconButton = <T,>({ Icon, ...props } : LabeledIconButton_T & AsyncAction<T>) => {
+  const { performingAction, handlePerformAction } = useAsyncAction(props)
+
+  return <LabeledIconButton {...props} disabled={props.disabled ?? performingAction} onClick={handlePerformAction}
     Icon={performingAction ? CircularProgressIcon : Icon}
   />
+}
+interface AsyncButtonProps<T> extends AsyncAction<T> {
+  text: string,
+  loadingText?: string,
+  variant?: ButtonProps['variant'],
+}
+export const AsyncButton = <T,>({ text, loadingText=text, variant, ...props }: AsyncButtonProps<T>) => {
+  const { performingAction, handlePerformAction } = useAsyncAction(props)
+
+  return (
+    <Button disabled={performingAction} onClick={handlePerformAction} variant={variant}>
+      {performingAction ? loadingText : text}
+    </Button>
+  )
 }

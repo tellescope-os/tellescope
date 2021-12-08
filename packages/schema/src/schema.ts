@@ -13,12 +13,16 @@ import {
   JSONType,
   CRUD,
   HTTPMethod,
+  SessionType,
+  UserIdentity,
 } from "@tellescope/types-utilities"
 import {
   EnduserSession,
   ConfiguredSession,
   JourneyState,
   UserSession,
+  AttendeeInfo,
+  MeetingStatus,
 } from "@tellescope/types-models"
 
 import {
@@ -57,16 +61,24 @@ import {
   listOfDisplayNameInfo,
   fileTypeValidator,
   fileSizeValidator,
+  meetingStatusValidator,
+  listOfAttendeesValidator,
+  meetingInfoValidator,
+  listOfUserIndentitiesValidator,
+  attendeeInfoValidator,
+  listOfObjectAnyFieldsValidator,
+  meetingsListValidator,
 } from "@tellescope/validation"
 
 import {
   CREATOR_ONLY_ACCESS,
   DEFAULT_OPERATIONS,
   PLACEHOLDER_ID,
+  ENDUSER_SESSION_TYPE,
 } from "@tellescope/constants"
 export type RelationshipConstraint<T> = {
   explanation: string; // human readable, for documentation purposes
-  evaluate: (v: T, dependencies: Indexable<Partial<DatabaseModel>>) => string | void;
+  evaluate: (v: T, dependencies: Indexable<Partial<DatabaseModel>>, session: UserSession | EnduserSession) => string | void;
 }
 
 export type DependencyAccessConstraint <T> = { type: 'dependency', foreignModel: ModelName, foreignField: string, accessField: keyof T  }
@@ -84,7 +96,7 @@ export type Constraint <T> = {
   access?: AccessConstraint<T>[];
 }
 
-export type Initializer <T, R> = (a: T, s: ConfiguredSession | EnduserSession) => R
+export type Initializer <T, R> = (a: T, s: UserSession | EnduserSession) => R
 
 export type EndpointOptions = {
   // parameters used for endpoint that aren't stored in the model
@@ -156,7 +168,7 @@ type ReadFilter <T> = { [K in keyof T]?: { required: boolean } }
 
 // m is the original model (or undefined, if create)
 // allows for easier event handling based on specific updates (by comparing args to pre-update model)
-export type SideEffectHandler <T, O=any> = (args: Partial<T>[], m: (Partial<T> | undefined)[] | undefined, n: (Partial<T> & { _id: ObjectId })[], s: ConfiguredSession | EnduserSession, o: O) => Promise<ErrorInfo[]>;
+export type SideEffectHandler <T, O=any> = (args: Partial<T>[], m: (Partial<T> | undefined)[] | undefined, n: (Partial<T> & { _id: ObjectId })[], s: UserSession | EnduserSession, o: O) => Promise<ErrorInfo[]>;
 
 type SideEffect = {
   name: string;
@@ -250,7 +262,14 @@ export type CustomActions = {
   users: {
     display_names: CustomAction<{ }, { fname: string, lname: string, id: string }[]>,
     refresh_session: CustomAction<{}, { user: UserSession, authToken: string }>,
-  }
+  },
+  meetings: {
+    start_meeting: CustomAction<{ }, { id: string, meeting: object, host: AttendeeInfo }>, 
+    end_meeting: CustomAction<{ id: string }, { }>, 
+    add_attendees_to_meeting: CustomAction<{ id: string, attendees: UserIdentity[] }, { }>, 
+    my_meetings: CustomAction<{}, { id: string, updatedAt: string, status: MeetingStatus }[]>
+    attendee_info: CustomAction<{ id: string }, { attendee: AttendeeInfo, others: UserIdentity[] }>,
+  },
 } 
 
 export type PublicActions = {
@@ -810,7 +829,7 @@ export const schema: SchemaV1 = {
   chat_rooms: {
     info: {},
     constraints: { 
-      unique: [{ array: 'userIds' }], 
+      unique: [{ array: 'userIds' }, { array: 'enduserIds' }], 
       relationship: [],
       access: [
         { type: 'filter', field: 'userIds' }, 
@@ -851,7 +870,13 @@ export const schema: SchemaV1 = {
         validator: mongoIdStringValidator,
         initializer: () => '',
         readonly: true,
-      }
+      },
+      ticketId: {
+        validator: mongoIdStringValidator,
+      },
+      endedAt: {
+        validator: dateValidator,
+      },
     },
     defaultActions: DEFAULT_OPERATIONS,
     enduserActions: { create: {}, read: {}, readMany: {} },
@@ -985,6 +1010,9 @@ export const schema: SchemaV1 = {
       roles: {
         validator: listOfStringsValidator,
       },
+      skills: {
+        validator: listOfStringsValidator,
+      },
       avatar: {
         validator: stringValidator100,
         dependencies: [
@@ -1095,5 +1123,140 @@ export const schema: SchemaV1 = {
         },
       },
     },
-  }
+  },
+  tickets: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [
+        {
+          explanation: 'When created by an enduser, enduserId must match their id',
+          evaluate: ({ enduserId },_,session) => {
+          if (session.type === ENDUSER_SESSION_TYPE && session.id !== enduserId)
+            return "enduserId does not match creator id for enduser session"
+          } 
+        },
+      ],
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: {},
+    enduserActions: { create: {}, read: {}, readMany: {} },
+    fields: {
+      ...BuiltInFields, 
+      title: {
+        validator: stringValidator100,
+        required: true,
+        examples: ["Ticket Name"],
+      },
+      enduserId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+      },
+      closedAt: {
+        validator: dateValidator,
+      },
+      owner: {
+        validator: mongoIdStringValidator,
+      },
+      message: {
+        validator: stringValidator5000,
+        examples: ["Message"],
+      },
+      type: {
+        validator: stringValidator100,
+      },
+      skillsRequired: {
+        validator: listOfStringsValidator,
+      },
+    }
+  },
+  meetings: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: { },
+    customActions: {
+      start_meeting: {
+        op: "custom", access: 'create', method: "post",
+        name: 'Start Meeting',
+        path: '/start-meeting',
+        description: "Generates an video meeting room",
+        parameters: { },
+        returns: { 
+          id: {
+            validator: mongoIdStringValidator,
+          },
+          meeting: {
+            validator: objectAnyFieldsValidator,
+          },
+          host: {
+            validator: attendeeInfoValidator,
+          },
+        },
+      },
+      end_meeting: { 
+        op: "custom", access: 'update', method: "post",
+        name: "End Meeting",
+        path: '/end-meeting',
+        description: "Ends a video meeting",
+        parameters: { id: { validator: mongoIdStringValidator } },
+        returns: { },
+      },
+      add_attendees_to_meeting: { 
+        op: "custom", access: 'update', method: "post",
+        name: 'Add Attendees to Meeting',
+        path: '/add-attendees-to-meeting',
+        description: "Adds other attendees to a meeting",
+        parameters: { 
+          id: { validator: mongoIdStringValidator },
+          attendees: { validator: listOfUserIndentitiesValidator },
+        },
+        returns: { },
+      },
+      attendee_info: {
+        op: "custom", access: 'read', method: "get",
+        name: 'Get attendee info for meeting',
+        path: '/attendee-info',
+        description: "Gets meeting info for the current user, and details about other attendees",
+        parameters: { 
+          id: { validator: mongoIdStringValidator },
+        },
+        returns: { 
+          attendee: { validator: attendeeInfoValidator },
+          others: { validator: listOfUserIndentitiesValidator },
+        },
+      },
+      my_meetings: {
+        op: "custom", access: 'read', method: "get",
+        name: 'Get list of meetings',
+        path: '/my-meetings',
+        description: "Gets meetings for the current user.",
+        parameters: { 
+          id: { validator: mongoIdStringValidator },
+        },
+        returns: { validator: meetingsListValidator },
+      }
+    },
+    enduserActions: { my_meetings: {} },
+    fields: {
+      ...BuiltInFields, 
+      // all fields are updatable by custom endpoints only
+      status: {
+        validator: meetingStatusValidator,
+        readonly: true,
+        initializer: () => 'scheduled',
+      },
+      attendees: {
+        validator: listOfAttendeesValidator,
+        readonly: true,
+      },
+      meetingInfo: {
+        validator: meetingInfoValidator,
+        readonly: true
+      }
+    }
+  },
 }

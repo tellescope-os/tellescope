@@ -1,4 +1,4 @@
-import { Indexable } from "@tellescope/types-utilities"
+import { Indexable, UserIdentity } from "@tellescope/types-utilities"
 
 export type AccessType = "All" | "Assigned" | null
 export type AccessAction = "create" | "read" | "update" | "delete"
@@ -56,6 +56,7 @@ export interface OrganizationInfo {
   subscriptionExpiresAt: Date;
   subscriptionPeriod: number;
   roles?: string[];
+  skills?: string[];
   logoVersion?: number; // missing if no logo set
   themeColor?: string;
 }
@@ -262,6 +263,8 @@ export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom
   topic?: ChatRoomTopic;
   topicId?: string;
   enduserIds?: string[];
+  ticketId?: string; // for connecting with a related ticket
+  endedAt?: Date;
 }
 
 export interface ChatMessage_readonly extends ClientRecord {
@@ -304,6 +307,41 @@ export interface File_required {
 export interface File_updatesDisabled {}
 export interface File extends File_readonly, File_required, File_updatesDisabled {}
 
+export interface Ticket_readonly extends ClientRecord {}
+export interface Ticket_required {
+  title: string;
+  enduserId: string;
+}
+export interface Ticket_updatesDisabled {}
+export interface Ticket extends Ticket_readonly, Ticket_required, Ticket_updatesDisabled {
+  closedAt?: Date;
+  message?: string;
+  type?: string;
+  owner?: string;
+  skillsRequired?: string[];
+}
+
+export type AttendeeInfo = {
+  ExternalUserId: string,
+  AttendeeId: string,
+  JoinToken: string,
+}
+export type Attendee = UserIdentity & { info: { Attendee: AttendeeInfo }}
+export type MeetingStatus = 'scheduled' | 'live' | 'ended'
+export type MeetingInfo = {
+  MeetingId: string,
+  ExternalMeetingId: string,
+  MediaPlacement: object,
+}
+export interface Meeting_readonly extends ClientRecord {}
+export interface Meeting_required {}
+export interface Meeting_updatesDisabled {}
+export interface Meeting extends Meeting_readonly, Meeting_required, Meeting_updatesDisabled {
+  attendees: Attendee[],
+  meetingInfo: { Meeting: MeetingInfo },
+  status: MeetingStatus,
+}
+
 export type ModelForName_required = {
   endusers: Enduser_required;
   engagement_events: EngagementEvent_required;
@@ -317,6 +355,8 @@ export type ModelForName_required = {
   users: User_required;
   templates: MessageTemplate_required;
   files: File_required;
+  tickets: Ticket_required;
+  meetings: Meeting_required,
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
 
@@ -333,6 +373,8 @@ export interface ModelForName_readonly {
   users: User_readonly;
   templates: MessageTemplate_readonly;
   files: File_readonly;
+  tickets: Ticket_readonly;
+  meetings: Meeting_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
 
@@ -349,6 +391,8 @@ export interface ModelForName_updatesDisabled {
   users: User_updatesDisabled;
   templates: MessageTemplate_updatesDisabled;
   files: File_updatesDisabled;
+  tickets: Ticket_updatesDisabled;
+  meetings: Meeting_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
 
@@ -365,6 +409,8 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   users: User;
   templates: MessageTemplate;
   files: File;
+  tickets: Ticket;
+  meetings: Meeting;
 }
 export type ModelName = keyof ModelForName
 export type Model = ModelForName[keyof ModelForName]

@@ -48,9 +48,10 @@ export const convert_CSS_to_RNStyles = (style?: React.CSSProperties) => {
   return transform(input)
 }
 
-export const SendIcon = (p : IconProps) => (
-  <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="send"/>
-)
+export const SendIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="send"/>
+export const NavigateBeforeIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-left"/>
+export const NavigateNextIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-right"/>
+export const VideoIconMui = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video"/>
 
 export const Card = ({ style, flex, children, ...props } : CardProps) => (
   <MuiCard style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style)}} {...props}>
@@ -74,7 +75,7 @@ export const BottomNavigation = <T,>({ initialPageIndex, routes } : BottomNaviga
     <MuiBottomNavigation
       navigationState={{ index, routes }}
       onIndexChange={setIndex}
-      renderScene={MuiBottomNavigation.SceneMap(routing)}
+      renderScene={MuiBottomNavigation.SceneMap(routing as any)}
     />
   );
 };
@@ -107,7 +108,7 @@ export const TextField = ({
           height: size === 'small' ? 40 : undefined,
           ...convert_CSS_to_RNStyles(style),
         }}
-        
+        autoComplete='' 
         { ...props }
       />
       {helperText 

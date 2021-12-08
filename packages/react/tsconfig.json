@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "chat" },
+    { "path": "video-chat" },
     { "path": "components" }
   ],
   "exclude": [

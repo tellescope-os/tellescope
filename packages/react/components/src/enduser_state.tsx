@@ -8,6 +8,11 @@ import {
 } from "@tellescope/sdk"
 
 import {
+  Ticket,
+  Meeting,
+} from '@tellescope/types-client'
+
+import {
   useEnduserSession,
   WithEnduserSession,
 } from "./authentication"
@@ -16,15 +21,20 @@ import {
   createSliceForList,
   sharedConfig,
   useListStateHook,
+  WithFetchContext,
 } from "./state"
 
 type UserDisplayInfo = { fname: string, lname: string, id: string }
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
+const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')
+const meetingsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
 
 const store = configureStore({
   reducer: { 
     users: usersSlice.reducer,
+    tickets: ticketsSlice.reducer,
+    meetings: meetingsSlice.reducer,
     ...sharedConfig.reducer,
   },
 })
@@ -33,20 +43,23 @@ type AppDispatch = typeof store.dispatch
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
 const useTypedDispatch = () => useDispatch<AppDispatch>()
 
-type Values<T> = {
-  value: T[],
-  setValue: (t: T[]) => void,
-}
-
-export const WithEnduserState = ({ children, sessionOptions }: { children: React.ReactNode, sessionOptions?: SessionOptions  }) => (
-  <WithEnduserSession sessionOptions={sessionOptions}>
+export const WithEnduserState = ({ children }: { children: React.ReactNode  }) => (
+  <WithFetchContext>
   <Provider store={store}>
     {children}
   </Provider>
-  </WithEnduserSession>
+  </WithFetchContext>
 )
 export const useUserDisplayNames = () => {
   const session = useEnduserSession()  
   const state = useTypedSelector(s => s.users)
-  return useListStateHook(state, session.api.users.display_names, usersSlice)
+  return useListStateHook('users', state, session, usersSlice, session.api.users.display_names, { socketConnection: 'none' })
+}
+export const useTickets = () => {
+  const session = useEnduserSession()
+  return useListStateHook('tickets', useTypedSelector(s => s.tickets), session, ticketsSlice, session.api.tickets.getSome)
+}
+export const useMeetings = () => {
+  const session = useEnduserSession()
+  return useListStateHook('meetings', useTypedSelector(s => s.meetings), session, meetingsSlice, session.api.meetings.my_meetings)
 }

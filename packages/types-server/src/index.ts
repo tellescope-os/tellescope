@@ -25,13 +25,16 @@ export type Journey = ServerModelForName['journeys']
 export type MessageTemplate = ServerModelForName['templates']
 export type SMSMessage = ServerModelForName['sms_messages']
 export type Task = ServerModelForName['tasks']
+export type Ticket = ServerModelForName['tickets']
 export type User = ServerModelForName['users']
+export type Meeting = ServerModelForName['meetings']
 
 export type Organization = ToServerModel<BaseOrganization>
 export type DatabaseModel = ServerModelForName[keyof ModelForName]
 export type DatabaseRecord = ToServerModel<RecordInfo>
 export { ModelName } from "@tellescope/types-models"
 
+export type ClientType <T> = Omit<T, '_id'> & { id: string }
 
 export interface CustomUpdateOptions {
   replaceObjectFields?: boolean,

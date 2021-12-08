@@ -91,17 +91,37 @@ const defaultTextReceivedStyle: CSSProperties = {
   textAlign: 'left',
 }
 
+export interface MessagesHeaderProps {
+  room?: ChatRoom;
+  resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
+  style?: CSSProperties;
+}
+
+const MessagesHeader = ({ room, resolveSenderName, ...p}: MessagesHeaderProps) => (
+  <Flex>
+    <Typography>
+      {room &&  resolveSenderName?.(room)}
+    </Typography>
+  </Flex>
+)
+
 interface Messages_T {
+  resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
   messages: LoadedData<ChatMessage[]>,
   chatUserId: string,
+  Header?: React.JSXElementConstructor<MessagesHeaderProps>,
+  headerProps?: MessagesHeaderProps,
   receivedMessageStyle?: CSSProperties,
   receivedMessageTextStyle?: CSSProperties,
   sentMessageStyle?: CSSProperties,
   sentMessageTextStyle?: CSSProperties,
 }
 export const Messages = ({ 
+  resolveSenderName,
   messages, 
   chatUserId, 
+  Header=MessagesHeader,
+  headerProps,
   style=defaultMessagesStyle,
   receivedMessageStyle=defaultReceivedStyle, 
   receivedMessageTextStyle=defaultTextReceivedStyle, 
@@ -109,24 +129,24 @@ export const Messages = ({
   sentMessageTextStyle=defaultTextSentStyle,
 }: Messages_T & Styled) => (
   <LoadingLinear data={messages} render={messages => (
-    <List reverse style={style} items={messages} render={(message) => (
-      <Flex key={message.id} style={message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle}>
-        <Typography style={message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle}>
-          {message.message}
-        </Typography>    
-      </Flex>
-    )}/>    
+    <Flex column flex={1}>
+      {Header && <Header {...headerProps}/>}
+      <List reverse style={style} items={messages} render={(message) => (
+        <Flex key={message.id} style={message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle}>
+          <Typography style={message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle}>
+            {message.message}
+          </Typography>    
+        </Flex>
+      )}/>    
+    </Flex>
   )}/>
 )
 
-
 const defaultSidebarStyle: CSSProperties  = {
-  backgroundColor: "#858585",
   borderRadius: 5,
   overflowY: 'auto',
 }
 const defaultSidebarItemStyle: CSSProperties  = {
-  backgroundColor: "#454545",
   color: "#ffffff",
   borderRadius: 5,
   cursor: 'pointer',
@@ -145,6 +165,15 @@ const defaultMessagePreviewStyle: CSSProperties = {
   textAlign: 'right',
 }
 
+export interface ConversationPreviewProps {
+  onClick?: (roomId: string) => void;
+  room: ChatRoom;
+  selected?: boolean;
+  resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
+  style?: CSSProperties;
+  selectedStyle?: CSSProperties;
+}
+
 interface SidebarInfo {
   selectedRoom?: string;
   onRoomSelect: (roomId: string) => void;
@@ -152,27 +181,35 @@ interface SidebarInfo {
   selectedItemStyle?: CSSProperties;
   itemStyle?: CSSProperties;
   nameStyle?: CSSProperties;
+  PreviewComponent?: React.JSXElementConstructor<ConversationPreviewProps>
   previewStyle?: CSSProperties;
 }
 
-interface Sidebar_T extends SidebarInfo {
-  resolveChatName: (r: ChatRoom) => string;
+const ConversationPreview = ({ onClick, selected, room, resolveSenderName, style, selectedStyle }: ConversationPreviewProps) => (
+  <Flex flex={1} column onClick={() => !selected && onClick?.(room.id)} 
+    style={selected ? (selectedStyle ?? defaultSidebarItemStyleSelected) : (style ?? defaultSidebarItemStyle) }
+  >
+    <Typography style={defaultMessageNameStyle}>
+      <Resolver item={room} resolver={resolveSenderName ?? (() => room.id)}/>
+    </Typography>
+
+    <Typography style={defaultMessagePreviewStyle}>
+      {room.recentMessage ?? room.title}
+    </Typography>
+  </Flex>
+)
+
+interface ConversationsProps extends SidebarInfo {
+  resolveSenderName: (r: ChatRoom) => string;
   rooms: LoadedData<ChatRoom[]>;
 }
-export const Conversations = ({ rooms, selectedRoom, onRoomSelect, resolveChatName, style, selectedItemStyle, itemStyle, nameStyle, previewStyle } : Sidebar_T) => ( 
+export const Conversations = ({ rooms, selectedRoom, onRoomSelect, resolveSenderName, PreviewComponent=ConversationPreview, style, selectedItemStyle, itemStyle } : ConversationsProps) => ( 
   <LoadingLinear data={rooms} render={rooms =>
     <List style={style ?? defaultSidebarStyle} items={rooms} onClick={onRoomSelect} render={(room, { onClick, index }) => 
-      <Flex key={room.id} flex={1} column onClick={() => selectedRoom !== room.id && onClick?.(room.id ?? index)} 
-        style={selectedRoom === room.id ? (selectedItemStyle ?? defaultSidebarItemStyleSelected) : (itemStyle ?? defaultSidebarItemStyle) }
-      >
-        <Typography style={nameStyle ?? defaultMessageNameStyle}>
-          <Resolver item={room} resolver={resolveChatName}/>
-        </Typography>
-
-        <Typography style={previewStyle ?? defaultMessagePreviewStyle}>
-          {room.recentMessage}
-        </Typography>
-      </Flex>
+      <PreviewComponent key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
+        resolveSenderName={resolveSenderName ?? (() => room.id)}
+        selectedStyle={selectedItemStyle} style={itemStyle}
+      />
     }/>    
   }/>
 )
@@ -192,8 +229,7 @@ export const EndusersConversations = ({ enduserId, ...p } : SidebarInfo & { endu
     return ''
   }, [displayNames])
 
-  return <Conversations {...p} rooms={rooms} resolveChatName={resolveChatName}/>
-
+  return <Conversations {...p} rooms={rooms} resolveSenderName={resolveChatName}/>
 }
 
 export const UsersConversations = ({ userId, ...p } : SidebarInfo & { userId: string }) => {
@@ -211,24 +247,34 @@ export const UsersConversations = ({ userId, ...p } : SidebarInfo & { userId: st
     return ''
   }, [endusers])
 
-  return <Conversations {...p} rooms={rooms} resolveChatName={resolveChatName}/>
+  return <Conversations {...p} rooms={rooms} resolveSenderName={resolveChatName}/>
 }
 
 interface SendMessage_T {
   session: Session | EnduserSession,
   roomId: string,
   onNewMessage: (m: ChatMessage) => void;
+  placeholderText?: string;
   Icon?: React.ElementType<any>;
+  style?: CSSProperties;
 }
-export const SendMessage = ({ session, roomId, Icon=SendIcon, onNewMessage }: SendMessage_T) => {
+export const SendMessage = ({ 
+  session, 
+  roomId, 
+  Icon=SendIcon, 
+  onNewMessage, 
+  placeholderText="Enter a message", 
+  style={},
+}: SendMessage_T) => {
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
 
   return (
-    <Flex row flex={1} alignContent="center">
+    <Flex row flex={1} alignContent="center" style={style}>
       <Flex column flex={1}>
         <TextField variant="outlined" value={message} onChange={setMessage} disabled={sending}
-          aria-label="Enter a message" placeholder="Enter a message" size="small"
+          aria-label="Enter a message" 
+          placeholder={placeholderText} 
         />
       </Flex>
       <Flex column alignSelf="center">
@@ -251,7 +297,7 @@ interface SplitChat_T {
   type: SessionType,
 }
 export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : SplitChat_T & Styled) => {
-  const [, { updateElement: updateRoom }] = useChatRooms(type)
+  const [, { updateElement: updateRoom  }] = useChatRooms(type)
   const [selectedRoom, setSelectedRoom] = useState('')
   const [messages, { addElementForKey: addMessage }] = useChats(selectedRoom, type)
 
@@ -264,11 +310,15 @@ export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : Split
         }
       </Flex>
 
-      <Flex column flex={2} style={{ backgroundColor: '#cccccc', borderRadius: 5 }}>
+      <Flex column flex={2} style={{ borderRadius: 5 }}>
         {selectedRoom && 
           <>
           <Flex row flex={8}>
-            <Messages messages={messages} chatUserId={session.userInfo.id}/>
+            <Messages messages={messages} chatUserId={session.userInfo.id}
+              headerProps={{
+
+              }}
+            />
           </Flex>
 
           <Flex row flex={1} style={{ marginLeft: 10, marginRight: 10 }}>

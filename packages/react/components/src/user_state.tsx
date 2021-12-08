@@ -4,10 +4,6 @@ import { Provider, useSelector, TypedUseSelectorHook, useDispatch } from 'react-
 import { createSlice, configureStore, PayloadAction } from '@reduxjs/toolkit'
 
 import {
-  Enduser,
-} from "@tellescope/types-client"
-
-import {
   SessionOptions,
 } from "@tellescope/sdk"
 
@@ -20,13 +16,27 @@ import {
   sharedConfig,
   createSliceForList,
   useListStateHook,
+  WithFetchContext,
 } from "./state"
 
+import {
+  Enduser,
+  Meeting,
+  Task,
+  Ticket,
+} from "@tellescope/types-client"
+
 const endusersSlice = createSliceForList<Enduser, 'endusers'>('endusers')
+const tasksSlice = createSliceForList<Task, 'tasks'>('tasks')
+const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')
+const meetingsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
 
 const store = configureStore({
   reducer: { 
     endusers: endusersSlice.reducer,
+    tasks: tasksSlice.reducer,
+    tickets: ticketsSlice.reducer,
+    meetings: meetingsSlice.reducer,
     ...sharedConfig.reducer,
   },
 })
@@ -35,19 +45,27 @@ type AppDispatch = typeof store.dispatch
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
 const useTypedDispatch = () => useDispatch<AppDispatch>()
 
-type Values<T> = {
-  value: T[],
-  setValue: (t: T[]) => void,
-}
-
-export const WithUserState = ({ children, sessionOptions }: { children: React.ReactNode, sessionOptions?: SessionOptions  }) => (
-  <WithSession sessionOptions={sessionOptions}>  
-    <Provider store={store}>
-      {children}
-    </Provider>
-  </WithSession>
+export const WithUserState = ({ children }: { children: React.ReactNode  }) => (
+  <WithFetchContext>
+  <Provider store={store}>
+    {children}
+  </Provider>
+  </WithFetchContext>
 )
 
 export const useEndusers = () => {
-  return useListStateHook(useTypedSelector(s => s.endusers), useSession().api.endusers.getSome, endusersSlice)
+  const session = useSession()
+  return useListStateHook('endusers', useTypedSelector(s => s.endusers), session, endusersSlice, session.api.endusers.getSome)
+}
+export const useTasks = () => {
+  const session = useSession()
+  return useListStateHook('tasks', useTypedSelector(s => s.tasks), session, tasksSlice, session.api.tasks.getSome)
+}
+export const useTickets = () => {
+  const session = useSession()
+  return useListStateHook('tickets', useTypedSelector(s => s.tickets), session, ticketsSlice, session.api.tickets.getSome)
+}
+export const useMeetings = () => {
+  const session = useSession()
+  return useListStateHook('meetings', useTypedSelector(s => s.meetings), session, meetingsSlice, session.api.meetings.my_meetings)
 }

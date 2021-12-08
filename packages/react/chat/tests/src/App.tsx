@@ -12,10 +12,11 @@ import {
   useEnduserSession,
   // useEndusers,
   Flex,
-  FileUploader,
   Table,
   UserProvider,
   EnduserProvider,
+  WithEnduserSession,
+  WithSession,
   EnduserLogin,
   UserLogin,
 } from "@tellescope/react-components"
@@ -63,24 +64,26 @@ export const App = () => {
 
 
 const ChatsForUser = () => (
-  <UserProvider sessionOptions={{ host: 'http://localhost:8080' }}>
+  <WithSession sessionOptions={{ host: 'http://localhost:8080' }}>
+  <UserProvider>
     <ChatsForUserWithProvider/> 
   </UserProvider>
+  </WithSession>
 )
 
 const ChatsForUserWithProvider = () => {
   const session = useSession()
   if (!session.authToken) return <UserLogin/>
 
-  return <FileUploader session={session} onUpload={console.log}/>
-
   return <UserChatSplit/>
 }
 
 const ChatsForEnduser = () => (
-  <EnduserProvider sessionOptions={{ host: 'http://localhost:8080' }}>
+  <WithEnduserSession sessionOptions={{ host: 'http://localhost:8080' }}>
+  <EnduserProvider>
     <ChatsForEnduserWithProvider/>
   </EnduserProvider>
+  </WithEnduserSession>
 )
 const ChatsForEnduserWithProvider = () => {
   const session = useEnduserSession()
