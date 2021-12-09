@@ -12,6 +12,7 @@ import {
   ClientModelForName_readonly,
   ClientModelForName_required,
   ClientModelForName_updatesDisabled,
+  ChatRoom,
   Enduser,
   File,
 } from "@tellescope/types-client"
@@ -80,6 +81,7 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   endusers: {
     setPassword: (args: { id: string, password: string }) => Promise<void>,
     isAuthenticated: (args: { id: string, authToken: string }) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
+    generateAuthToken: (args: { id: string }) => Promise<{ authToken: string }>
   },
   users: {
     display_names: () => Promise<{ fname: string, lname: string, id: string }[]>,
@@ -95,6 +97,9 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     my_meetings: () => Promise<Meeting[]>,
     attendee_info: (args: { id: string }) => Promise<{ attendee: AttendeeInfo, others: UserIdentity[] }>,
   },
+  chat_rooms: {
+    join_room: (args: { id: string }) => Promise<{ room: ChatRoom }>,
+  },
 }
 
 export class Session extends SessionManager {
@@ -108,9 +113,11 @@ export class Session extends SessionManager {
     queries.journeys.updateState = ({id, name, updates}) => this._PATCH(`/v1/journey/${id}/state/${name}`, { updates })
     queries.endusers.setPassword = ({id, password}) => this._POST(`/v1/set-enduser-password`, { id, password })
     queries.endusers.isAuthenticated = ({id, authToken}) => this._GET(`/v1/enduser-is-authenticated`, { id, authToken })
+    queries.endusers.generateAuthToken = args => this._GET(`/v1/generate-enduser-auth-token`, args)
     queries.users.display_names = () => this._GET<{}, { fname: string, lname: string, id: string }[]>(`/v1/user-display-names`),
     queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args),
     queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a),
+    queries.chat_rooms.join_room = a => this._POST('/v1/join-chat-room', a),
 
     queries.meetings.start_meeting = () => this._POST('/v1/start-meeting')
     queries.meetings.end_meeting = a => this._POST('/v1/end-meeting', a)

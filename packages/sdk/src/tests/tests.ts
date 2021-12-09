@@ -2,7 +2,6 @@ require('source-map-support').install();
 
 import {
   Enduser,
-  ChatRoom,
   ClientModelForName,
   ClientModelForName_required,
 } from "@tellescope/types-client"
@@ -229,6 +228,16 @@ const updatesTests = async () => {
   assert(!!task, '', 'Set completed false')
 
   await sdk.api.tasks.deleteOne(task.id)
+  await sdk.api.endusers.deleteOne(enduser.id)
+}
+
+const generateEnduserAuthTests = async () => {
+  log_header("Generated Enduser authToken Tests")
+  const enduser = await sdk.api.endusers.createOne({ email: 'generated@tellescope.com'})
+  const { authToken } = await sdk.api.endusers.generateAuthToken({ id: enduser.id })
+  const { isAuthenticated } = await sdk.api.endusers.isAuthenticated({ id: enduser.id, authToken })
+  assert(isAuthenticated, 'invalid authToken generated for enduser', 'Generate authToken for enduser is valid')
+
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
@@ -744,8 +753,31 @@ const chat_room_tests = async () => {
     () => sdk2.api.chat_rooms.getOne(room.id), 
     { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
   )
+  await sdk.api.chat_rooms.deleteOne(room.id)
 
-  sdk.api.chat_rooms.deleteOne(room.id)
+  
+  const emptyRoom = await sdk.api.chat_rooms.createOne({ })
+  await async_test(
+    `get-chat-room (creator can access, even when not in userIds)`, 
+    () => sdk.api.chat_rooms.getOne(emptyRoom.id), 
+    { onResult: r => r.id === emptyRoom.id }
+  ) 
+  await async_test(
+    `get-chat-room (not in empty room)`, 
+    () => sdk2.api.chat_rooms.getOne(emptyRoom.id), 
+    { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
+  ) 
+  await async_test(
+    `join-room`, 
+    () => sdk2.api.chat_rooms.join_room({ id: emptyRoom.id }), 
+    { onResult: ({ room }) => room.id === emptyRoom.id }
+  ) 
+  await async_test(
+    `get-chat-room (join successful)`, 
+    () => sdk2.api.chat_rooms.getOne(emptyRoom.id), 
+    { onResult: r => r.id === emptyRoom.id }
+  ) 
+  await sdk.api.chat_rooms.deleteOne(emptyRoom.id)
 }
 
 const chat_tests = async() => {
@@ -970,6 +1002,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
     await updatesTests()
     await threadKeyTests()
     await enduserAccessTests()
+    await generateEnduserAuthTests()
   } catch(err) {
     console.error("Failed during custom test")
     console.error(err)

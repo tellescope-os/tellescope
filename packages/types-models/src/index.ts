@@ -136,6 +136,7 @@ export interface Enduser extends Enduser_readonly, Enduser_required, Enduser_upd
   phoneConsent? : boolean;
   fname? : string;
   lname? : string;
+  dateOfBirth?: Date;
   journeys?: Indexable<string>;
   tags? : string[];
   fields? : Indexable<string | CustomField>;
@@ -253,18 +254,18 @@ export interface ChatRoom_readonly extends ClientRecord {
   recentMessage?: string,
   recentSender?: string,
 }
-export interface ChatRoom_required {
-  type: ChatRoomType; 
-  userIds: string[];
-}
+export interface ChatRoom_required {}
 export interface ChatRoom_updatesDisabled {}
 export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom_updatesDisabled {
+  type?: ChatRoomType; 
+  userIds?: string[];
   title?: string
   topic?: ChatRoomTopic;
   topicId?: string;
   enduserIds?: string[];
   ticketId?: string; // for connecting with a related ticket
   endedAt?: Date;
+  tags?: string[];
 }
 
 export interface ChatMessage_readonly extends ClientRecord {
@@ -319,6 +320,7 @@ export interface Ticket extends Ticket_readonly, Ticket_required, Ticket_updates
   type?: string;
   owner?: string;
   skillsRequired?: string[];
+  chatRoomId?: string;
 }
 
 export type AttendeeInfo = {

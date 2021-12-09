@@ -18,7 +18,7 @@ import {
 } from "@tellescope/types-utilities"
 import {
   EnduserSession,
-  ConfiguredSession,
+  ChatRoom,
   JourneyState,
   UserSession,
   AttendeeInfo,
@@ -257,11 +257,15 @@ export type CustomActions = {
       { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
     >,
     refresh_session: CustomAction<{}, { enduser: Enduser, authToken: string }>,
+    generate_auth_token: CustomAction<{ id: string }, { authToken: string }>,
     logout: CustomAction<{ }, { }>,
   },
   users: {
     display_names: CustomAction<{ }, { fname: string, lname: string, id: string }[]>,
     refresh_session: CustomAction<{}, { user: UserSession, authToken: string }>,
+  },
+  chat_rooms: {
+    join_room: CustomAction<{ id: string }, { room: ChatRoom }>,
   },
   meetings: {
     start_meeting: CustomAction<{ }, { id: string, meeting: object, host: AttendeeInfo }>, 
@@ -343,6 +347,9 @@ export const schema: SchemaV1 = {
       },
       lname: { 
         validator: nameValidator,
+      },
+      dateOfBirth: { 
+        validator: dateValidator,
       },
       journeys: { 
         validator: journeysValidator,
@@ -430,6 +437,14 @@ export const schema: SchemaV1 = {
           authToken: { validator: stringValidator, required: true }, 
           enduser: { validator: 'enduser' }, 
         } as any // todo: add enduser eventually, when validator defined
+      },
+      generate_auth_token: {
+        op: "custom", access: 'create', method: "get",
+        name: 'Generate authToken',
+        path: '/generate-enduser-auth-token',
+        description: "Generates an authToken for use by an enduser. Useful for integrating a 3rd-party authentication process or creating a session for an enduser without a set password in Tellescope.",
+        parameters: { id: { validator: mongoIdStringValidator } },
+        returns: { authToken: { validator: stringValidator100 } },
       },
       logout: {
         op: "custom", access: 'update', method: "post",
@@ -853,8 +868,8 @@ export const schema: SchemaV1 = {
       },
       userIds: {
         validator: listOfMongoIdStringValidator,
-        required: true,
         examples: [[PLACEHOLDER_ID]], 
+        // required: true, // no longer required
         // add pull dependency for user deletion?
       },
       enduserIds: {
@@ -877,10 +892,24 @@ export const schema: SchemaV1 = {
       endedAt: {
         validator: dateValidator,
       },
+      tags: {
+        validator: listOfStringsValidator,
+      },
     },
     defaultActions: DEFAULT_OPERATIONS,
     enduserActions: { create: {}, read: {}, readMany: {} },
-    customActions: {},
+    customActions: {
+      join_room: {
+        op: "custom", access: 'update', method: "post",
+        name: 'Join chat room',
+        path: '/join-chat-room',
+        description: "Allows a user to join a chat room with no other users, for use in accepting support chats.",
+        parameters: { id: { validator: mongoIdStringValidator } },
+        returns: { 
+          room: { validator:  'Room' }, 
+        } as any // add room eventually, when validator defined
+      },
+    },
   },
   chats: {
     info: {
@@ -916,7 +945,7 @@ export const schema: SchemaV1 = {
       senderId: { 
         validator: mongoIdStringValidator,
         readonly: true, // create a separate endpoint for storing enduser chats
-        initializer: (a, s) => (s as UserSession).id ?? (s as EnduserSession).id,
+        initializer: (a, s) => s.id,
         examples: [PLACEHOLDER_ID],
         dependencies: [{ // can be userId or enduserId
           dependsOn: ['users', 'endusers'],
@@ -975,7 +1004,6 @@ export const schema: SchemaV1 = {
           enduser: { validator:  'user' }, 
         } as any // add enduser eventually, when validator defined
       },
-
     },
     enduserActions: { display_names: {} },
     fields: {
@@ -1152,6 +1180,9 @@ export const schema: SchemaV1 = {
         validator: mongoIdStringValidator,
         required: true,
         examples: [PLACEHOLDER_ID],
+      },
+      chatRoomId: {
+        validator: mongoIdStringValidator,
       },
       closedAt: {
         validator: dateValidator,
