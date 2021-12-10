@@ -108,7 +108,7 @@ export const TextField = ({
           height: size === 'small' ? 40 : undefined,
           ...convert_CSS_to_RNStyles(style),
         }}
-        autoComplete='' 
+        autoComplete={undefined}
         { ...props }
       />
       {helperText 

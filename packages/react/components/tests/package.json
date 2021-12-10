@@ -1,9 +1,9 @@
 {
   "name": "@tellescope/components-tests",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "private": true,
   "dependencies": {
-    "@tellescope/react-components": "^0.0.13",
+    "@tellescope/react-components": "^0.0.14",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
