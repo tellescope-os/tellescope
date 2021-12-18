@@ -195,6 +195,11 @@ export class Session {
     catch(err) { console.error(err); throw err }
   }
 
+  DOWNLOAD = async (downloadURL: string) => { 
+    const content = await axios.get(downloadURL)
+    return content.data
+  }
+
   EMIT = async (route: string, args: object, authenticated=true, options={} as RequestOptions) => {
     this.socket?.emit(route, { ...args, ...authenticated ? { authToken: this.authToken } : {} } )
   }

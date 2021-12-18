@@ -28,6 +28,7 @@ export type Task = ServerModelForName['tasks']
 export type Ticket = ServerModelForName['tickets']
 export type User = ServerModelForName['users']
 export type Meeting = ServerModelForName['meetings']
+export type Note = ServerModelForName['notes']
 
 export type Organization = ToServerModel<BaseOrganization>
 export type DatabaseModel = ServerModelForName[keyof ModelForName]

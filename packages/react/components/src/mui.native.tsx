@@ -51,7 +51,8 @@ export const convert_CSS_to_RNStyles = (style?: React.CSSProperties) => {
 export const SendIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="send"/>
 export const NavigateBeforeIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-left"/>
 export const NavigateNextIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-right"/>
-export const VideoIconMui = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video"/>
+export const VideoIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video"/>
+export const DownloadIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="download"/>
 
 export const Card = ({ style, flex, children, ...props } : CardProps) => (
   <MuiCard style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style)}} {...props}>

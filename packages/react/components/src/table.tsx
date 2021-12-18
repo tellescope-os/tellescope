@@ -302,6 +302,8 @@ export interface TableProps<T extends Item> extends WithTitle, WithHeader<T>, Wi
   HorizontalPadded, Elevated, ItemClickable<T> 
 {
   items: T[],
+  emptyText?: string,
+  emptyComponent?: React.ReactElement,
   fields: TableHeaderProps<T>['fields']; // make fields required
   pageOptions?: PaginationOptions,
   paddingHorizontal?: number,
@@ -311,6 +313,8 @@ export interface TableProps<T extends Item> extends WithTitle, WithHeader<T>, Wi
 }
 export const Table = <T extends Item>({
   items,
+  emptyText,
+  emptyComponent,
   pageOptions={ paginated: true },
   style={},
   horizontalPadding=20,
@@ -333,16 +337,23 @@ export const Table = <T extends Item>({
   const { ...paginationProps } = usePagination({ items, ...pageOptions, })
   RowComponent = RowComponent ?? TableRow // don't allow to be undefined 
 
-
   return (
     <Paper style={style} elevation={elevation}>
       <Flex column flex={1}>
         {title && TitleComponent && <TitleComponent title={title} horizontalPadding={horizontalPadding}/>}
-        {fields && HeaderComponent && fields.length > 0 && 
+        {fields && HeaderComponent && fields.length > 0 && items.length > 0 && 
           <HeaderComponent fields={fields} horizontalPadding={horizontalPadding} fontSize={headerFontSize}/>
         }
         <List items={paginationProps.mapSelectedItems(i => i)} 
           renderProps={{ horizontalPadding }}
+          emptyComponent={emptyComponent ?? (
+            emptyText 
+              ? <Typography style={{ padding: horizontalPadding }}>
+                  {emptyText}
+                </Typography> 
+              : undefined
+            )
+          }
           render={(item, { index }) => (
             <RowComponent key={item.id} item={item} fields={fields} fontSize={rowFontSize} hoverColor={hoverColor}
               horizontalPadding={horizontalPadding}
@@ -357,7 +368,7 @@ export const Table = <T extends Item>({
             />
           )
         } />
-        {paginated && FooterComponent && 
+        {paginated && paginationProps.numPages > 1 && FooterComponent && 
           <FooterComponent {...paginationProps } {...pageOptions} horizontalPadding={horizontalPadding}/>
         }
       </Flex>

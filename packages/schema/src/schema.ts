@@ -435,7 +435,7 @@ export const schema: SchemaV1 = {
         enduserOnly: true,
         returns: { 
           authToken: { validator: stringValidator, required: true }, 
-          enduser: { validator: 'enduser' }, 
+          enduser: { validator: 'enduser', required: true }, 
         } as any // todo: add enduser eventually, when validator defined
       },
       generate_auth_token: {
@@ -443,8 +443,8 @@ export const schema: SchemaV1 = {
         name: 'Generate authToken',
         path: '/generate-enduser-auth-token',
         description: "Generates an authToken for use by an enduser. Useful for integrating a 3rd-party authentication process or creating a session for an enduser without a set password in Tellescope.",
-        parameters: { id: { validator: mongoIdStringValidator } },
-        returns: { authToken: { validator: stringValidator100 } },
+        parameters: { id: { validator: mongoIdStringValidator, required: true } },
+        returns: { authToken: { validator: stringValidator100, required: true } },
       },
       logout: {
         op: "custom", access: 'update', method: "post",
@@ -904,7 +904,7 @@ export const schema: SchemaV1 = {
         name: 'Join chat room',
         path: '/join-chat-room',
         description: "Allows a user to join a chat room with no other users, for use in accepting support chats.",
-        parameters: { id: { validator: mongoIdStringValidator } },
+        parameters: { id: { validator: mongoIdStringValidator, required: true } },
         returns: { 
           room: { validator:  'Room' }, 
         } as any // add room eventually, when validator defined
@@ -1103,6 +1103,9 @@ export const schema: SchemaV1 = {
         validator: fileTypeValidator,
         required: true
       },
+      enduserId: {
+        validator: mongoIdStringValidator,
+      },
       secureName: {
         validator: stringValidator250,
         readonly: true,
@@ -1141,7 +1144,7 @@ export const schema: SchemaV1 = {
       file_download_URL: {
         op: "custom", access: 'read', method: "get",
         name: 'Generate File Download',
-        path: '/file-download-link',
+        path: '/file-download-URL',
         description: "Generates a temporary download link for a file.",
         parameters: { 
           secureName: { validator: stringValidator250 },
@@ -1233,7 +1236,7 @@ export const schema: SchemaV1 = {
         name: "End Meeting",
         path: '/end-meeting',
         description: "Ends a video meeting",
-        parameters: { id: { validator: mongoIdStringValidator } },
+        parameters: { id: { validator: mongoIdStringValidator, required: true } },
         returns: { },
       },
       add_attendees_to_meeting: { 
@@ -1242,8 +1245,8 @@ export const schema: SchemaV1 = {
         path: '/add-attendees-to-meeting',
         description: "Adds other attendees to a meeting",
         parameters: { 
-          id: { validator: mongoIdStringValidator },
-          attendees: { validator: listOfUserIndentitiesValidator },
+          id: { validator: mongoIdStringValidator, required: true },
+          attendees: { validator: listOfUserIndentitiesValidator, required: true },
         },
         returns: { },
       },
@@ -1253,11 +1256,11 @@ export const schema: SchemaV1 = {
         path: '/attendee-info',
         description: "Gets meeting info for the current user, and details about other attendees",
         parameters: { 
-          id: { validator: mongoIdStringValidator },
+          id: { validator: mongoIdStringValidator, required: true },
         },
         returns: { 
-          attendee: { validator: attendeeInfoValidator },
-          others: { validator: listOfUserIndentitiesValidator },
+          attendee: { validator: attendeeInfoValidator, required: true },
+          others: { validator: listOfUserIndentitiesValidator, required: true },
         },
       },
       my_meetings: {
@@ -1265,10 +1268,8 @@ export const schema: SchemaV1 = {
         name: 'Get list of meetings',
         path: '/my-meetings',
         description: "Gets meetings for the current user.",
-        parameters: { 
-          id: { validator: mongoIdStringValidator },
-        },
-        returns: { validator: meetingsListValidator },
+        parameters: {},
+        returns: { validator: meetingsListValidator, required: true },
       }
     },
     enduserActions: { my_meetings: {} },
@@ -1287,6 +1288,38 @@ export const schema: SchemaV1 = {
       meetingInfo: {
         validator: meetingInfoValidator,
         readonly: true
+      }
+    }
+  },
+  notes: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: {},
+    enduserActions: {},
+    fields: {
+      ...BuiltInFields, 
+      enduserId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+      },
+      ticketId: {
+        validator: mongoIdStringValidator,
+      },
+      text: {
+        validator: stringValidator5000,
+        examples: ["Text"],
+      },
+      title: {
+        validator: stringValidator250,
+        examples: ["Text"],
+      },
+      fields: {
+        validator: fieldsValidator,
       }
     }
   },

@@ -32,6 +32,7 @@ import {
   // VideoTile,
   // PreviewVideo,
   // RemoteVideo,
+  useAttendeeAudioStatus,
   useLocalVideo,
   useMeetingManager,
   useRosterState,
@@ -46,7 +47,7 @@ export type AttendeeDisplayInfo =  { attendeeId: string, externalUserId: string 
 export const CurrentCallContext = React.createContext({} as {
   meeting: MeetingInfo | undefined, setMeeting: (m: MeetingInfo | undefined) => void,
   videoIsEnabled: boolean, toggleVideo: () => Promise<void>,
-  attendees: AttendeeDisplayInfo[], shareScreenId: string,
+  attendees: AttendeeDisplayInfo[], shareScreenId: number | null,
   videoTiles: (number | string)[],
 })
 export interface VideoProps {
@@ -67,7 +68,7 @@ const WithContext = ({ children } : { children: React.ReactNode }) => {
   }
 
   return (
-    <CurrentCallContext.Provider value={{ attendees, videoTiles: tiles, shareScreenId: tileId?.toString() ?? '', meeting, setMeeting, videoIsEnabled, toggleVideo }}>
+    <CurrentCallContext.Provider value={{ attendees, videoTiles: tiles, shareScreenId: tileId, meeting, setMeeting, videoIsEnabled, toggleVideo }}>
       {children}
     </CurrentCallContext.Provider>
   )

@@ -11,6 +11,8 @@ import {
   LinearProgress,
 } from "./mui"
 
+export { LoadedData, APIError, LoadingStatus }
+
 interface LoadingElement <T>{
   data: LoadedData<T>,
   render: (data: T) => React.ReactElement,

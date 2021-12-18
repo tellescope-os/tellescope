@@ -15,6 +15,7 @@ import { AutoComplete } from "./forms"
 import { DEFAULT_ICON_SIZE  } from "./constants"
 
 import SendIconMui from "@mui/icons-material/Send"
+import DownloadIconMui from "@mui/icons-material/Download"
 import NavigateBeforeIconMui from '@mui/icons-material/NavigateBefore';
 import NavigateNextIconMui from '@mui/icons-material/NavigateNext';
 import VideoIconMui from '@mui/icons-material/Videocam';
@@ -26,6 +27,7 @@ export const SendIcon = (p : IconProps) => <Icon {...p} Component={SendIconMui}/
 export const NavigateBeforeIcon = (p : IconProps) => <Icon {...p} Component={NavigateBeforeIconMui}/>
 export const NavigateNextIcon = (p : IconProps) => <Icon {...p} Component={NavigateNextIconMui}/>
 export const VideoIcon = (p : IconProps) => <Icon {...p} Component={VideoIconMui}/>
+export const DownloadIcon = (p : IconProps) => <Icon {...p} Component={DownloadIconMui}/>
 
 export type Styled = {
   style?: CSSProperties,

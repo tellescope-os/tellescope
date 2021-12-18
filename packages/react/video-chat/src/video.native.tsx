@@ -7,7 +7,7 @@
  */
 
 import React, { useCallback, useContext, useEffect, useState } from "react"
-import { View, Text, StyleSheet } from "react-native"
+import { View, StyleSheet } from "react-native"
 import {
   AttendeeInfo,
   MeetingInfo,
@@ -16,7 +16,8 @@ import {
   UserIdentity,
 } from '@tellescope/types-utilities'
 import { useSession } from "@tellescope/react-components/lib/esm/authentication"
-import { Button } from "@tellescope/react-components/lib/esm/mui"
+import { Flex } from "@tellescope/react-components/lib/esm/layout"
+import { Button, Typography } from "@tellescope/react-components/lib/esm/mui"
 
 import {
   CurrentCallContext,
@@ -33,17 +34,26 @@ import {
 } from "./native/bridge"
 import { RNVideoView } from "./native/RNVideoRenderView"
 
+interface TileState {
+  isLocal: boolean,
+  isScreenShare: boolean,
+  tileId: number,
+}
+
 export const WithVideo = ({ children } : VideoProps ) => {
   const [meeting, setMeeting] = useState(undefined as MeetingInfo | undefined)
 
   const [inMeeting, setInMeeting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [videoIsEnabled, setVideoIsEnabled] = useState(false)
-  const [videoTiles, setVideoTiles] = useState([] as string[])
-  const [screenShareTile, setScreenShareTile] = useState('')
+  const [videoTiles, setVideoTiles] = useState([] as number[])
+  const [screenShareTile, setScreenShareTile] = useState(null as number | null)
   const [attendees, setAttendees] = useState ([] as AttendeeDisplayInfo[])
 
-  const toggleVideo = () => NativeFunction.setCameraOn(!videoIsEnabled)
+  const toggleVideo = async () => {
+    console.log('toggling', NativeFunction.setCameraOn(!videoIsEnabled))
+    setVideoIsEnabled(v => !v)
+  }
   const emitter = getSDKEventEmitter()
 
   useEffect(() => { 
@@ -52,19 +62,22 @@ export const WithVideo = ({ children } : VideoProps ) => {
       setIsLoading(false)
     });
 
-    const endSubscription = emitter.addListener(MobileSDKEvent.OnMeetingEnd, () => {
-      setInMeeting(true)
+    // called when user clicks Leave Meeting or meeting is ended by host
+    const endSubscription = emitter.addListener(MobileSDKEvent.OnMeetingEnd, a => {
+      setInMeeting(false)
       setIsLoading(false)
     });
 
-    const joinSubscription = emitter.addListener(MobileSDKEvent.OnAttendeesJoin, ({ attendeeId, externalUserId }) => {
+    const joinSubscription = emitter.addListener(MobileSDKEvent.OnAttendeesJoin, (added: { attendeeId: string, externalUserId: string }) => {
+      const { attendeeId, externalUserId } = added
       setAttendees(as => !as.find(a => a.attendeeId === attendeeId) 
         ? [{ attendeeId, externalUserId, muted: false }, ...as] 
         : as
       )
     });
 
-    const leaveSubscription = emitter.addListener(MobileSDKEvent.OnAttendeesLeave, ({ attendeeId }) => {
+    const leaveSubscription = emitter.addListener(MobileSDKEvent.OnAttendeesLeave, (leaving: { attendeeId: string }) => {
+      const { attendeeId } = leaving
       setAttendees(as => as.filter(a => a.attendeeId !== attendeeId))
     });
 
@@ -80,24 +93,23 @@ export const WithVideo = ({ children } : VideoProps ) => {
       setAttendees(as => as.map(a => a.attendeeId === attendeeId ? { ...a, muted: false } : a))
     });
 
-    const addVideoSubscription = emitter.addListener(MobileSDKEvent.OnAddVideoTile, (tileState) => {
+    const addVideoSubscription = emitter.addListener(MobileSDKEvent.OnAddVideoTile, (tileState: TileState) => {
       if (tileState.isScreenShare) {
         setScreenShareTile(tileState.tileId)
         return
       }
-      setVideoTiles(v => [...v, tileState.titleId])
+      setVideoTiles(v => [...v, tileState.tileId])
       setVideoIsEnabled(v => tileState.isLocal ? true : v)
     });
 
-    const removeVideoSubscription = emitter.addListener(MobileSDKEvent.OnRemoveVideoTile, (tileState) => {
+    const removeVideoSubscription = emitter.addListener(MobileSDKEvent.OnRemoveVideoTile, (tileState: TileState) => {
       if (tileState.isScreenShare) {
-        setScreenShareTile('')
+        setScreenShareTile(null)
         return
       }
       setVideoTiles(vs => vs.filter(v => v !== tileState.tileId))
       setVideoIsEnabled(v => tileState.isLocal ? false : v)
     });
-
 
     return () => {
       startSubscription.remove();
@@ -113,7 +125,15 @@ export const WithVideo = ({ children } : VideoProps ) => {
   }, [emitter]) 
 
   return (
-    <CurrentCallContext.Provider value={{ attendees, videoTiles, meeting, shareScreenId: screenShareTile, setMeeting, videoIsEnabled, toggleVideo }}>
+    <CurrentCallContext.Provider value={{ 
+      attendees, 
+      videoTiles, 
+      meeting, 
+      shareScreenId: screenShareTile, 
+      setMeeting, 
+      videoIsEnabled, 
+      toggleVideo 
+    }}>
       {children}
     </CurrentCallContext.Provider>
   )
@@ -174,66 +194,57 @@ export const useJoinVideoCall = (): JoinVideoCallReturnType => {
 
   return { meeting, videoIsEnabled, toggleVideo, joinMeeting }
 }
-
 export const VideoTileGrid = () => {
   const { 
     // attendees, 
-    videoIsEnabled, 
     videoTiles, 
-    shareScreenId 
+    toggleVideo,
   } = useContext(CurrentCallContext)
 
   return (
-    <View style={[styles.container, { justifyContent: 'flex-start' }]}>
-      <Text style={styles.title}>TITLE</Text>
-      <View style={styles.buttonContainer}>
-        {/* <MuteButton muted={currentMuted} onPress={() => NativeFunction.setMute(!currentMuted) }/>          */}
-        {/* <CameraButton disabled={selfVideoEnabled} onPress={() =>  NativeFunction.setCameraOn(!videoIsEnabled)}/> */}
-        <Button disabled={videoIsEnabled} onPress={() =>  NativeFunction.setCameraOn(!videoIsEnabled)}>
-          Toggle Video
-        </Button>
-        {/* <HangOffButton onPress={() => NativeFunction.stopMeeting()} /> */}
-        <Button onPress={() => NativeFunction.stopMeeting()}> Leave Meeting </Button>
-      </View>
-      <Text style={styles.title}>Video</Text>
-      <View style={styles.videoContainer}>
+    <Flex column justifyContent="space-between" alignItems="center">
+      <Flex style={styles.videoContainer}>
         {
           videoTiles.length > 0 ? videoTiles.map(tileId => 
             <RNVideoView style={styles.video} key={tileId} tileId={tileId} />
-          ) : <Text style={styles.subtitle}>No one is sharing video at this moment</Text>
+          ) : <Typography style={styles.subtitle}>No one is sharing video at this moment</Typography>
         }
-      </View>
+      </Flex>
+
+      {/* 
       {
         !!shareScreenId &&    
         <React.Fragment>
-          <Text style={styles.title}>Screen Share</Text>
+          <Typography style={styles.title}>Screen Share</Typography>
           <View style={styles.videoContainer}>
             <RNVideoView style={styles.screenShare} key={shareScreenId} tileId={shareScreenId} />
           </View>
         </React.Fragment>
-      }
-      <Text style={styles.title}>Attendee</Text>
+      } 
+      */}
+
+      <Flex justifyContent="space-between" style={{ height: '5%' }}>
+        {/* <MuteButton muted={currentMuted} onPress={() => NativeFunction.setMute(!currentMuted) }/>          */}
+        {/* <CameraButton disabled={selfVideoEnabled} onPress={() =>  NativeFunction.setCameraOn(!videoIsEnabled)}/> */}
+        <Button onPress={toggleVideo}>
+          Toggle Video
+        </Button>
+        {/* <HangOffButton onPress={() => NativeFunction.stopMeeting()} /> */}
+        <Button onPress={() => NativeFunction.stopMeeting()}> Leave Meeting </Button>
+      </Flex>
+
       {/* <FlatList
         style={styles.attendeeList}
         data={attendees}
         renderItem={({ item }) => <AttendeeItem attendeeName={attendeeNameMap[item] ? attendeeNameMap[item] : item} muted={this.state.mutedAttendee.includes(item)}/>}
         keyExtractor={(item) => item}
       /> */}
-    </View>
+
+    </Flex>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '95%',
-    backgroundColor: 'white'
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   title: {
     fontSize: 30,
     fontWeight: '700'
@@ -247,6 +258,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
+    height: '95%',
     // This is an existing React Native issue:
     // When you create a native android component
     // that use GLSurfaceView (We use this internally), the entire screen will
@@ -254,8 +266,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   video: {
-    width: '45%',
-    margin: '1%',
+    width: '100%',
     aspectRatio: 16 / 9,
   },
   screenShare: {

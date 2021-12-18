@@ -306,7 +306,9 @@ export interface File_required {
   size: number;
 }
 export interface File_updatesDisabled {}
-export interface File extends File_readonly, File_required, File_updatesDisabled {}
+export interface File extends File_readonly, File_required, File_updatesDisabled {
+  enduserId?: string;
+}
 
 export interface Ticket_readonly extends ClientRecord {}
 export interface Ticket_required {
@@ -344,6 +346,19 @@ export interface Meeting extends Meeting_readonly, Meeting_required, Meeting_upd
   status: MeetingStatus,
 }
 
+export interface Note_readonly extends ClientRecord {}
+export interface Note_required {
+  enduserId: string,
+}
+export interface Note_updatesDisabled {}
+export interface Note extends Note_readonly, Note_required, Note_updatesDisabled {
+  text?: string,
+  title?: string,
+  type?: string,
+  ticketId?: string,
+  fields?: Indexable<string | CustomField>,
+}
+
 export type ModelForName_required = {
   endusers: Enduser_required;
   engagement_events: EngagementEvent_required;
@@ -358,7 +373,8 @@ export type ModelForName_required = {
   templates: MessageTemplate_required;
   files: File_required;
   tickets: Ticket_required;
-  meetings: Meeting_required,
+  meetings: Meeting_required;
+  notes: Note_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
 
@@ -377,6 +393,7 @@ export interface ModelForName_readonly {
   files: File_readonly;
   tickets: Ticket_readonly;
   meetings: Meeting_readonly;
+  notes: Note_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
 
@@ -395,6 +412,7 @@ export interface ModelForName_updatesDisabled {
   files: File_updatesDisabled;
   tickets: Ticket_updatesDisabled;
   meetings: Meeting_updatesDisabled;
+  notes: Note_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
 
@@ -413,6 +431,7 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   files: File;
   tickets: Ticket;
   meetings: Meeting;
+  notes: Note;
 }
 export type ModelName = keyof ModelForName
 export type Model = ModelForName[keyof ModelForName]

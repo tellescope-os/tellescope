@@ -10,11 +10,14 @@ import {
   CircularProgress,
   Styled,
   TooltipPlacement,
+
+  DownloadIcon,
 } from "./mui"
 
 import {
   Flex,
 } from "./layout"
+import { Session, EnduserSession } from '@tellescope/sdk';
 
 interface LabeledIconButton_T {
   Icon: React.ElementType, 
@@ -125,5 +128,32 @@ export const AsyncButton = <T,>({ text, loadingText=text, variant, ...props }: A
     <Button disabled={performingAction} onClick={handlePerformAction} variant={variant}>
       {performingAction ? loadingText : text}
     </Button>
+  )
+}
+
+interface DownloadButton {
+  session: Session | EnduserSession,
+  secureName: string,
+  onDownload: (downloadURL: string) => void;
+  onError?: (error: string) => void;
+}
+
+export const DownloadFileIconButton = ({ session, secureName, onDownload, onError }: DownloadButton) => {
+  const [downloadURL, setDownloadURL] = useState('')
+
+  return (
+    <AsyncIconButton Icon={DownloadIcon} label="download" ariaLabel='download icon'
+      action={async () => {
+        if (downloadURL) {
+          onDownload(downloadURL) 
+          return
+        }
+        try {
+          const { downloadURL } = await session.api.files.file_download_URL({ secureName })
+          setDownloadURL(downloadURL)
+          onDownload(downloadURL)
+        } catch(err: any) { onError?.(err?.message ?? '') }          
+      }}
+    />
   )
 }

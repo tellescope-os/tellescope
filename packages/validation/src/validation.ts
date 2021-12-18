@@ -202,7 +202,17 @@ export const objectValidator = <T extends object>(i: InputValidation<Required<T>
     const validated = {} as T
 
     if (!is_object(object)) {
-      throw new Error("Expected a non-null object by got ${object}")
+      throw new Error(`Expected a non-null object by got ${object}`)
+    }
+
+    const unrecognizedFields = []
+    for (const field in object) {
+      if (!(i as Indexable)[field]) {
+        unrecognizedFields.push(field)
+      } 
+    }
+    if (unrecognizedFields.length > 0) {
+      throw new Error(`Got unexpected field(s) [${unrecognizedFields.join(', ')}]`)
     }
 
     for (const field in i) {

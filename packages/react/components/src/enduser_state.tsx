@@ -22,6 +22,7 @@ import {
   sharedConfig,
   useListStateHook,
   WithFetchContext,
+  HookOptions,
 } from "./state"
 
 type UserDisplayInfo = { fname: string, lname: string, id: string }
@@ -50,16 +51,16 @@ export const WithEnduserState = ({ children }: { children: React.ReactNode  }) =
   </Provider>
   </WithFetchContext>
 )
-export const useUserDisplayNames = () => {
+export const useUserDisplayNames = (options={} as HookOptions<UserDisplayInfo>) => {
   const session = useEnduserSession()  
   const state = useTypedSelector(s => s.users)
-  return useListStateHook('users', state, session, usersSlice, session.api.users.display_names, { socketConnection: 'none' })
+  return useListStateHook('users', state, session, usersSlice, session.api.users.display_names, { socketConnection: 'none', ...options })
 }
-export const useTickets = () => {
+export const useTickets = (options={} as HookOptions<Ticket>) => {
   const session = useEnduserSession()
-  return useListStateHook('tickets', useTypedSelector(s => s.tickets), session, ticketsSlice, session.api.tickets.getSome)
+  return useListStateHook('tickets', useTypedSelector(s => s.tickets), session, ticketsSlice, session.api.tickets.getSome, { ...options })
 }
-export const useMeetings = () => {
+export const useMeetings = (options={} as HookOptions<Meeting>) => {
   const session = useEnduserSession()
-  return useListStateHook('meetings', useTypedSelector(s => s.meetings), session, meetingsSlice, session.api.meetings.my_meetings)
+  return useListStateHook('meetings', useTypedSelector(s => s.meetings), session, meetingsSlice, session.api.meetings.my_meetings, { ...options })
 }

@@ -1,4 +1,6 @@
 require('source-map-support').install();
+import * as fs from "fs"
+import * as buffer from "buffer" // only node >=15.7.0
 
 import {
   Enduser,
@@ -190,7 +192,7 @@ const threadKeyTests = async () => {
 }
 
 const filterTests = async () => {
-  const enduser = await sdk.api.endusers.createOne({ email: 'filtertests@tellescope.com', fname: 'test' })
+  const enduser = await sdk.api.endusers.createOne({ email: 'filtertests@tellescope.com', fname: 'test', fields: { field1: 'value1', field2: 'value2' } })
   const otherEnduser = await sdk.api.endusers.createOne({ email: 'other@tellescope.com' })
   await async_test(
     `find enduser by filter`, 
@@ -210,6 +212,36 @@ const filterTests = async () => {
   await async_test(
     `nothing found for invalid filter`, 
     () => sdk.api.endusers.getSome({ filter: { email: 'doesnotexist@tellescope.com' }}), 
+    { onResult: es => es.length === 0 },
+  )
+  await async_test(
+    `find enduser by nested filter`, 
+    () => sdk.api.endusers.getSome({ filter: { fields: { field1: 'value1' } } }), 
+    { onResult: es => es.length === 1 && es[0].id === enduser.id },
+  )
+  await async_test(
+    `nothing found by invalid nested filter`, 
+    () => sdk.api.endusers.getSome({ filter: { fields: { field1: 'not a nested field value' } }}), 
+    { onResult: es => es.length === 0 },
+  )
+  await async_test(
+    `find enduser by compound nested filter`, 
+    () => sdk.api.endusers.getSome({ filter: { fields: { field1: 'value1', field2: 'value2' } } }), 
+    { onResult: es => es.length === 1 && es[0].id === enduser.id },
+  )
+  await async_test(
+    `nothing found by compound invalid nested filter`, 
+    () => sdk.api.endusers.getSome({ filter: { fields: { field1: 'not a nested field value', field2: 'value2' } }}), 
+    { onResult: es => es.length === 0 },
+  )
+  await async_test(
+    `find enduser by compound nested filter with non-nested field as well`, 
+    () => sdk.api.endusers.getSome({ filter: {email: 'filtertests@tellescope.com', fields: { field1: 'value1', field2: 'value2' } } }), 
+    { onResult: es => es.length === 1 && es[0].id === enduser.id },
+  )
+  await async_test(
+    `nothing found for compound nested filter with non-nested field as well`, 
+    () => sdk.api.endusers.getSome({ filter: {email: 'doesnotexist@tellescope.com', fields: { field1: 'value1', field2: 'value2' } } }), 
     { onResult: es => es.length === 0 },
   )
 
@@ -973,6 +1005,20 @@ const enduserAccessTests = async () => {
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
+const files_tests = async () => {
+  const buff = buffer.Buffer.from('test file data')
+
+  const { presignedUpload, file } = await sdk.api.files.prepare_file_upload({ 
+    name: 'Test File', size: buff.byteLength, type: 'text/plain' 
+  })
+  await sdk.UPLOAD(presignedUpload, undefined, buff as any)
+
+  const { downloadURL } = await sdk.api.files.file_download_URL({ secureName: file.secureName })
+  const downloaded: string = await sdk.DOWNLOAD(downloadURL)
+
+  assert(downloaded === buff.toString(), 'downloaded file does not match uploaded file', 'upload, download comparison') 
+}
+
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -985,9 +1031,10 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   chat_rooms: chat_room_tests,
   users: () => {},
   templates: () => {},
-  files: () => {},
+  files: files_tests,
   tickets: () => {},
   meetings: () => {},
+  notes: () => {},
 };
 
 (async () => {

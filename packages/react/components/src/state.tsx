@@ -24,7 +24,11 @@ import {
   useSession,
   useEnduserSession,
 } from "./authentication"
-import { Session, EnduserSession } from '@tellescope/sdk'
+import { 
+  LoadFunction,
+  Session, 
+  EnduserSession,
+} from '@tellescope/sdk'
 
 const FetchContext = createContext({} as Indexable<boolean>)
 export const WithFetchContext = ( { children } : { children: React.ReactNode }) => (
@@ -137,7 +141,7 @@ type AppDispatch = typeof _store.dispatch
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
 const useTypedDispatch = () => useDispatch<AppDispatch>()
 
-export interface ListUpdateMethods <T>{
+export interface ListUpdateMethods <T> {
   addElement: (e: T) => void,
   addElements: (e: T[]) => void,
   findById: (id: string) => T | undefined,
@@ -152,13 +156,16 @@ export const useListStateHook = <T extends { id: string }>(
   state: LoadedData<T[]>, 
   session: Session | EnduserSession,
   slice: Slice<any, ListReducers<T>>,
-  loadQuery: () => Promise<T[]>, 
+  loadQuery: LoadFunction<T>, 
   options?: {
-    socketConnection: 'model' | 'keys' | 'self' | 'none'
+    socketConnection?: 'model' | 'keys' | 'self' | 'none'
+    loadFilter?: Partial<T>,
   }
 ): ListStateReturnType<T> => 
 {
   const socketConnection = options?.socketConnection ?? 'model'
+  const loadFilter = options?.loadFilter
+
   const dispatch = useTypedDispatch()
   const didFetch = useContext(FetchContext)
 
@@ -191,33 +198,30 @@ export const useListStateHook = <T extends { id: string }>(
   }, [state])
 
   useEffect(() => {
-    if (didFetch[modelName]) return
-    didFetch[modelName] = true
+    const fetchKey = loadFilter ? JSON.stringify(loadFilter) + modelName : modelName
+    if (didFetch[fetchKey]) return
+    didFetch[fetchKey] = true
 
-    if (state.status === LoadingStatus.Unloaded) {
-      toLoadedData(loadQuery).then(
-        es => {
-          if (es.status === LoadingStatus.Loaded) {
-            dispatch(slice.actions.addSome(es.value))
+    toLoadedData(() => loadQuery({ filter: loadFilter })).then(
+      es => {
+        if (es.status === LoadingStatus.Loaded) {
+          dispatch(slice.actions.addSome(es.value))
 
-            if (socketConnection !== 'keys') return
-            const subscription = { } as Indexable         
-            for (const e of es.value) {
-              subscription[e.id] = modelName
-            }
-            session.subscribe(subscription)
-          } else {
-            dispatch(slice.actions.set(es))
+          if (socketConnection !== 'keys') return
+          const subscription = { } as Indexable         
+          for (const e of es.value) {
+            subscription[e.id] = modelName
           }
-        }
-      )
-    }
+          session.subscribe(subscription)
+        } 
+      }
+    )
 
     return () => {
       if (state.status !== LoadingStatus.Loaded || socketConnection !== 'keys') return
       session.unsubscribe(state.value.map(e => e.id))
     }
-  }, [state, socketConnection, didFetch, loadQuery])
+  }, [state, socketConnection, didFetch, loadFilter, loadQuery])
 
   useEffect(() => {
     if (socketConnection === 'none') return 
@@ -326,6 +330,10 @@ const useResolvedSession = (type: SessionType) => {
   const u_session = useSession({ throwIfMissingContext: type === 'user' })
   const e_session = useEnduserSession({ throwIfMissingContext: type === 'enduser' })
   return type === 'user' ? u_session : e_session
+}
+
+export type HookOptions<T> = {
+  loadFilter?: Partial<T>,
 }
 
 export const useChatRooms = (type: SessionType) => {

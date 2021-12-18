@@ -168,12 +168,15 @@ export const ListItem = <T extends Item, P={}>({ item, index, render, onClick, r
 
 export interface List_T <T extends Item, P={}> extends ListOptions<T, P> {
   items: T[],
+  emptyComponent?: React.ReactElement,
   header?: React.ReactNode,
   onClick?: (id: string) => void;
   onPress?: (id: string) => void;
   reverse?: boolean
 }
-export const List = <T extends Item, P={}>({ items, render, renderProps, onClick, reverse, style }: List_T<T> & Styled) => {
+export const List = <T extends Item, P={}>({ items, emptyComponent, render, renderProps, onClick, reverse, style }: List_T<T> & Styled) => {
+  if (items.length === 0 && emptyComponent) return emptyComponent
+  
   return (
     <Flex flex={1} column reverse={reverse} style={style}>
       {items.map((item, i) => 

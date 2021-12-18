@@ -24,6 +24,8 @@ import { Session as SessionManager, SessionOptions, Filter } from "./session"
 export * from "./public"
 export * from "./enduser"
 
+export type LoadFunction<T> = (o?: { lastId?: string, limit?: number, sort?: SortOption, threadKey?: string, filter?: Filter<Partial<T>> }) => Promise<T[]>
+
 export interface APIQuery<
   N extends keyof ClientModelForName, 
   T=ClientModelForName[N], 
@@ -35,7 +37,7 @@ export interface APIQuery<
   createOne: (t: CREATE) => Promise<T>;
   createSome: (ts: CREATE[]) => Promise<{ created: T[], errors: object[] }>;
   getOne: (id: string, filter?: Filter<Partial<T>>) => Promise<T>;
-  getSome: (o?: { lastId?: string, limit?: number, sort?: SortOption, threadKey?: string, filter?: Filter<Partial<T>> }) => Promise<T[]>
+  getSome: LoadFunction<T>;
   updateOne: (id: string, updates: UPDATE, options?: CustomUpdateOptions) => Promise<T>;
   deleteOne: (id: string) => Promise<void>;
 }
@@ -72,6 +74,7 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   files: defaultQueries(s, 'files'),
   tickets: defaultQueries(s, 'tickets'),
   meetings: defaultQueries(s, 'meetings'),
+  notes: defaultQueries(s, 'notes'),
 })
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {

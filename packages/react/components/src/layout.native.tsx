@@ -53,13 +53,17 @@ export const Flex = (props: Flex_Native) => {
 export const Form = ({ children }: FormProps) =>  <>{children}</>
 export const SUPPORTS_FORMS = false
 
-export const List = <T extends Item>({ items, render, onClick, onPress, reverse, style }: List_T<T> & Styled) => (
-  <FlatList 
-    inverted={reverse}
-    data={items}
-    renderItem={({ item, index }) => render(item, { index, onClick: onPress ?? onClick })} 
-    keyExtractor={item => item.id}
-  />
-)
+export const List = <T extends Item>({ items, emptyComponent, render, onClick, onPress, reverse, style }: List_T<T> & Styled) => {
+  if (items.length === 0 && emptyComponent) return emptyComponent
+  
+  return (
+    <FlatList 
+      inverted={reverse}
+      data={items}
+      renderItem={({ item, index }) => render(item, { index, onClick: onPress ?? onClick })} 
+      keyExtractor={item => item.id}
+    />
+  )
+}
 
 export const withHover: Hoverable = ({ }, r) => r({})
