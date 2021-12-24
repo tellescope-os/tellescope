@@ -42,7 +42,7 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
     logout: () => Promise<void>;
   },
   users: {
-    display_names: () => Promise<{ fname: string, lname: string, id: string }[]>
+    display_info: () => Promise<{ fname?: string, lname?: string, id: string, lastActive?: Date, lastLogout?: Date }[]>
   },
   files: {
     prepare_file_upload: (args: { name: string, size: number, type: string }) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
@@ -76,7 +76,7 @@ export class EnduserSession extends Session {
       logout: () => this._POST('/v1/logout-enduser'),
     }
     this.api.users = { 
-      display_names: () => this._GET<{}, { fname: string, lname: string, id: string }[] >(`/v1/user-display-names`),
+      display_info: () => this._GET<{}, { fname: string, lname: string, id: string }[] >(`/v1/user-display-info`),
     }
     this.api.meetings = { 
       attendee_info: a => this._GET('/v1/attendee-info', a),

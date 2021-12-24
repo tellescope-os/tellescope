@@ -22,11 +22,6 @@ import {
   MeetingInfo,
 } from "@tellescope/types-models"
 
-import {
-  RequestHandler,
-  Request,
-} from "express"
-
 import v from 'validator'
 export const {
   isDate,

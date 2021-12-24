@@ -12,14 +12,6 @@ import {
   MeetingInfo,
 } from '@tellescope/types-models'
 
-import {
-  user_display_name,
-} from "@tellescope/utilities"
-
-import {
-  Session,
-  EnduserSession,
-} from "@tellescope/sdk"
 
 import { ThemeProvider } from 'styled-components';
 import {
@@ -31,12 +23,15 @@ import {
   // VideoGrid,
   // VideoTile,
   // PreviewVideo,
-  // RemoteVideo,
+  RemoteVideo,
   useAttendeeAudioStatus,
+  LocalVideo,
   useLocalVideo,
   useMeetingManager,
   useRosterState,
-  useRemoteVideoTileState
+  useRemoteVideoTileState,
+  VideoTile,
+  useToggleLocalMute,
   // useRemoteVideoTileState,
   // useContentShareControls, // screen sharing
 } from 'amazon-chime-sdk-component-library-react';
@@ -47,8 +42,11 @@ export type AttendeeDisplayInfo =  { attendeeId: string, externalUserId: string 
 export const CurrentCallContext = React.createContext({} as {
   meeting: MeetingInfo | undefined, setMeeting: (m: MeetingInfo | undefined) => void,
   videoIsEnabled: boolean, toggleVideo: () => Promise<void>,
+  microphoneIsEnabled: boolean, toggleMicrophone: () => Promise<void>,
   attendees: AttendeeDisplayInfo[], shareScreenId: number | null,
-  videoTiles: (number | string)[],
+  localTileId: number | null,
+  isHost: boolean, setIsHost: (b: boolean) => void;
+  videoTiles: (number)[],
 })
 export interface VideoProps {
   children?: React.ReactNode,
@@ -56,10 +54,12 @@ export interface VideoProps {
 }
 const WithContext = ({ children } : { children: React.ReactNode }) => {
   const [meeting, setMeeting] = useState(undefined as MeetingInfo | undefined)
-  const { toggleVideo, isVideoEnabled: videoIsEnabled } = useLocalVideo();
+  const [isHost, setIsHost] = useState(false)
+  const { toggleVideo, isVideoEnabled: videoIsEnabled, tileId: localTileId } = useLocalVideo();
   const { roster } = useRosterState()
   const { tileId } = useContentShareState()
   const { tiles } = useRemoteVideoTileState()
+  const { muted, toggleMute } = useToggleLocalMute()
 
   const attendees = [] as AttendeeDisplayInfo[]
   for (const attendeeId in roster) {
@@ -68,7 +68,19 @@ const WithContext = ({ children } : { children: React.ReactNode }) => {
   }
 
   return (
-    <CurrentCallContext.Provider value={{ attendees, videoTiles: tiles, shareScreenId: tileId, meeting, setMeeting, videoIsEnabled, toggleVideo }}>
+    <CurrentCallContext.Provider value={{ 
+      isHost, setIsHost,
+      attendees, 
+      localTileId,
+      videoTiles: tiles, 
+      shareScreenId: tileId, 
+      meeting, 
+      setMeeting, 
+      videoIsEnabled, 
+      toggleVideo, 
+      microphoneIsEnabled: !muted,
+      toggleMicrophone: async () => toggleMute(),
+    }}>
       {children}
     </CurrentCallContext.Provider>
   )
@@ -86,9 +98,9 @@ export const WithVideo = ({ children, theme=darkTheme }: VideoProps) => (
 export const useStartVideoCall = () => {
   const [starting, setStarting] = useState(false)
   const [ending, setEnding] = useState(false)
-  const { meeting, setMeeting, toggleVideo, videoIsEnabled } = React.useContext(CurrentCallContext)
+  const { meeting, setMeeting, toggleVideo, videoIsEnabled, setIsHost } = React.useContext(CurrentCallContext)
 
-  const session = useSession()
+  const session = useSession() // meetings can only be started by users, not endusers (for now)
   const meetingManager = useMeetingManager();
 
   const createAndStartMeeting = async (initialAttendees?: UserIdentity[]) => {
@@ -105,6 +117,7 @@ export const useStartVideoCall = () => {
       }
 
       setMeeting(meeting.Meeting)
+      setIsHost(true)
     } catch(err) {
       console.error(err)
     }
@@ -147,5 +160,20 @@ export const useJoinVideoCall = () => {
   return { meeting, videoIsEnabled: videoIsEnabled, toggleVideo, joinMeeting }
 }
 export type JoinVideoCallReturnType = ReturnType<typeof useJoinVideoCall>
+
+export interface VideoViewProps {
+  style?: CSSProperties,
+}
+export const SelfView = ({ style }: VideoViewProps) => <div style={style}><LocalVideo/></div>
+
+export const useRemoteViews = (props={} as VideoViewProps) => {
+  const { localTileId, videoTiles } = React.useContext(CurrentCallContext)
+  const nonLocal = videoTiles.filter(v => v !== localTileId)
+
+  return nonLocal.map(tileId => 
+    <RemoteVideo key={tileId} style={props.style} tileId={tileId} />
+  )
+}
+
 
 export { VideoTileGrid }

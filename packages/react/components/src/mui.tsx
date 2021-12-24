@@ -19,15 +19,23 @@ import DownloadIconMui from "@mui/icons-material/Download"
 import NavigateBeforeIconMui from '@mui/icons-material/NavigateBefore';
 import NavigateNextIconMui from '@mui/icons-material/NavigateNext';
 import VideoIconMui from '@mui/icons-material/Videocam';
+import VideoOffIconMui from '@mui/icons-material/VideocamOff';
+import MicrophoneIconMui from '@mui/icons-material/Mic';
+import MicrophoneOffIconMui from '@mui/icons-material/MicOff';
+import CallEndIconMui from '@mui/icons-material/CallEnd';
 
-const Icon = ({ Component, size, ...props } : IconBuilderProps) => (
-  <Component style={{ fontSize: size ?? DEFAULT_ICON_SIZE }}/>
+const Icon = ({ Component, size=DEFAULT_ICON_SIZE, ...props } : IconBuilderProps) => (
+  <Component style={{ fontSize: size }}/>
 )
+export const DownloadIcon = (p : IconProps) => <Icon {...p} Component={DownloadIconMui}/>
 export const SendIcon = (p : IconProps) => <Icon {...p} Component={SendIconMui}/>
 export const NavigateBeforeIcon = (p : IconProps) => <Icon {...p} Component={NavigateBeforeIconMui}/>
 export const NavigateNextIcon = (p : IconProps) => <Icon {...p} Component={NavigateNextIconMui}/>
 export const VideoIcon = (p : IconProps) => <Icon {...p} Component={VideoIconMui}/>
-export const DownloadIcon = (p : IconProps) => <Icon {...p} Component={DownloadIconMui}/>
+export const VideoOffIcon = (p : IconProps) => <Icon {...p} Component={VideoOffIconMui}/>
+export const MicrophoneIcon = (p : IconProps) => <Icon {...p} Component={MicrophoneIconMui}/>
+export const MicrophoneOffIcon = (p : IconProps) => <Icon {...p} Component={MicrophoneOffIconMui}/>
+export const CallEndIcon = (p : IconProps) => <Icon {...p} Component={CallEndIconMui}/>
 
 export type Styled = {
   style?: CSSProperties,

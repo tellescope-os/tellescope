@@ -17,14 +17,24 @@ import {
 } from '@tellescope/types-utilities'
 import { useSession } from "@tellescope/react-components/lib/esm/authentication"
 import { Flex } from "@tellescope/react-components/lib/esm/layout"
-import { Button, Typography } from "@tellescope/react-components/lib/esm/mui"
+import { 
+  Button, 
+  Typography, 
+  convert_CSS_to_RNStyles,
+
+  VideoIcon,
+  VideoOffIcon,
+  MicrophoneIcon,
+  MicrophoneOffIcon,
+} from "@tellescope/react-components/lib/esm/mui.native"
 
 import {
   CurrentCallContext,
   JoinVideoCallReturnType,
   StartVideoCallReturnType,
   VideoProps,
-  AttendeeDisplayInfo
+  AttendeeDisplayInfo,
+  VideoViewProps,
 } from "./video.js"
 
 import {
@@ -34,25 +44,37 @@ import {
 } from "./native/bridge"
 import { RNVideoView } from "./native/RNVideoRenderView"
 
+export { CurrentCallContext }
+
 interface TileState {
   isLocal: boolean,
   isScreenShare: boolean,
   tileId: number,
 }
 
-export const WithVideo = ({ children } : VideoProps ) => {
+export const WithVideo = ({ children } : VideoProps) => {
   const [meeting, setMeeting] = useState(undefined as MeetingInfo | undefined)
+  const [isHost, setIsHost] = useState(false)
 
   const [inMeeting, setInMeeting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [muted, setMuted] = useState(false)
   const [videoIsEnabled, setVideoIsEnabled] = useState(false)
   const [videoTiles, setVideoTiles] = useState([] as number[])
+  const [localTileId, setLocalTileId] = useState(null as number | null)
   const [screenShareTile, setScreenShareTile] = useState(null as number | null)
   const [attendees, setAttendees] = useState ([] as AttendeeDisplayInfo[])
 
   const toggleVideo = async () => {
-    console.log('toggling', NativeFunction.setCameraOn(!videoIsEnabled))
+    NativeFunction.setCameraOn(!videoIsEnabled)
+    if (videoIsEnabled) {
+      setLocalTileId(null)
+    }
     setVideoIsEnabled(v => !v)
+  }
+  const toggleMic = async () => {
+    NativeFunction.setMute(!muted)
+    setMuted(m => !m)
   }
   const emitter = getSDKEventEmitter()
 
@@ -98,6 +120,9 @@ export const WithVideo = ({ children } : VideoProps ) => {
         setScreenShareTile(tileState.tileId)
         return
       }
+      if (tileState.isLocal) {
+        setLocalTileId(tileState.tileId)
+      }
       setVideoTiles(v => [...v, tileState.tileId])
       setVideoIsEnabled(v => tileState.isLocal ? true : v)
     });
@@ -126,22 +151,45 @@ export const WithVideo = ({ children } : VideoProps ) => {
 
   return (
     <CurrentCallContext.Provider value={{ 
+      isHost, setIsHost,
       attendees, 
+      localTileId,
       videoTiles, 
       meeting, 
       shareScreenId: screenShareTile, 
       setMeeting, 
       videoIsEnabled, 
-      toggleVideo 
+      toggleVideo, 
+      microphoneIsEnabled: !muted,
+      toggleMicrophone: toggleMic,
     }}>
       {children}
     </CurrentCallContext.Provider>
   )
 }
 
+
+export const useRemoteViews = (props={} as { style: React.CSSProperties }) => {
+  const { localTileId, videoTiles } = React.useContext(CurrentCallContext)
+  const nonLocal = videoTiles.filter(v => v !== localTileId)
+
+  return nonLocal.map(tileId => 
+    <RNVideoView key={tileId} style={convert_CSS_to_RNStyles(props.style) ?? styles.video} tileId={tileId} />
+  )
+}
+
+export const SelfView = ({ style } : VideoViewProps) => {
+  const { localTileId } = React.useContext(CurrentCallContext)
+  if (localTileId === null) return null // localTileId may be zero, don't return null on simple falsey check
+  
+  return (
+    <RNVideoView style={convert_CSS_to_RNStyles(style) ?? styles.video} tileId={localTileId}/>
+  )
+}
+
 export const useStartVideoCall = (): StartVideoCallReturnType => {
   const session = useSession()
-  const { meeting, setMeeting, videoIsEnabled, toggleVideo } = React.useContext(CurrentCallContext)
+  const { meeting, setMeeting, setIsHost, videoIsEnabled, toggleVideo } = React.useContext(CurrentCallContext)
 
   const [starting, setStarting] = useState(false)
   const [ending, setEnding] = useState(false)
@@ -157,6 +205,7 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
       NativeFunction.startMeeting(meeting.Meeting, host.Attendee)
 
       setMeeting(meeting.Meeting)
+      setIsHost(true)
     } catch(err) {
       console.error(err)
     }
@@ -182,7 +231,16 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
     setMeeting(undefined)
   }
 
-  return { meeting, videoIsEnabled, starting, ending, toggleVideo, createAndStartMeeting, addAttendees, endMeeting }
+  return { 
+    meeting, 
+    videoIsEnabled, 
+    starting, 
+    ending, 
+    toggleVideo, 
+    createAndStartMeeting, 
+    addAttendees, 
+    endMeeting,
+  }
 }
 
 export const useJoinVideoCall = (): JoinVideoCallReturnType => {

@@ -257,11 +257,11 @@ export type CustomActions = {
       { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
     >,
     refresh_session: CustomAction<{}, { enduser: Enduser, authToken: string }>,
-    generate_auth_token: CustomAction<{ id: string }, { authToken: string }>,
+    generate_auth_token: CustomAction<{ id?: string, phone?: string, email?: string, externalId?: string }, { authToken: string, enduser: Enduser }>,
     logout: CustomAction<{ }, { }>,
   },
   users: {
-    display_names: CustomAction<{ }, { fname: string, lname: string, id: string }[]>,
+    display_info: CustomAction<{ }, { fname: string, lname: string, id: string }[]>,
     refresh_session: CustomAction<{}, { user: UserSession, authToken: string }>,
   },
   chat_rooms: {
@@ -443,8 +443,16 @@ export const schema: SchemaV1 = {
         name: 'Generate authToken',
         path: '/generate-enduser-auth-token',
         description: "Generates an authToken for use by an enduser. Useful for integrating a 3rd-party authentication process or creating a session for an enduser without a set password in Tellescope.",
-        parameters: { id: { validator: mongoIdStringValidator, required: true } },
-        returns: { authToken: { validator: stringValidator100, required: true } },
+        parameters: { 
+          id: { validator: mongoIdStringValidator }, 
+          externalId: { validator: stringValidator250 },
+          email: { validator: emailValidator }, 
+          phone: { validator: phoneValidator },
+        },
+        returns: { 
+          authToken: { validator: stringValidator100, required: true },
+          enduser: { validator: 'enduser' as any, required: true },
+        },
       },
       logout: {
         op: "custom", access: 'update', method: "post",
@@ -983,11 +991,11 @@ export const schema: SchemaV1 = {
     },
     defaultActions: { read: {}, readMany: {} },
     customActions: {
-      display_names: {
+      display_info: {
         op: "custom", access: 'read', method: "get",
-        name: 'User Display Names',
-        path: '/user-display-names',
-        description: "Gets display names for users, accessible by endusers",
+        name: 'User Display Info',
+        path: '/user-display-info',
+        description: "Gets display info for users, accessible by endusers",
         parameters: {},
         returns: { 
           validator: listOfDisplayNameInfo

@@ -79,12 +79,12 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   journeys: {
-    updateState: (args: { id: string, name: string, updates: JourneyState }) => Promise<void>
+    update_state: (args: { id: string, name: string, updates: JourneyState }) => Promise<void>
   },
   endusers: {
-    setPassword: (args: { id: string, password: string }) => Promise<void>,
-    isAuthenticated: (args: { id: string, authToken: string }) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
-    generateAuthToken: (args: { id: string }) => Promise<{ authToken: string }>
+    set_password: (args: { id: string, password: string }) => Promise<void>,
+    is_authenticated: (args: { id: string, authToken: string }) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
+    generate_auth_token: (args: { id?: string, phone?: string, email?: string, externalId?: string }) => Promise<{ authToken: string, enduser: Enduser }>
   },
   users: {
     display_names: () => Promise<{ fname: string, lname: string, id: string }[]>,
@@ -113,10 +113,10 @@ export class Session extends SessionManager {
     super({ ...o, cacheKey: o?.cacheKey || "tellescope_user" })
     const queries = loadDefaultQueries(this) as Queries
 
-    queries.journeys.updateState = ({id, name, updates}) => this._PATCH(`/v1/journey/${id}/state/${name}`, { updates })
-    queries.endusers.setPassword = ({id, password}) => this._POST(`/v1/set-enduser-password`, { id, password })
-    queries.endusers.isAuthenticated = ({id, authToken}) => this._GET(`/v1/enduser-is-authenticated`, { id, authToken })
-    queries.endusers.generateAuthToken = args => this._GET(`/v1/generate-enduser-auth-token`, args)
+    queries.journeys.update_state = ({id, name, updates}) => this._PATCH(`/v1/journey/${id}/state/${name}`, { updates })
+    queries.endusers.set_password = ({id, password}) => this._POST(`/v1/set-enduser-password`, { id, password })
+    queries.endusers.is_authenticated = ({id, authToken}) => this._GET(`/v1/enduser-is-authenticated`, { id, authToken })
+    queries.endusers.generate_auth_token = args => this._GET(`/v1/generate-enduser-auth-token`, args)
     queries.users.display_names = () => this._GET<{}, { fname: string, lname: string, id: string }[]>(`/v1/user-display-names`),
     queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args),
     queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a),

@@ -60,12 +60,12 @@ export const LabeledIconButton = ({
   const Button = (
     <IconButton color={color !== 'white' ? color : undefined} aria-label={label ?? ariaLabel} 
       style={{ 
-        padding, maxHeight: size, maxWidth: size, position: "relative", top: offsetY, left: offsetX,
+        padding, position: "relative", top: offsetY, left: offsetX,
         ...(color === 'white' ? { color: disabled ? '#bdbdbd' : 'white' } : {})
       }}
       onClick={onClick} id={id} disabled={disabled}  
     >
-      <Icon style={{ height: size, width: size }}/>
+      <Icon size={size}/>
     </IconButton>
   )
 

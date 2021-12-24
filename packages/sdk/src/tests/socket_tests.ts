@@ -133,7 +133,7 @@ const access_tests = async () => {
 
 const enduser_tests = async () => {
   const enduser = await user1.api.endusers.createOne({ email: "enduser@tellescope.com" })
-  await user1.api.endusers.setPassword({ id: enduser.id, password: 'enduserPassword!' })
+  await user1.api.endusers.set_password({ id: enduser.id, password: 'enduserPassword!' })
 
   await enduserSDK.authenticate(enduser.email as string, 'enduserPassword!')
   await wait(undefined, 25)

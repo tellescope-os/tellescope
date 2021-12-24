@@ -265,10 +265,30 @@ const updatesTests = async () => {
 
 const generateEnduserAuthTests = async () => {
   log_header("Generated Enduser authToken Tests")
-  const enduser = await sdk.api.endusers.createOne({ email: 'generated@tellescope.com'})
-  const { authToken } = await sdk.api.endusers.generateAuthToken({ id: enduser.id })
-  const { isAuthenticated } = await sdk.api.endusers.isAuthenticated({ id: enduser.id, authToken })
+  const e = await sdk.api.endusers.createOne({ email: 'generated@tellescope.com', phone: '+15555555555', externalId: '1029f9v9sjd0as' })
+  const { authToken, enduser } = await sdk.api.endusers.generate_auth_token({ id: e.id })
+  assert(!!authToken && !!enduser, 'invalid returned values', 'Generate authToken and get enduser')
+
+  const { isAuthenticated } = await sdk.api.endusers.is_authenticated({ id: enduser.id, authToken })
   assert(isAuthenticated, 'invalid authToken generated for enduser', 'Generate authToken for enduser is valid')
+
+  await async_test(
+    `auth by externalId`, () => sdk.api.endusers.generate_auth_token({ externalId: e.externalId }), passOnVoid,
+  ) 
+  await async_test(
+    `auth by email`, () => sdk.api.endusers.generate_auth_token({ email: e.email }), passOnVoid,
+  ) 
+  await async_test(
+    `auth by phone`, () => sdk.api.endusers.generate_auth_token({ phone: e.phone }), passOnVoid,
+  ) 
+  await async_test(
+    `auth by nothing throws error`, () => sdk.api.endusers.generate_auth_token({ phone: undefined }), 
+    { shouldError: true, onError: e => e.message === "One of id, externalId, email, or phone is required" },
+  ) 
+  await async_test(
+    `auth by bad field throws error`, () => sdk.api.endusers.generate_auth_token({ email: "notavalidemail@tellescope.com" }), 
+    { shouldError: true, onError: e => e.message === "Could not find a corresponding enduser" },
+  ) 
 
   await sdk.api.endusers.deleteOne(enduser.id)
 }
@@ -640,7 +660,7 @@ const journey_tests = async (queries=sdk.api.journeys) => {
 
   await async_test(
     `journey-updateState`, 
-    () => queries.updateState({ id: journey.id, name: 'Added', updates: { name: 'Updated', priority: 'N/A' }}),
+    () => queries.update_state({ id: journey.id, name: 'Added', updates: { name: 'Updated', priority: 'N/A' }}),
     passOnVoid,
   )
   await wait(undefined, 25) // wait for side effects to update endusers
@@ -926,7 +946,7 @@ const enduserAccessTests = async () => {
   const password = 'testpassword'
 
   const enduser = await sdk.api.endusers.createOne({ email })
-  await sdk.api.endusers.setPassword({ id: enduser.id, password }).catch(console.error)
+  await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
   await enduserSDK.authenticate(email, password).catch(console.error)
 
   for (const n in schema) {

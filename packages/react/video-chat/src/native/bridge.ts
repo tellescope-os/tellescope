@@ -17,6 +17,7 @@ import { NativeModules, NativeEventEmitter } from 'react-native';
  * NativeEventEmitter.onRemoveVideoTile(tileState)
  * NativeEventEmitter.onError(errorMessage)
  */
+console.log(NativeModules)
 const _eventEmitter = new NativeEventEmitter(NativeModules.NativeMobileSDKBridge);
 
 export const MobileSDKEvent = {

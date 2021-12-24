@@ -48,11 +48,15 @@ export const convert_CSS_to_RNStyles = (style?: React.CSSProperties) => {
   return transform(input)
 }
 
+export const DownloadIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="download"/>
 export const SendIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="send"/>
 export const NavigateBeforeIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-left"/>
 export const NavigateNextIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-right"/>
 export const VideoIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video"/>
-export const DownloadIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="download"/>
+export const VideoOffIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video-off"/>
+export const MicrophoneIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone"/>
+export const MicrophoneOffIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone-off"/>
+export const CallEndIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="phone-hangup"/>
 
 export const Card = ({ style, flex, children, ...props } : CardProps) => (
   <MuiCard style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style)}} {...props}>

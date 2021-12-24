@@ -98,6 +98,8 @@ export type AccountType = "Business"// | "joining org"
 export interface User_readonly extends ClientRecord {
   organization?: string 
   orgEmail?: string;
+  lastActive?: Date;
+  lastLogout?: Date;
 }
 export interface User_required {  
   email: string;

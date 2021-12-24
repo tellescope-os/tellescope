@@ -46,7 +46,8 @@ export const objects_equivalent = (o1?: Indexable, o2?: Indexable) => {
   return true
 }
 
-export const user_display_name = (user: { fname?: string, lname?: string, email?: string, phone?: string, id: string }) => {
+export const user_display_name = (user?: { fname?: string, lname?: string, email?: string, phone?: string, id: string }) => {
+  if (!user) return ''
   const { fname, lname, email, phone, id } = user
 
   if (fname && lname) return `${fname} ${lname}`
@@ -55,4 +56,12 @@ export const user_display_name = (user: { fname?: string, lname?: string, email?
   if (phone) return phone
 
   return `User ${id}`
+}
+
+export const defined_fields = <T extends {}>(o: T): Partial<T> => {
+  const filtered = {} as Partial<T>
+  for (const field in o) {
+    if (o[field] !== undefined) filtered[field] = o[field]
+  }
+  return filtered
 }

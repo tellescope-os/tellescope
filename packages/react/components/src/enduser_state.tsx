@@ -25,7 +25,7 @@ import {
   HookOptions,
 } from "./state"
 
-type UserDisplayInfo = { fname: string, lname: string, id: string }
+type UserDisplayInfo = { fname?: string, lname?: string, id: string, lastActive?: Date, lastLogout?: Date }
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
 const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')
@@ -54,7 +54,7 @@ export const WithEnduserState = ({ children }: { children: React.ReactNode  }) =
 export const useUserDisplayNames = (options={} as HookOptions<UserDisplayInfo>) => {
   const session = useEnduserSession()  
   const state = useTypedSelector(s => s.users)
-  return useListStateHook('users', state, session, usersSlice, session.api.users.display_names, { socketConnection: 'none', ...options })
+  return useListStateHook('users', state, session, usersSlice, session.api.users.display_info, { socketConnection: 'none', ...options })
 }
 export const useTickets = (options={} as HookOptions<Ticket>) => {
   const session = useEnduserSession()

@@ -32,14 +32,14 @@ const enduser_login_tests = async () => {
   )
   await async_test(
     'setPassword', 
-    () => sdk.api.endusers.setPassword({ id: e.id, password }),
+    () => sdk.api.endusers.set_password({ id: e.id, password }),
     { onResult: _ => true }
   )
 
   let authToken = 'placeholder'
   await async_test(
     'isAuthenticated (no)', 
-    () => sdk.api.endusers.isAuthenticated({ id: e.id, authToken }),
+    () => sdk.api.endusers.is_authenticated({ id: e.id, authToken }),
     { onResult: ({ isAuthenticated, enduser }) => isAuthenticated === false && enduser === null }
   )
   await async_test(
@@ -49,7 +49,7 @@ const enduser_login_tests = async () => {
   )
   await async_test(
     'isAuthenticated (yes)', 
-    () => sdk.api.endusers.isAuthenticated({ id: e.id, authToken }),
+    () => sdk.api.endusers.is_authenticated({ id: e.id, authToken }),
     { onResult: ({ isAuthenticated, enduser }) => isAuthenticated === true && enduser?.id === e.id }
   )
 }
