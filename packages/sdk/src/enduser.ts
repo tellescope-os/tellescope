@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client'
 
-import { Session, SessionOptions, APIQuery } from "./session"
+import { Session, SessionOptions } from "./session"
+import { APIQuery } from "./sdk"
 import { url_safe_path } from "@tellescope/utilities"
 
 import { S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
@@ -14,7 +15,6 @@ import {
   Enduser,
   File,
 } from "@tellescope/types-client"
-import { stringValidator } from "@tellescope/validation";
 
 export interface EnduserSessionOptions extends SessionOptions {}
 
@@ -30,8 +30,9 @@ export const defaultQueries = <N extends keyof ClientModelForName>(
   return {
     createOne: o => s._POST(`/v1/${singularName}`, o),
     createSome: os => s._POST(`/v1/${safeName}`, { create: os }),
-    getOne: (id, filter) => s._GET(`/v1/${singularName}/${id}`, { filter }),
-    getSome: (o) => s._GET(`/v1/${safeName}`, o),
+    getOne: (argument) => typeof argument === 'string' ? s._GET(`/v1/${singularName}/${argument}`)
+                                                       : s._GET(`/v1/${singularName}`, { filter: argument}),
+    getSome: o => s._GET(`/v1/${safeName}`, o),
     updateOne: (id, updates, options) => s._PATCH(`/v1/${singularName}/${id}`, { updates, options }),
     deleteOne: id => s._DELETE(`/v1/${singularName}/${id}`),
   }
@@ -124,8 +125,11 @@ export class EnduserSession extends Session {
     return { authToken, enduser }
   }
 
-  authenticate = async (email: string, password: string) => this.handle_new_session(
-    await this.POST<{email: string, password: string }, { authToken: string, enduser: Enduser }>('/v1/login-enduser', { email, password })
+  authenticate = async (email: string, password: string, o?: { expirationInSeconds?: number }) => this.handle_new_session(
+    await this.POST<
+      {email: string, password: string, expirationInSeconds?: number }, 
+      { authToken: string, enduser: Enduser }
+    >('/v1/login-enduser', { email, password, ...o })
   )
 
   refresh_session = async () => {

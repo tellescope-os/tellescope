@@ -32,6 +32,12 @@ export type AccessPermissions = {
   [K in AccessResources]: AccessForResource
 }
 
+export type ExistsFilter = { _exists: boolean } 
+export type FilterType = ExistsFilter
+export type FilterKey = '_exists'
+export const FilterKeys = ['_exists'] as const
+export type ReadFilter<T> = { [K in keyof T]?: T[K] | FilterType }
+
 export type OrganizationLimit = 'endusersLimit'
   | 'smsLimit'
   | 'emailsLimit'
@@ -123,7 +129,6 @@ export interface CustomField {
 }
 
 export interface Enduser_readonly extends ClientRecord {
-  unread: boolean;
   lastCommunication?: Date;
   recentMessagePreview?: string;
   hashedPassword: string;

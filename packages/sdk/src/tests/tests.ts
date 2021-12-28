@@ -71,7 +71,7 @@ const userId = '60398b0231a295e64f084fd9'
 //   await sdk.api.endusers.deleteOne(enduser.id)
 // }
 
-const sdk = new Session()
+const sdk = new Session({ host })
 const sdkOther = new Session({ host, apiKey: "ba745e25162bb95a795c5fa1af70df188d93c4d3aac9c48b34a5c8c9dd7b80f7" })
 const enduserSDK = new EnduserSession({ host })
 // const sdkOtherEmail = "sebass@tellescope.com"
@@ -90,8 +90,6 @@ const setup_tests = async () => {
   await async_test('test_online', sdk.test_online, { expectedResult: 'API V1 Online' })
   await async_test('test_authenticated', sdk.test_authenticated, { expectedResult: 'Authenticated!' })
 
-  // console.log(await sdk.api.api_keys.createOne({}))
-
   await async_test(
     'test_authenticated (with API Key)', 
     (new Session({ host, apiKey: '3n5q0SCBT_iUvZz-b9BJtX7o7HQUVJ9v132PgHJNJsg.' /* local test key */  })).test_authenticated, 
@@ -100,7 +98,7 @@ const setup_tests = async () => {
 
   await sdk.logout()
   await async_test<string, string>('test_authenticated - (logout invalidates jwt)', sdk.test_authenticated, { shouldError: true, onError: e => e === 'Unauthenticated' })
-  await sdk.authenticate(email, password, host)
+  await sdk.authenticate(email, password)
   await async_test('test_authenticated (re-authenticated)', sdk.test_authenticated, { expectedResult: 'Authenticated!' })
 
   await async_test('reset_db', () => sdk.reset_db(), passOnVoid)
@@ -191,6 +189,20 @@ const threadKeyTests = async () => {
   ])
 }
 
+const badInputTests = async () => {
+  log_header("Bad Input Tests")
+  await async_test(
+    `_-prefixed fields are not allowed`, 
+    () => sdk.api.endusers.createOne({ email: 'failure@tellescope.com', fields: { "_notallowed": 'hello' } }), 
+    { shouldError: true, onError: e => e.message === "Error parsing field fields: Fields that start with '_' are not allowed" },
+  )
+  await async_test(
+    `_-prefixed fields are not allowed`, 
+    () => sdk.api.notes.createOne({ enduserId: PLACEHOLDER_ID, fields: { "_notallowed": 'hello' } }), 
+    { shouldError: true, onError: e => e.message === "Error parsing field fields: Fields that start with '_' are not allowed" },
+  )
+}
+
 const filterTests = async () => {
   const enduser = await sdk.api.endusers.createOne({ email: 'filtertests@tellescope.com', fname: 'test', fields: { field1: 'value1', field2: 'value2' } })
   const otherEnduser = await sdk.api.endusers.createOne({ email: 'other@tellescope.com' })
@@ -198,6 +210,17 @@ const filterTests = async () => {
     `find enduser by filter`, 
     () => sdk.api.endusers.getSome({ filter: { email: 'filtertests@tellescope.com' }}), 
     { onResult: es => es.length === 1 && es[0].id === enduser.id },
+  )
+  await async_test(
+    `find enduser by _exists filter`, 
+    () => sdk.api.endusers.getSome({ filter: { fname: { _exists: true } }}), 
+    { onResult: es => es.length === 1 && es[0].id === enduser.id },
+  )
+  await async_test(
+    `find enduser by _exists filter (findOne)`, 
+    // () => sdk.api.endusers.getOne({ fname: { _exists: true } }), 
+    () => sdk.api.endusers.getOne({ fname: { _exists: true } }), 
+    { onResult: e => e.id === enduser.id },
   )
   await async_test(
     `find enduser by compound filter`, 
@@ -419,7 +442,7 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
   }
   await async_test(
     `get-${singularName}`, 
-    () => queries.getOne(_id, filter), 
+    () => queries.getOne(_id), 
     { onResult: d => {
         if (!d?.id) return false
 
@@ -452,7 +475,7 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
   )
   await async_test(
     `get-${singularName} (verify delete)`, 
-    () => queries.getOne(_id, filter), 
+    () => queries.getOne(_id), 
     { shouldError: true, onError: e => e.message === 'Could not find a record for the given id' } 
   )
 }
@@ -840,20 +863,15 @@ const chat_tests = async() => {
   const chat  = await sdk.api.chats.createOne({ roomId: room.id, message: "Hello!" })
   const chat2 = await sdk.api.chats.createOne({ roomId: room.id, message: "Hello..." })
 
-  await async_test(
-    `get-chat (without filter)`, 
-    () => sdk.api.chats.getOne(chat.id), 
-    { shouldError: true, onError: () => true }
-  )
+  // await async_test(
+  //   `get-chat (without filter)`, 
+  //   () => sdk.api.chats.getOne(chat.id), 
+  //   { shouldError: true, onError: () => true }
+  // )
   await async_test(
     `get-chats (without filter)`, 
     () => sdk.api.chats.getSome({}), 
     { shouldError: true, onError: () => true }
-  )
-  await async_test(
-    `get-chat (with filter)`, 
-    () => sdk.api.chats.getOne(chat.id, { roomId: room.id }), 
-    { onResult: c => c?.id === chat.id }
   )
   await async_test(
     `get-chats (with filter)`, 
@@ -861,11 +879,6 @@ const chat_tests = async() => {
     { onResult: c => c?.length === 2 }
   )
 
-  await async_test(
-    `get-chat not allowed`, 
-    () => sdk2.api.chats.getOne(chat.id, { roomId: room.id }), 
-    { shouldError: true, onError: e => e.message === 'You do not have permission to access this resource' }
-  )
   await async_test(
     `get-chats not allowed`, 
     () => sdk2.api.chats.getSome({ filter: { roomId: room.id } }), 
@@ -894,12 +907,12 @@ const chat_tests = async() => {
   await wait(undefined, 25)
   await async_test(
     `get-chat (deleted as dependency of room 1)`,
-    () => sdk.api.chats.getOne(chat.id, { roomId: room.id }), 
+    () => sdk.api.chats.getOne(chat.id), 
     { shouldError: true, onError: e => e.message === 'Could not find a record for the given id' }
   )
   await async_test(
     `get-chat (deleted as dependency of room 2)`,
-    () => sdk.api.chats.getOne(chat2.id, { roomId: room.id }), 
+    () => sdk.api.chats.getOne(chat2.id), 
     { shouldError: true, onError: e => e.message === 'Could not find a record for the given id' }
   )
 
@@ -908,12 +921,12 @@ const chat_tests = async() => {
   const sharedChat2 = await sdk2.api.chats.createOne({ roomId: sharedRoom.id, message: "Hello there!", })
   await async_test(
     `get-chat (shared, user1)`,
-    () => sdk.api.chats.getOne(sharedChat.id, { roomId: sharedRoom.id }), 
+    () => sdk.api.chats.getOne(sharedChat.id), 
     { onResult: r => r.id === sharedChat.id }
   )
   await async_test(
     `get-chat (shared, user2)`,
-    () => sdk2.api.chats.getOne(sharedChat.id, { roomId: sharedRoom.id }), 
+    () => sdk2.api.chats.getOne(sharedChat.id), 
     { onResult: r => r.id === sharedChat.id }
   )
   await async_test(
@@ -936,7 +949,7 @@ const chat_tests = async() => {
   await sdk.api.chats.deleteOne(chatNull.id)
   await async_test(
     `get-chat (setNull working)`,
-    () => sdk.api.chats.getOne(chat2Null.id, { roomId: roomNull.id }), 
+    () => sdk.api.chats.getOne(chat2Null.id), 
     { onResult: c => c.replyId === null }
   )
 }
@@ -1058,13 +1071,13 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
 };
 
 (async () => {
-  await sdk.authenticate(email, password, host)
-
   log_header("API")
-  
+
   try {
+    await sdk.authenticate(email, password)
     await setup_tests()
     await multi_tenant_tests() // should come right after setup tests
+    await badInputTests()
     await filterTests()
     await updatesTests()
     await threadKeyTests()

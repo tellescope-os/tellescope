@@ -21,7 +21,7 @@ export const matching_fields = (fields: string[], o1: Indexable, o2: Indexable) 
 const WHITE_SPACE_EXP = /^\s*$/
 export const is_whitespace = (s='') => WHITE_SPACE_EXP.test(s)
 
-export const url_safe_path = (p='') => p.replace(/_/g, '-')
+export const url_safe_path = (p='' as string | string) => p.replace(/_/g, '-')
 
 export const to_object_id = (s='') => new ObjectId(s)
 

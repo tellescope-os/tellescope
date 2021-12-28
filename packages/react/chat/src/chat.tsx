@@ -251,16 +251,16 @@ export const UsersConversations = ({ userId, ...p } : SidebarInfo & { userId: st
 }
 
 interface SendMessage_T {
-  session: Session | EnduserSession,
+  type: SessionType,
   roomId: string,
-  onNewMessage: (m: ChatMessage) => void;
+  onNewMessage?: (m: ChatMessage) => void;
   placeholderText?: string;
   Icon?: React.ElementType<any>;
   style?: CSSProperties;
 }
 export const SendMessage = ({ 
-  session, 
   roomId, 
+  type,
   Icon=SendIcon, 
   onNewMessage, 
   placeholderText="Enter a message", 
@@ -268,6 +268,8 @@ export const SendMessage = ({
 }: SendMessage_T) => {
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
+  
+  const [, { createElement: createMessage }] = useChats(roomId, type)
 
   return (
     <Flex row flex={1} alignContent="center" style={style}>
@@ -279,10 +281,10 @@ export const SendMessage = ({
       </Flex>
       <Flex column alignSelf="center">
         <AsyncIconButton label="send" Icon={Icon} disabled={message === ''}
-          action={() => session.api.chats.createOne({ message, roomId })}
+          action={() => createMessage({ message, roomId })}
           onSuccess={m => {
             setMessage('')
-            onNewMessage(m)
+            onNewMessage?.(m)
           }}
           onChange={setSending}
         />
@@ -299,7 +301,7 @@ interface SplitChat_T {
 export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : SplitChat_T & Styled) => {
   const [, { updateElement: updateRoom  }] = useChatRooms(type)
   const [selectedRoom, setSelectedRoom] = useState('')
-  const [messages, { addElementForKey: addMessage }] = useChats(selectedRoom, type)
+  const [messages] = useChats(selectedRoom, type)
 
   return (
     <Flex row style={style} flex={1}>
@@ -322,12 +324,7 @@ export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : Split
           </Flex>
 
           <Flex row flex={1} style={{ marginLeft: 10, marginRight: 10 }}>
-            <SendMessage session={session} roomId={selectedRoom}
-              onNewMessage={m => { 
-                addMessage(selectedRoom, m)
-                updateRoom(selectedRoom, { recentMessage: m.message, recentSender: m.senderId ?? '' })
-              }}
-            /> 
+            <SendMessage type={type} roomId={selectedRoom}/> 
           </Flex>
           </>
         }

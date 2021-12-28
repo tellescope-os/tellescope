@@ -1,3 +1,4 @@
+import { createHash } from "crypto"
 import {
   assert,
   async_test,
@@ -17,6 +18,7 @@ import { EnduserSession } from "../enduser"
 import { Session, /* APIQuery */ } from "../sdk"
 import { PLACEHOLDER_ID } from "@tellescope/constants"
 
+export const get_sha256 = (s='') => createHash('sha256').update(s).digest('hex')
 
 const host = process.env.TEST_URL || 'http://localhost:8080'
 const [email, password] = [process.env.TEST_EMAIL, process.env.TEST_PASSWORD]
@@ -198,28 +200,89 @@ const enduser_tests = async () => {
   // await user1.api.chats.deleteOne(messageToUser.id)
 }
 
+const TEST_SESSION_DURATION = 2 // seconds
+const SESSION_TIMEOUT_DELAY = 2000 // ms
+const deauthentication_tests = async (byTimeout=false) => {
+  log_header(`Unauthenticated Tests ${byTimeout ? '- With Timeout, requires Worker' : '- With Manual Logout' }`)
+  
+  const enduser = await user1.api.endusers.createOne({ email: "socketenduser@tellescope.com" })
+  await user1.api.endusers.set_password({ id: enduser.id, password: 'enduserPassword!' })
+  await enduserSDK.authenticate(enduser.email as string, 'enduserPassword!', { expirationInSeconds: byTimeout ? TEST_SESSION_DURATION : undefined })
+  await wait(undefined, 25)
+  
+  const room  = await user1.api.chat_rooms.createOne({ 
+    type: 'external', 
+    userIds: [user1.userInfo.id],
+    enduserIds: [enduser.id],
+  })
+
+  const userEvents = [] as ChatMessage[]
+  const enduserEvents = [] as ChatMessage[]
+  user1.subscribe({ [room.id]: 'chats' })
+  enduserSDK.subscribe({ [room.id]: 'chats' }) 
+  user1.handle_events({ 'created-chats': rs => userEvents.push(...rs) }) 
+  enduserSDK.handle_events({ 'created-chats': rs => enduserEvents.push(...rs) }) 
+  await wait(undefined, 10)
+
+  if (!byTimeout) {
+    await enduserSDK.api.endusers.logout()
+  } else {
+    await wait(undefined, TEST_SESSION_DURATION * 1000 + SESSION_TIMEOUT_DELAY) 
+  }
+  await user1.api.chats.createOne({ roomId: room.id, message: "Hello!" })
+  await wait(undefined, 25)
+  assert(objects_equivalent(enduserEvents[0], undefined), 'enduser got message after logout on socket', 'enduser logged out')
+
+  // re-authenticate enduser to send message to user
+  await enduserSDK.authenticate(enduser.email as string, 'enduserPassword!')
+
+  // ensure user logged out appropriately for not receiving message
+  await user1.logout()
+  if (byTimeout) {
+    await user1.authenticate(email, password, { expirationInSeconds: byTimeout ? TEST_SESSION_DURATION : undefined } )
+    await wait(undefined, TEST_SESSION_DURATION * 1000 + SESSION_TIMEOUT_DELAY) 
+  }
+  await enduserSDK.api.chats.createOne({ roomId: room.id, message: "Hello right back!" })
+  await wait(undefined, 25)
+  assert(objects_equivalent(userEvents[0], undefined), 'user got message after logout', 'user logged out')
+
+  // must come before cleanup, so cleanup works
+  await user1.authenticate(email, password), // reauthenticate for later tests as needed
+
+  // cleanup
+  await Promise.all([
+    user1.api.endusers.deleteOne(enduser.id),
+    user1.api.chat_rooms.deleteOne(room.id), // deletes chats as side effect
+  ])
+}
+
 (async () => {
   log_header("Sockets")
 
   try {
-    await user1.authenticate(email, password, host)
+    await user1.authenticate(email, password)
     await user1.reset_db()
-    await user2.authenticate(email2, password2, host) // generate authToken + socket connection for API keyj
+    await user2.authenticate(email2, password2) // generate authToken + socket connection for API keyj
     await wait(undefined, 25)
 
     let loopCount = 0
     while (!(user1.socketAuthenticated && user2.socketAuthenticated) && ++loopCount < 10) {
-      user2.authenticate_socket()
+      if (!user1.socketAuthenticated) user1.authenticate_socket()
+      if (!user2.socketAuthenticated) user2.authenticate_socket()
       await wait(undefined, 100)
     }
     if (loopCount === 10) {
       console.log("Failed to authenticate")
       process.exit()
     }
-    
+
     await enduser_tests()
     await basic_tests()
     await access_tests()
+
+    await deauthentication_tests() // should come last!
+    await deauthentication_tests(true) // should come last!
+
   } catch(err) {
     console.error(err)
   }

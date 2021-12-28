@@ -278,7 +278,9 @@ export type CustomActions = {
 
 export type PublicActions = {
   endusers: {
-    login: CustomAction<{ id?: string, email?: string, phone?: string, password: string }, { authToken: string }>,
+    login: CustomAction<{ id?: string, email?: string, phone?: string, password: string, expirationInSeconds: number }, 
+    { authToken: string }
+  >,
   },
 }
 
@@ -472,9 +474,10 @@ export const schema: SchemaV1 = {
         enduserOnly: true, // implemented as authenticate in enduser sdk only
         parameters: { 
           id: { validator: mongoIdStringValidator },
-          password: { validator: stringValidator100, required: true }, // required until optional challenge token available
           phone: { validator: phoneValidator },
           email: { validator: emailValidator },
+          password: { validator: stringValidator100, required: true }, // required until optional challenge token available
+          expirationInSeconds: { validator: nonNegNumberValidator },
         },
         returns: { authToken: { validator: stringValidator5000 } },
       },

@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useRef, createContext } from 'react'
+import React, { useCallback, useContext, useEffect, createContext } from 'react'
 
 import { useSelector, TypedUseSelectorHook, useDispatch } from 'react-redux'
 import { createSlice, configureStore, PayloadAction, Slice } from '@reduxjs/toolkit'
@@ -55,11 +55,16 @@ export const add_elements_to_array = <T extends { id: string }>(a: LoadedData<T[
   return { status: LoadingStatus.Loaded, value: [...newValues, ...a.value] }
 }
 
-
 export const update_elements_in_array = <T extends { id: string }>(a: LoadedData<T[]>, updates: { [id: string]: Partial<T> }) => {
   if (a.status !== LoadingStatus.Loaded) return a
 
   return { status: LoadingStatus.Loaded, value: a.value.map(e => !!updates[e.id] ? { ...e, ...updates[e.id] } : e)}
+}
+
+export const replace_elements_in_array = <T extends { id: string }>(a: LoadedData<T[]>, updated: { [id: string]: Partial<T> }) => {
+  if (a.status !== LoadingStatus.Loaded) return a
+
+  return { status: LoadingStatus.Loaded, value: a.value.map(e => !!updated[e.id] ? updated[e.id] : e)}
 }
 
 export const remove_elements_in_array = <T extends { id: string }>(a: LoadedData<T[]>, ids: string[]) => {
@@ -74,6 +79,7 @@ interface ListReducers<T> {
   addSome: (state: LoadedData<T[]>, action: PayloadAction<T[]>) => void; 
   update: (state: LoadedData<T[]>, action: PayloadAction<{ id: string, updates: Partial<T>}>) => void; 
   updateSome: (state: LoadedData<T[]>, action: PayloadAction<{ [id: string]: Partial<T>}>) => void; 
+  replace: (state: LoadedData<T[]>, action: PayloadAction<{ id: string, updated: T}>) => void; 
   remove: (state: LoadedData<T[]>, action: PayloadAction<{ id: string }>) => void; 
   removeSome: (state: LoadedData<T[]>, action: PayloadAction<{ ids: string[] }>) => void; 
   [index: string]: any
@@ -93,6 +99,7 @@ export const createSliceForList = <T extends { id: string }, N extends string>(n
         updatedAt: (action.payload as any).updatedAt ?? new Date().toString()
       }
     }),
+    replace: (state, action) => replace_elements_in_array(state, { [action.payload.id]: action.payload.updated }),
     updateSome: (state, action) => update_elements_in_array(state, action.payload),
     remove: (s, a) => remove_elements_in_array(s, [a.payload.id]),
     removeSome: (s, a) => remove_elements_in_array(s, a.payload.ids),
@@ -101,7 +108,7 @@ export const createSliceForList = <T extends { id: string }, N extends string>(n
 
 interface MappedListReducers<T extends { id: string }> {
   setForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadAction<{ key: string, value: LoadedData<T[]> }>) => void;
-  addElementForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadAction<{ key: string, e: T }>) => void; 
+  addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadAction<{ key: string, elements: T[] }>) => void; 
   [index: string]: any
 }
 export const createSliceForMappedListState = <T extends { id: string }, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
@@ -111,15 +118,18 @@ export const createSliceForMappedListState = <T extends { id: string }, N extend
     setForKey: (state, action) => {
       state[action.payload.key] = action.payload.value
     },
-    addElementForKey: (state, action) => {
+    addElementsForKey: (state, action) => {
       if (state[action.payload.key].status !== LoadingStatus.Loaded) {
-        state[action.payload.key] = { status: LoadingStatus.Loaded, value: [action.payload.e] }
-      }
-      if ((state[action.payload.key].value as T[]).find(v => v.id === action.payload.e.id) !== undefined) {
-        return state
+        state[action.payload.key] = { status: LoadingStatus.Loaded, value: action.payload.elements }
       }
 
-      (state[action.payload.key].value as T[]).unshift(action.payload.e)
+      const toUnshift: T[] = []
+      for (const e of action.payload.elements) {
+        if ((state[action.payload.key].value as T[]).find(v => v.id === e.id) !== undefined) continue
+        toUnshift.push(e)
+      }
+
+      (state[action.payload.key].value as T[]).unshift(...toUnshift)
     }
   }
 })
@@ -141,54 +151,103 @@ type AppDispatch = typeof _store.dispatch
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
 const useTypedDispatch = () => useDispatch<AppDispatch>()
 
-export interface ListUpdateMethods <T> {
-  addElement: (e: T) => void,
-  addElements: (e: T[]) => void,
+export interface ListUpdateMethods <T, ADD> {
+  addLocalElement: (e: T) => void,
+  addLocalElements: (e: T[]) => void,
+  createElement: (e: ADD) => Promise<T>,
+  createElements: (e: ADD[]) => Promise<T[]>,
   findById: (id: string) => T | undefined,
-  updateElement: (id: string, e: Partial<T>) => void,
-  updateElements: (updates: { [id: string]: Partial<T> }) => void,
-  removeElement: (id: string) => void,
-  removeElements: (ids: string[]) => void,
+  updateElement: (id: string, e: Partial<T>) => Promise<T>,
+  updateLocalElement: (id: string, e: Partial<T>) => void,
+  updateLocalElements: (updates: { [id: string]: Partial<T> }) => void,
+  removeElement: (id: string) => Promise<void>,
+  removeLocalElements: (ids: string[]) => void,
 }
-export type ListStateReturnType <T extends { id: string }> = [LoadedData<T[]>, ListUpdateMethods<T>]
-export const useListStateHook = <T extends { id: string }>(
+export type ListStateReturnType <T extends { id: string }, ADD=Partial<T>> = [LoadedData<T[]>, ListUpdateMethods<T, ADD>]
+export const useListStateHook = <T extends { id: string }, ADD extends Partial<T>>(
   modelName: ModelName,
   state: LoadedData<T[]>, 
   session: Session | EnduserSession,
   slice: Slice<any, ListReducers<T>>,
-  loadQuery: LoadFunction<T>, 
+  apiCalls: {
+    loadQuery: LoadFunction<T>, 
+    addOne?: (value: ADD) => Promise<T>,
+    addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
+    updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
+    deleteOne?: (id: string) => Promise<void>,
+  },
   options?: {
     socketConnection?: 'model' | 'keys' | 'self' | 'none'
     loadFilter?: Partial<T>,
+    onAdd?: (n: T[]) => void;
+    onUpdate?: (n: Partial<T>[]) => void;
+    onDelete?: (id: string[]) => void;
   }
-): ListStateReturnType<T> => 
+): ListStateReturnType<T, ADD> => 
 {
+  const { loadQuery, addOne, addSome, updateOne, deleteOne } = apiCalls
+
   const socketConnection = options?.socketConnection ?? 'model'
   const loadFilter = options?.loadFilter
 
   const dispatch = useTypedDispatch()
   const didFetch = useContext(FetchContext)
 
-  const addElement = useCallback((e: T) => {
+  const addLocalElement = useCallback((e: T) => {
     dispatch(slice.actions.add(e))
-  }, [dispatch, slice])
-  const addElements = useCallback((es: T[]) => {
+    options?.onAdd?.([e])
+    return e
+  }, [dispatch, options, slice])
+  const addLocalElements = useCallback((es: T[]) => {
     dispatch(slice.actions.addSome(es))
-  }, [dispatch, slice])
-
-  const updateElement = useCallback((id: string, updates: Partial<T>) => {
+    options?.onAdd?.(es)
+    return es
+  }, [dispatch, options, slice])
+  const createElement = useCallback(async (e: ADD) => {
+    if (!addOne) throw new Error(`Add element by API is not supported`)
+    return addLocalElement(await addOne(e))
+  }, [addLocalElement, addOne])
+  const createElements = useCallback(async (es: ADD[]) => {
+    if (!addSome) throw new Error(`Add elements by API is not supported`)
+    return addLocalElements((await addSome(es)).created)
+  }, [addLocalElements, addSome])
+ 
+  const updateLocalElement = useCallback((id: string, updates: Partial<T>) => {
     dispatch(slice.actions.update({ id, updates }))
-  }, [dispatch, slice])
-  const updateElements = useCallback((updates: { [id: string] : Partial<T> }) => {
+    options?.onUpdate?.([{ id, ...updates }])
+  }, [dispatch, options, slice])
+  const updateLocalElements = useCallback((updates: { [id: string] : Partial<T> }) => {
     dispatch(slice.actions.updateSome(updates))
-  }, [dispatch, slice])
 
-  const removeElement = useCallback(id => {
+    const updated: Partial<T>[] = []
+    for (const id in updates) {
+      updated.push({ id, ...updates[id] })
+    }
+    options?.onUpdate?.(updated)
+  }, [dispatch, options, slice])
+
+  const replaceLocalElement = useCallback((id: string, updated: T) => {
+    dispatch(slice.actions.replace({ id, updated }))
+    options?.onUpdate?.([updated])
+    return updated
+  }, [dispatch, options, slice])
+  const updateElement = useCallback(async (id: string, e: Partial<T>) => {
+    if (!updateOne) throw new Error(`Update element by API is not supported`)
+    return replaceLocalElement(id, await updateOne(id, e)) // API returns updated model, avoids needing to merge object fields client-side, so just replace
+  }, [replaceLocalElement, updateOne])
+
+  const removeLocalElement = useCallback(id => {
     dispatch(slice.actions.remove(id))
-  }, [dispatch, slice])
-  const removeElements = useCallback(ids => {
+    options?.onDelete?.([id])
+  }, [dispatch, options, slice])
+  const removeLocalElements = useCallback(ids => {
     dispatch(slice.actions.removeSome(ids))
-  }, [dispatch, slice])
+    options?.onDelete?.(ids)
+  }, [dispatch, options, slice])
+  const removeElement = useCallback(async (id: string) => {
+    if (!deleteOne) throw new Error(`Add element by API is not supported`)
+    removeLocalElement(await deleteOne(id))
+  }, [removeLocalElement, deleteOne])
 
   const findById = useCallback((id: string) => {
     if (!id) return undefined
@@ -229,15 +288,15 @@ export const useListStateHook = <T extends { id: string }>(
     didFetch[modelName + 'socket'] = true
 
     session.handle_events({
-      [`created-${modelName}`]: addElements,
+      [`created-${modelName}`]: addLocalElements,
       [`updated-${modelName}`]: es => {
         const idToUpdates = {} as Indexable<Partial<T>>
         for (const { id, ...e } of es) {
           idToUpdates[id] = e 
         }
-        updateElements(idToUpdates)
+        updateLocalElements(idToUpdates)
       },
-      [`deleted-${modelName}`]: removeElements,
+      [`deleted-${modelName}`]: removeLocalElements,
     })
 
     if (socketConnection !== 'model') return 
@@ -252,54 +311,91 @@ export const useListStateHook = <T extends { id: string }>(
     }
   }, [session, socketConnection, didFetch])
 
-  return [state, { addElement, addElements, updateElement, updateElements, findById, removeElement, removeElements }]
+  return [state, {
+    addLocalElement, addLocalElements,
+    createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements 
+  }]
 }
 
-export interface MappedListUpdateMethods <T>{
-  addElementForKey:  (key: string, e: T) => void,
-  addElementsForKey: (key: string, e: T[]) => void,
+export interface MappedListUpdateMethods <T, ADD>{
+  createElement:  (e: ADD) => Promise<T>,
+  createElements: (e: ADD[]) => Promise<T[]>,
 }
-export type MappedListStateReturnType <T extends { id: string }> = [
+export type MappedListStateReturnType <T extends { id: string }, ADD=Partial<T>> = [
   LoadedData<T[]>,
-  MappedListUpdateMethods<T>
+  MappedListUpdateMethods<T, ADD>
 ]
-export const useMappedListStateHook = <T extends { id: string }>(
+export const useMappedListStateHook = <T extends { id: string }, ADD extends Partial<T>>(
   modelName: ModelName,
+  filterKey: (keyof T) & string,
   state:  Indexable<LoadedData<T[]>>, 
   session: EnduserSession | Session,
   key: string, 
-  loadQuery: () => Promise<T[]>, 
   slice: Slice<any, MappedListReducers<T>>,
+  apiCalls: {
+    loadQuery: LoadFunction<T>, 
+    addOne?: (value: ADD) => Promise<T>,
+    addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
+    updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
+    deleteOne?: (id: string) => Promise<void>,
+  },
   options?: {
     socketConnection?: 'keys' | 'none',
+    loadFilter?: Partial<T>,
     onAdd?: (n: T[]) => void;
-    onUpdate?: (n: T[]) => void;
-    onDelete?: (n: T[]) => void;
+    onUpdate?: (n: Partial<T>[]) => void;
+    onDelete?: (id: string[]) => void;
   }
-): MappedListStateReturnType<T>=> {
+): MappedListStateReturnType<T, ADD>=> {
+  const { loadQuery, addOne, addSome, updateOne, deleteOne } = apiCalls
+
+  const loadFilter = options?.loadFilter
   const socketConnection = options?.socketConnection ?? 'keys'
+
   const dispatch = useTypedDispatch()
   const didFetch = useContext(FetchContext)
 
-  const addElementForKey = useCallback((key: string, e: T) => {
-    dispatch(slice.actions.addElementForKey({ key, e } ))
+  const addLocalElementForKey = useCallback((key: string, e: T) => {
+    dispatch(slice.actions.addElementsForKey({ key, elements: [e] } ))
     options?.onAdd?.([e])
+    return e
+  }, [dispatch, slice]) 
+  const addLocalElementsForKey = useCallback((key: string, es: T[]) => {
+    dispatch(slice.actions.addElementsForKey({ key, elements: es } ))
+    options?.onAdd?.(es) 
+    return es
   }, [dispatch, slice]) 
 
-  const addElementsForKey = useCallback((key: string, es: T[]) => {
-    for (const e of es) addElementForKey(key, e)
-    options?.onAdd?.(es) 
-  }, [addElementForKey]) 
+  const createElement = useCallback(async (e: ADD) => {
+    if (!addOne) throw new Error(`Add element by API is not supported`)
+
+    const key = e[filterKey]
+    if (typeof key !== 'string') throw new Error(`filterKey must be a string`)
+
+    return addLocalElementForKey(key, await addOne(e))
+  }, [filterKey, addLocalElementForKey, addOne])
+
+  const createElements = useCallback(async (es: ADD[]) => {
+    if (!addSome) throw new Error(`Add elements by API is not supported`)
+
+    const key = es[0]?.[filterKey]
+    if (typeof key !== 'string') throw new Error(`filterKey must be a string`)
+
+    return addLocalElementsForKey(key, (await addSome(es)).created)
+  }, [filterKey, addLocalElementsForKey, addSome])
 
   useEffect(() => {
     if (!key) return
-    if (didFetch[key]) return
-    didFetch[key] = true
 
-    toLoadedData(loadQuery).then(
+    const fetchKey = loadFilter ? JSON.stringify(loadFilter) + key : key
+    if (didFetch[fetchKey]) return
+    didFetch[fetchKey] = true
+
+    const filter: Partial<T> = { ...loadFilter, [filterKey]: key } as any // we know [filterKey] is a keyof T
+    toLoadedData(() => loadQuery({ filter })).then(
       value => dispatch(slice.actions.setForKey({ key, value }))
     )
-  }, [key, didFetch, loadQuery])
+  }, [key, loadFilter, dispatch, didFetch, loadQuery])
 
   useEffect(() => {
     if (!key) return
@@ -308,19 +404,18 @@ export const useMappedListStateHook = <T extends { id: string }>(
     didFetch[key + 'socket'] = true
 
     session.subscribe({ [key]: modelName }, {
-      'created-chats': (cs: T[]) => addElementsForKey(key, cs)
-      // todo add updated and delted when supported
+      'created-chats': (cs: T[]) => addLocalElementsForKey(key, cs)
     })
 
     return () => { 
       session.unsubscribe([key]) 
       didFetch[key + 'socket'] = false
     }
-  }, [modelName, session, key, socketConnection, addElementsForKey])
+  }, [modelName, session, key, didFetch, socketConnection, addLocalElementForKey])
 
   return [state[key] ?? UNLOADED, {
-    addElementForKey,
-    addElementsForKey,
+    createElement,
+    createElements,
   }]
 }
 
@@ -336,19 +431,42 @@ export type HookOptions<T> = {
   loadFilter?: Partial<T>,
 }
 
-export const useChatRooms = (type: SessionType) => {
+export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRoom>) => {
   const session = useResolvedSession(type)
-  return useListStateHook('chat_rooms', useTypedSelector(s => s.chat_rooms), session, chatRoomsSlice, session.api.chat_rooms.getSome, { socketConnection: 'self' })
+  return useListStateHook('chat_rooms', useTypedSelector(s => s.chat_rooms), session, chatRoomsSlice,
+    { 
+      loadQuery: session.api.chat_rooms.getSome,
+      addOne: session.api.chat_rooms.createOne,
+      addSome: session.api.chat_rooms.createSome,
+      deleteOne: session.api.chat_rooms.deleteOne,
+      updateOne: session.api.chat_rooms.updateOne,
+    },
+    { 
+      socketConnection: 'self',
+      ...options,
+    },
+  )
 }
 
-export const useChats = (roomId: string, type: SessionType) => {
+export const useChats = (roomId: string, type: SessionType, options={} as HookOptions<ChatMessage>) => {
   const session = useResolvedSession(type)
   const state = useTypedSelector(s => s.chats)
-  const [_, { updateElement: updateChatRoom }] = useChatRooms(type)  
-  const toReturn = useMappedListStateHook('chats', state, session, roomId, () => session.api.chats.getSome({ filter: { roomId } }), chatsSlice, {
-    onAdd: ms => {
-      const newest = ms[0]
-      updateChatRoom(roomId, { recentMessage: newest.message, recentSender: newest.senderId ?? '' })
+  const [_, { updateLocalElement: updateLocalChatRoom }] = useChatRooms(type)  
+  const toReturn = useMappedListStateHook(
+    'chats', 'roomId', state, session, roomId, 
+    chatsSlice,
+    { 
+      loadQuery: session.api.chats.getSome,
+      addOne: session.api.chats.createOne,
+      addSome: session.api.chats.createSome,
+      deleteOne: session.api.chats.deleteOne,
+      updateOne: session.api.chats.updateOne,
+    }, 
+    {
+      ...options,
+      onAdd: ms => {
+        const newest = ms[0]
+        updateLocalChatRoom(roomId, { recentMessage: newest.message, recentSender: newest.senderId ?? '' })
     }
   }) 
 

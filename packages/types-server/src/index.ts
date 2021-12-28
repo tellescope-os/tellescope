@@ -41,3 +41,16 @@ export interface CustomUpdateOptions {
   replaceObjectFields?: boolean,
 }
 
+export type DelayedEvent = {
+  _id: ObjectId,
+  type: 'sessionTimeout',
+  triggerAt: number,
+  businessId: string,
+  fields: object,
+}
+export interface SessionTimeoutEvent extends DelayedEvent {
+  type: 'sessionTimeout'
+  fields: {
+    authToken: string,
+  }
+}

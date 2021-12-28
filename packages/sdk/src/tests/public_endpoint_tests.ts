@@ -58,7 +58,7 @@ const enduser_login_tests = async () => {
   log_header("Public Endpoints")
 
   try {
-    await sdk.authenticate(email, password, host)
+    await sdk.authenticate(email, password)
     await sdk.reset_db()
 
     await enduser_login_tests()

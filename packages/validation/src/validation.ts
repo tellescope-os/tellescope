@@ -7,6 +7,8 @@ import {
 } from "@tellescope/types-utilities"
 
 import {
+  FilterType,
+
   CustomField,
   Preference,
   JourneyState,
@@ -30,6 +32,7 @@ export const {
   isMongoId,
   isMimeType,
 } = v
+import isBoolean from "validator/lib/isBoolean" // better for tree-shaking in more configurations
 
 // import {
 //   BUSINESS_TYPE,
@@ -192,6 +195,27 @@ const optionsWithDefaults = (options={} as ValidatorOptions) => {
   }
 }
 
+export const binaryOrValidator = <A, B>(f1: EscapeFunction<A>, f2: EscapeFunction<B>): EscapeBuilder<A | B> => (o={}) => build_validator(
+  value => {
+    try {
+      return f1(value)
+    } catch(err) {
+      return f2(value)
+    }
+  }, 
+  { ...o, listOf: false }
+)
+
+export const filterCommandsValidator: EscapeBuilder<FilterType> = (o={}) => build_validator(
+  (value: any) => {
+    if (!is_object(value)) { throw new Error("Expecting object value for FilterType") }
+    
+    if (value._exists && typeof value._exists === 'boolean' ) return { _exists: value._exists }
+    
+    throw new Error(`Unknown filter value ${JSON.stringify(value)}`)
+  }, { ...o, isObject: true, listOf: false }
+)
+
 export const objectValidator = <T extends object>(i: InputValidation<Required<T>>): EscapeBuilder<T>  => (o={}) => build_validator(
   (object: any) => {
     const validated = {} as T
@@ -302,7 +326,6 @@ export const mongoIdValidator: EscapeBuilder<ObjectId> = (o={}) => build_validat
 export const mongoIdStringValidator: EscapeBuilder<string> = (o={}) => build_validator(
   escapeMongoId, { ...optionsWithDefaults(o), maxLength: 100, listOf: false } 
 ) 
-
 
 export const mongoIdRequired = mongoIdValidator()
 export const mongoIdOptional = mongoIdValidator({ isOptional: true })
@@ -555,6 +578,7 @@ export const fieldsValidator: EscapeBuilder<Indexable<string | CustomField>> = (
 
     for (const k in fields) {
       if (DEFAULT_ENDUSER_FIELDS.includes(k)) throw new Error(`key ${k} conflicts with a built-in field.`)
+      if (k.startsWith('_')) throw new Error("Fields that start with '_' are not allowed")
       if (is_whitespace(k)) {
         delete fields[k]
         continue

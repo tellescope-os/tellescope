@@ -1,10 +1,10 @@
 import {
   AttendeeInfo,
   JourneyState, 
-  MeetingStatus, 
   Meeting,
   UserSession,
   MeetingInfo,
+  ReadFilter,
 } from "@tellescope/types-models"
 
 import {
@@ -19,12 +19,18 @@ import {
 import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"
 
-import { Session as SessionManager, SessionOptions, Filter } from "./session"
+import { Session as SessionManager, SessionOptions } from "./session"
 
 export * from "./public"
 export * from "./enduser"
 
-export type LoadFunction<T> = (o?: { lastId?: string, limit?: number, sort?: SortOption, threadKey?: string, filter?: Filter<Partial<T>> }) => Promise<T[]>
+export type LoadFunction<T> = (o?: { 
+    lastId?: string, 
+    limit?: number, 
+    sort?: SortOption, 
+    threadKey?: string, 
+    filter?: ReadFilter<T>,
+  }) => Promise<T[]>
 
 export interface APIQuery<
   N extends keyof ClientModelForName, 
@@ -36,7 +42,7 @@ export interface APIQuery<
 {
   createOne: (t: CREATE) => Promise<T>;
   createSome: (ts: CREATE[]) => Promise<{ created: T[], errors: object[] }>;
-  getOne: (id: string, filter?: Filter<Partial<T>>) => Promise<T>;
+  getOne: (argument: string | ReadFilter<T>) => Promise<T>;
   getSome: LoadFunction<T>;
   updateOne: (id: string, updates: UPDATE, options?: CustomUpdateOptions) => Promise<T>;
   deleteOne: (id: string) => Promise<void>;
@@ -52,7 +58,8 @@ export const defaultQueries = <N extends keyof ClientModelForName>(
   return {
     createOne: o => s._POST(`/v1/${singularName}`, o),
     createSome: os => s._POST(`/v1/${safeName}`, { create: os }),
-    getOne: (id, filter) => s._GET(`/v1/${singularName}/${id}`, { filter }),
+    getOne: (argument) => typeof argument === 'string' ? s._GET(`/v1/${singularName}/${argument}`)
+                                                       : s._GET(`/v1/${singularName}`, { filter: argument }),
     getSome: (o) => s._GET(`/v1/${safeName}`, o),
     updateOne: (id, updates, options) => s._PATCH(`/v1/${singularName}/${id}`, { updates, options }),
     deleteOne: id => s._DELETE(`/v1/${singularName}/${id}`),
@@ -173,13 +180,14 @@ export class Session extends SessionManager {
     if (this.AUTO_REFRESH_MS < elapsedSessionMS) { return await this.refresh_session()}
   }
 
-  authenticate = async (email: string, password: string, url?: string) => {
-    if (url) this.host = url
-
-    return this.handle_new_session(
-      await this.POST<{email: string, password: string },  UserSession & { authToken: string }>('/submit-login', { email, password })
-    ) 
-  }
+  authenticate = async (email: string, password: string, o?: { expirationInSeconds?: number }) => (
+    this.handle_new_session(
+      await this.POST<
+        {email: string, password: string, expirationInSeconds?: number }, 
+        UserSession & { authToken: string }
+      >('/submit-login', { email, password, ...o })
+    )
+  ) 
   logout = async () => {
     this.clearState()
     await this.POST('/logout-api').catch(console.error)

@@ -22,29 +22,12 @@ export interface SessionOptions {
   authToken?: string;
   host?: string;
   cacheKey?: string;
+  expirationInSeconds?: number,
   handleUnauthenticated?: () => Promise<void>;
 }
 
 interface RequestOptions {
   refresh_session?: () => Promise<any>,
-}
-
-export type Filter<T> = { [K in keyof T]: T[K] }
-
-export interface APIQuery<
-  N extends keyof ClientModelForName, 
-  T=ClientModelForName[N], 
-  Req=ClientModelForName_required[N], 
-  CREATE=Omit<Req & Partial<T>, keyof ClientModelForName_readonly[N]>, 
-  UPDATE=Omit<Partial<T>, keyof (ClientModelForName_readonly[N] & ClientModelForName_updatesDisabled[N])>,
-> 
-{
-  createOne: (t: CREATE) => Promise<T>;
-  createSome: (ts: CREATE[]) => Promise<{ created: T[], errors: object[] }>;
-  getOne: (id: string, filter?: Filter<Partial<T>>) => Promise<T>;
-  getSome: (o?: { lastId?: string, limit?: number, sort?: SortOption, threadKey?: string }, f?: Filter<Partial<T>>) => Promise<T[]>
-  updateOne: (id: string, updates: UPDATE, options?: CustomUpdateOptions) => Promise<T>;
-  deleteOne: (id: string) => Promise<void>;
 }
 
 const generateBearer = (authToken: string) => `Bearer ${authToken}`
@@ -71,6 +54,7 @@ export class Session {
   apiKey?: string;
   socket?: Socket;
   handleUnauthenticated?: SessionOptions['handleUnauthenticated']
+  expirationInSeconds?: number;
   socketAuthenticated: boolean;
   userInfo: { businessId?: string };
   sessionStart = Date.now();
@@ -81,6 +65,7 @@ export class Session {
   constructor(o={} as SessionOptions & RequestOptions) {
     this.host= o.host ?? DEFAULT_HOST
     this.apiKey = o.apiKey ?? '';
+    this.expirationInSeconds = o.expirationInSeconds
     this.socket = undefined as Socket | undefined
     this.socketAuthenticated = false
     this.handleUnauthenticated = o.handleUnauthenticated
