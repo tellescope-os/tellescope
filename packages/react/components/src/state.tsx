@@ -272,7 +272,9 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
             subscription[e.id] = modelName
           }
           session.subscribe(subscription)
-        } 
+        } else {
+          dispatch(slice.actions.set(es))
+        }
       }
     )
 
@@ -318,6 +320,8 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
 }
 
 export interface MappedListUpdateMethods <T, ADD>{
+  addLocalElement: (e: T) => void,
+  addLocalElements: (e: T[]) => void,
   createElement:  (e: ADD) => Promise<T>,
   createElements: (e: ADD[]) => Promise<T[]>,
 }
@@ -359,18 +363,31 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
     dispatch(slice.actions.addElementsForKey({ key, elements: [e] } ))
     options?.onAdd?.([e])
     return e
-  }, [dispatch, slice]) 
+  }, [dispatch, slice, options]) 
   const addLocalElementsForKey = useCallback((key: string, es: T[]) => {
     dispatch(slice.actions.addElementsForKey({ key, elements: es } ))
     options?.onAdd?.(es) 
     return es
-  }, [dispatch, slice]) 
+  }, [dispatch, slice, options]) 
+  const addLocalElement = useCallback((e: T) => {
+    const key = e[filterKey]
+    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
+
+    addLocalElementForKey(key, e)
+  }, [filterKey, addLocalElementForKey])
+  const addLocalElements = useCallback((es: T[]) => {
+    const key = es[0]?.[filterKey]
+    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
+
+    addLocalElementsForKey(key, es)
+
+  }, [filterKey, addLocalElementsForKey])
 
   const createElement = useCallback(async (e: ADD) => {
     if (!addOne) throw new Error(`Add element by API is not supported`)
 
     const key = e[filterKey]
-    if (typeof key !== 'string') throw new Error(`filterKey must be a string`)
+    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
 
     return addLocalElementForKey(key, await addOne(e))
   }, [filterKey, addLocalElementForKey, addOne])
@@ -379,7 +396,7 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
     if (!addSome) throw new Error(`Add elements by API is not supported`)
 
     const key = es[0]?.[filterKey]
-    if (typeof key !== 'string') throw new Error(`filterKey must be a string`)
+    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
 
     return addLocalElementsForKey(key, (await addSome(es)).created)
   }, [filterKey, addLocalElementsForKey, addSome])
@@ -414,6 +431,8 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
   }, [modelName, session, key, didFetch, socketConnection, addLocalElementForKey])
 
   return [state[key] ?? UNLOADED, {
+    addLocalElement,
+    addLocalElements,
     createElement,
     createElements,
   }]
