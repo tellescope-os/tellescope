@@ -12,7 +12,6 @@ import {
   useEnduserSession,
   // useEndusers,
   Flex,
-  Table,
   UserProvider,
   EnduserProvider,
   WithEnduserSession,
@@ -43,7 +42,7 @@ const Routing = () => (
   <Router>
   <Switch>   
     {Object.keys(routes).map(r => 
-      <Route exact path={r} key={r}>
+      <Route path={r} key={r}>
         {routes[r as keyof typeof routes]()}
       </Route>
     )}

@@ -3,16 +3,11 @@ import NodeFormData from "form-data"
 import { Socket, io } from 'socket.io-client'
 
 import { 
-  CustomUpdateOptions,
   FileBlob,
-  SortOption,  
   S3PresignedPost,
 } from "@tellescope/types-utilities"
 import { 
   ClientModelForName,
-  ClientModelForName_required, 
-  ClientModelForName_readonly, 
-  ClientModelForName_updatesDisabled 
 } from "@tellescope/types-client"
 
 export const DEFAULT_HOST = 'https://api.tellescope.com'

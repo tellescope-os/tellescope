@@ -68,8 +68,9 @@ export class EnduserSession extends Session {
   userInfo!: Enduser; 
   api: EnduserQueries;
 
-  constructor(o?: EnduserSessionOptions) {
+  constructor(o?: EnduserSessionOptions & { enduser?: Enduser }) {
     super({ ...o, cacheKey: o?.cacheKey || "tellescope_enduser" })
+    if (o?.enduser) this.userInfo = o.enduser
     
     this.api = loadDefaultQueries(this) as EnduserQueries 
 

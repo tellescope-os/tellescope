@@ -1016,7 +1016,7 @@ export const schema: SchemaV1 = {
         } as any // add enduser eventually, when validator defined
       },
     },
-    enduserActions: { display_names: {} },
+    enduserActions: { display_info: {} },
     fields: {
       ...BuiltInFields, 
       email: {

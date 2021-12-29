@@ -144,10 +144,10 @@ export const Messages = ({
 
 const defaultSidebarStyle: CSSProperties  = {
   borderRadius: 5,
+  backgroundColor: 'gray',
   overflowY: 'auto',
 }
 const defaultSidebarItemStyle: CSSProperties  = {
-  color: "#ffffff",
   borderRadius: 5,
   cursor: 'pointer',
   maxHeight: 60,
@@ -299,7 +299,6 @@ interface SplitChat_T {
   type: SessionType,
 }
 export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : SplitChat_T & Styled) => {
-  const [, { updateElement: updateRoom  }] = useChatRooms(type)
   const [selectedRoom, setSelectedRoom] = useState('')
   const [messages] = useChats(selectedRoom, type)
 

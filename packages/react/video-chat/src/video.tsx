@@ -35,23 +35,15 @@ import {
   // useRemoteVideoTileState,
   // useContentShareControls, // screen sharing
 } from 'amazon-chime-sdk-component-library-react';
-import {  } from "../../../types-client/node_modules/@tellescope/types-models/src"
 
-export type AttendeeDisplayInfo =  { attendeeId: string, externalUserId: string }
+import {
+  CurrentCallContext,
 
-export const CurrentCallContext = React.createContext({} as {
-  meeting: MeetingInfo | undefined, setMeeting: (m: MeetingInfo | undefined) => void,
-  videoIsEnabled: boolean, toggleVideo: () => Promise<void>,
-  microphoneIsEnabled: boolean, toggleMicrophone: () => Promise<void>,
-  attendees: AttendeeDisplayInfo[], shareScreenId: number | null,
-  localTileId: number | null,
-  isHost: boolean, setIsHost: (b: boolean) => void;
-  videoTiles: (number)[],
-})
-export interface VideoProps {
-  children?: React.ReactNode,
-  theme?: typeof darkTheme,
-}
+  AttendeeDisplayInfo,
+  VideoProps,
+  VideoViewProps,
+} from "./video_shared"
+
 const WithContext = ({ children } : { children: React.ReactNode }) => {
   const [meeting, setMeeting] = useState(undefined as MeetingInfo | undefined)
   const [isHost, setIsHost] = useState(false)
@@ -85,8 +77,8 @@ const WithContext = ({ children } : { children: React.ReactNode }) => {
     </CurrentCallContext.Provider>
   )
 }
-export const WithVideo = ({ children, theme=darkTheme }: VideoProps) => (
-  <ThemeProvider theme={theme}>
+export const WithVideo = ({ children }: VideoProps) => (
+  <ThemeProvider theme={darkTheme}>
   <MeetingProvider>
   <WithContext>
     {children}
@@ -161,9 +153,6 @@ export const useJoinVideoCall = () => {
 }
 export type JoinVideoCallReturnType = ReturnType<typeof useJoinVideoCall>
 
-export interface VideoViewProps {
-  style?: CSSProperties,
-}
 export const SelfView = ({ style }: VideoViewProps) => <div style={style}><LocalVideo/></div>
 
 export const useRemoteViews = (props={} as VideoViewProps) => {

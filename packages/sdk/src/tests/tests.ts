@@ -288,12 +288,20 @@ const updatesTests = async () => {
 
 const generateEnduserAuthTests = async () => {
   log_header("Generated Enduser authToken Tests")
-  const e = await sdk.api.endusers.createOne({ email: 'generated@tellescope.com', phone: '+15555555555', externalId: '1029f9v9sjd0as' })
+  const externalId = '1029f9v9sjd0as'
+  const e = await sdk.api.endusers.createOne({ email: 'generated@tellescope.com', phone: '+15555555555', externalId })
+
   const { authToken, enduser } = await sdk.api.endusers.generate_auth_token({ id: e.id })
   assert(!!authToken && !!enduser, 'invalid returned values', 'Generate authToken and get enduser')
-
   const { isAuthenticated } = await sdk.api.endusers.is_authenticated({ id: enduser.id, authToken })
   assert(isAuthenticated, 'invalid authToken generated for enduser', 'Generate authToken for enduser is valid')
+
+  const { authToken: authTokenUID, enduser: enduser2 } = await sdk.api.endusers.generate_auth_token({ externalId })
+  assert(!!authTokenUID && !!enduser2, 'invalid returned values eid', 'Generate authToken and get enduser eid')
+  assert((
+    await sdk.api.endusers.is_authenticated({ id: enduser2.id, authToken: authTokenUID })).isAuthenticated, 
+    'invalid authToken generated for enduser', 'Generate authToken for enduser is valid'
+  )
 
   await async_test(
     `auth by externalId`, () => sdk.api.endusers.generate_auth_token({ externalId: e.externalId }), passOnVoid,

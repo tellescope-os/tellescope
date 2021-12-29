@@ -116,8 +116,10 @@ export class Session extends SessionManager {
   api: Queries;
   userInfo!: UserSession;
 
-  constructor(o?: SessionOptions) {
+  constructor(o?: SessionOptions & { userInfo?: UserSession }) {
     super({ ...o, cacheKey: o?.cacheKey || "tellescope_user" })
+    if (o?.userInfo) this.userInfo = o.userInfo
+
     const queries = loadDefaultQueries(this) as Queries
 
     queries.journeys.update_state = ({id, name, updates}) => this._PATCH(`/v1/journey/${id}/state/${name}`, { updates })

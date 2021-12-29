@@ -48,11 +48,15 @@ export const toLoadedData = async <T,>(p: () => Promise<T>): Promise<{
   }
 }
 
-export const add_elements_to_array = <T extends { id: string }>(a: LoadedData<T[]>, elements: T[]) => {
+// default add to start
+export const add_elements_to_array = <T extends { id: string }>(a: LoadedData<T[]>, elements: T[], options?: { addTo?: 'start' | 'end' }) => {
   if (a.status !== LoadingStatus.Loaded) return { status: LoadingStatus.Loaded, value: elements }
  
   const newValues = elements.filter(e => a.value.find(v => v.id === e.id) === undefined) 
-  return { status: LoadingStatus.Loaded, value: [...newValues, ...a.value] }
+  return { 
+    status: LoadingStatus.Loaded, 
+    value: options?.addTo === 'end' ? [...a.value, ...newValues] : [...newValues, ...a.value] 
+  }
 }
 
 export const update_elements_in_array = <T extends { id: string }>(a: LoadedData<T[]>, updates: { [id: string]: Partial<T> }) => {
@@ -72,16 +76,18 @@ export const remove_elements_in_array = <T extends { id: string }>(a: LoadedData
   return { status: LoadingStatus.Loaded, value: a.value.filter(v => !ids.includes(v.id) )}
 }
 
+type PayloadActionWithOptions <DATA, OPTIONS={}> = PayloadAction<{ value: DATA, options?: OPTIONS }>
+
 interface ListReducers<T> {
-  set: (state: LoadedData<T[]>, action: PayloadAction<LoadedData<T[]>>) => void; 
+  set: (state: LoadedData<T[]>, action: PayloadActionWithOptions<LoadedData<T[]>>) => void; 
   setFetching: (state: LoadedData<T[]>) => void;
-  add: (state: LoadedData<T[]>, action: PayloadAction<T>) => void; 
-  addSome: (state: LoadedData<T[]>, action: PayloadAction<T[]>) => void; 
-  update: (state: LoadedData<T[]>, action: PayloadAction<{ id: string, updates: Partial<T>}>) => void; 
-  updateSome: (state: LoadedData<T[]>, action: PayloadAction<{ [id: string]: Partial<T>}>) => void; 
-  replace: (state: LoadedData<T[]>, action: PayloadAction<{ id: string, updated: T}>) => void; 
-  remove: (state: LoadedData<T[]>, action: PayloadAction<{ id: string }>) => void; 
-  removeSome: (state: LoadedData<T[]>, action: PayloadAction<{ ids: string[] }>) => void; 
+  add: (state: LoadedData<T[]>, action: PayloadActionWithOptions<T, AddOptions>) => void; 
+  addSome: (state: LoadedData<T[]>, action: PayloadActionWithOptions<T[], AddOptions>) => void; 
+  update: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ id: string, updates: Partial<T>}>) => void; 
+  updateSome: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ [id: string]: Partial<T>}>) => void; 
+  replace: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ id: string, updated: T}>) => void; 
+  remove: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ id: string }>) => void; 
+  removeSome: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ ids: string[] }>) => void; 
   [index: string]: any
 }
 
@@ -91,24 +97,24 @@ export const createSliceForList = <T extends { id: string }, N extends string>(n
   reducers: {
     set: (_, action) => action.payload,
     setFetching: (s) => s.status === LoadingStatus.Unloaded ? { status: LoadingStatus.Fetching, value: undefined } : s,
-    add: (state, action) => add_elements_to_array(state, [action.payload]),
-    addSome: (state, action) => add_elements_to_array(state, action.payload),
+    add: (state, action) => add_elements_to_array(state, [action.payload.value], action.payload.options),
+    addSome: (state, action) => add_elements_to_array(state, action.payload.value, action.payload.options),
     update: (state, action) => update_elements_in_array(state, { 
-      [action.payload.id]: {
-        ...action.payload.updates,
+      [action.payload.value.id]: {
+        ...action.payload.value.updates,
         updatedAt: (action.payload as any).updatedAt ?? new Date().toString()
       }
     }),
-    replace: (state, action) => replace_elements_in_array(state, { [action.payload.id]: action.payload.updated }),
-    updateSome: (state, action) => update_elements_in_array(state, action.payload),
-    remove: (s, a) => remove_elements_in_array(s, [a.payload.id]),
-    removeSome: (s, a) => remove_elements_in_array(s, a.payload.ids),
+    replace: (state, action) => replace_elements_in_array(state, { [action.payload.value.id]: action.payload.value.updated }),
+    updateSome: (state, action) => update_elements_in_array(state, action.payload.value),
+    remove: (s, a) => remove_elements_in_array(s, [a.payload.value.id]),
+    removeSome: (s, a) => remove_elements_in_array(s, a.payload.value.ids),
   }
 })
 
 interface MappedListReducers<T extends { id: string }> {
-  setForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadAction<{ key: string, value: LoadedData<T[]> }>) => void;
-  addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadAction<{ key: string, elements: T[] }>) => void; 
+  setForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, data: LoadedData<T[]> }, AddOptions>) => void;
+  addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, elements: T[] }, AddOptions>) => void; 
   [index: string]: any
 }
 export const createSliceForMappedListState = <T extends { id: string }, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
@@ -116,20 +122,25 @@ export const createSliceForMappedListState = <T extends { id: string }, N extend
   initialState: {} as Indexable<LoadedData<T[]>>,
   reducers: {
     setForKey: (state, action) => {
-      state[action.payload.key] = action.payload.value
+      state[action.payload.value.key] = action.payload.value.data
     },
     addElementsForKey: (state, action) => {
-      if (state[action.payload.key].status !== LoadingStatus.Loaded) {
-        state[action.payload.key] = { status: LoadingStatus.Loaded, value: action.payload.elements }
+      if (state[action.payload.value.key].status !== LoadingStatus.Loaded) {
+        state[action.payload.value.key] = { status: LoadingStatus.Loaded, value: action.payload.value.elements }
       }
 
-      const toUnshift: T[] = []
-      for (const e of action.payload.elements) {
-        if ((state[action.payload.key].value as T[]).find(v => v.id === e.id) !== undefined) continue
-        toUnshift.push(e)
+      const toAdd: T[] = []
+      for (const e of action.payload.value.elements) {
+        if ((state[action.payload.value.key].value as T[]).find(v => v.id === e.id) !== undefined) continue
+        toAdd.push(e)
       }
 
-      (state[action.payload.key].value as T[]).unshift(...toUnshift)
+      // default to start
+      if (action.payload.options?.addTo === 'end') {
+        (state[action.payload.value.key].value as T[]).push(...toAdd)
+      } else {
+        (state[action.payload.value.key].value as T[]).unshift(...toAdd)
+      }
     }
   }
 })
@@ -151,11 +162,15 @@ type AppDispatch = typeof _store.dispatch
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
 const useTypedDispatch = () => useDispatch<AppDispatch>()
 
+export type AddOptions = {
+  addTo?: 'start' | 'end'
+}
+
 export interface ListUpdateMethods <T, ADD> {
-  addLocalElement: (e: T) => void,
-  addLocalElements: (e: T[]) => void,
-  createElement: (e: ADD) => Promise<T>,
-  createElements: (e: ADD[]) => Promise<T[]>,
+  addLocalElement: (e: T, o?: AddOptions) => T,
+  addLocalElements: (e: T[], o?: AddOptions) => T[],
+  createElement: (e: ADD, o?: AddOptions) => Promise<T>,
+  createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
   findById: (id: string) => T | undefined,
   updateElement: (id: string, e: Partial<T>) => Promise<T>,
   updateLocalElement: (id: string, e: Partial<T>) => void,
@@ -193,31 +208,31 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
   const dispatch = useTypedDispatch()
   const didFetch = useContext(FetchContext)
 
-  const addLocalElement = useCallback((e: T) => {
-    dispatch(slice.actions.add(e))
+  const addLocalElement = useCallback((e: T, o?: AddOptions) => {
+    dispatch(slice.actions.add({ value: e, options: o }))
     options?.onAdd?.([e])
     return e
   }, [dispatch, options, slice])
-  const addLocalElements = useCallback((es: T[]) => {
-    dispatch(slice.actions.addSome(es))
+  const addLocalElements = useCallback((es: T[], o?: AddOptions) => {
+    dispatch(slice.actions.addSome({ value: es, options: o }))
     options?.onAdd?.(es)
     return es
   }, [dispatch, options, slice])
-  const createElement = useCallback(async (e: ADD) => {
+  const createElement = useCallback(async (e: ADD, options?: AddOptions) => {
     if (!addOne) throw new Error(`Add element by API is not supported`)
-    return addLocalElement(await addOne(e))
+    return addLocalElement(await addOne(e), options)
   }, [addLocalElement, addOne])
-  const createElements = useCallback(async (es: ADD[]) => {
+  const createElements = useCallback(async (es: ADD[], options?: AddOptions) => {
     if (!addSome) throw new Error(`Add elements by API is not supported`)
-    return addLocalElements((await addSome(es)).created)
+    return addLocalElements((await addSome(es)).created, options)
   }, [addLocalElements, addSome])
  
   const updateLocalElement = useCallback((id: string, updates: Partial<T>) => {
-    dispatch(slice.actions.update({ id, updates }))
+    dispatch(slice.actions.update({ value: { id, updates } }))
     options?.onUpdate?.([{ id, ...updates }])
   }, [dispatch, options, slice])
   const updateLocalElements = useCallback((updates: { [id: string] : Partial<T> }) => {
-    dispatch(slice.actions.updateSome(updates))
+    dispatch(slice.actions.updateSome({ value: updates }))
 
     const updated: Partial<T>[] = []
     for (const id in updates) {
@@ -227,7 +242,7 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
   }, [dispatch, options, slice])
 
   const replaceLocalElement = useCallback((id: string, updated: T) => {
-    dispatch(slice.actions.replace({ id, updated }))
+    dispatch(slice.actions.replace({ value: { id, updated } }))
     options?.onUpdate?.([updated])
     return updated
   }, [dispatch, options, slice])
@@ -264,7 +279,7 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
     toLoadedData(() => loadQuery({ filter: loadFilter })).then(
       es => {
         if (es.status === LoadingStatus.Loaded) {
-          dispatch(slice.actions.addSome(es.value))
+          dispatch(slice.actions.addSome({ value: es.value }))
 
           if (socketConnection !== 'keys') return
           const subscription = { } as Indexable         
@@ -273,7 +288,7 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
           }
           session.subscribe(subscription)
         } else {
-          dispatch(slice.actions.set(es))
+          dispatch(slice.actions.set({ value: es }))
         }
       }
     )
@@ -320,10 +335,10 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
 }
 
 export interface MappedListUpdateMethods <T, ADD>{
-  addLocalElement: (e: T) => void,
-  addLocalElements: (e: T[]) => void,
-  createElement:  (e: ADD) => Promise<T>,
-  createElements: (e: ADD[]) => Promise<T[]>,
+  addLocalElement: (e: T, o?: AddOptions) => void,
+  addLocalElements: (e: T[], o?: AddOptions) => void,
+  createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
+  createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
 }
 export type MappedListStateReturnType <T extends { id: string }, ADD=Partial<T>> = [
   LoadedData<T[]>,
@@ -359,46 +374,46 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
   const dispatch = useTypedDispatch()
   const didFetch = useContext(FetchContext)
 
-  const addLocalElementForKey = useCallback((key: string, e: T) => {
-    dispatch(slice.actions.addElementsForKey({ key, elements: [e] } ))
+  const addLocalElementForKey = useCallback((key: string, e: T, o?: AddOptions) => {
+    dispatch(slice.actions.addElementsForKey({ value: { key, elements: [e] }, options: o }))
     options?.onAdd?.([e])
     return e
   }, [dispatch, slice, options]) 
-  const addLocalElementsForKey = useCallback((key: string, es: T[]) => {
-    dispatch(slice.actions.addElementsForKey({ key, elements: es } ))
+  const addLocalElementsForKey = useCallback((key: string, es: T[], o?: AddOptions) => {
+    dispatch(slice.actions.addElementsForKey({ value: { key, elements: es }, options: o }))
     options?.onAdd?.(es) 
     return es
   }, [dispatch, slice, options]) 
-  const addLocalElement = useCallback((e: T) => {
+  const addLocalElement = useCallback((e: T, options?: AddOptions) => {
     const key = e[filterKey]
     if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
 
-    addLocalElementForKey(key, e)
+    addLocalElementForKey(key, e, options)
   }, [filterKey, addLocalElementForKey])
-  const addLocalElements = useCallback((es: T[]) => {
+  const addLocalElements = useCallback((es: T[], options?: AddOptions) => {
     const key = es[0]?.[filterKey]
     if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
 
-    addLocalElementsForKey(key, es)
+    addLocalElementsForKey(key, es, options)
 
   }, [filterKey, addLocalElementsForKey])
 
-  const createElement = useCallback(async (e: ADD) => {
+  const createElement = useCallback(async (e: ADD, options?: AddOptions) => {
     if (!addOne) throw new Error(`Add element by API is not supported`)
 
     const key = e[filterKey]
     if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
 
-    return addLocalElementForKey(key, await addOne(e))
+    return addLocalElementForKey(key, await addOne(e), options)
   }, [filterKey, addLocalElementForKey, addOne])
 
-  const createElements = useCallback(async (es: ADD[]) => {
+  const createElements = useCallback(async (es: ADD[], options?: AddOptions) => {
     if (!addSome) throw new Error(`Add elements by API is not supported`)
 
     const key = es[0]?.[filterKey]
     if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
 
-    return addLocalElementsForKey(key, (await addSome(es)).created)
+    return addLocalElementsForKey(key, (await addSome(es)).created, options)
   }, [filterKey, addLocalElementsForKey, addSome])
 
   useEffect(() => {
@@ -410,7 +425,7 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
 
     const filter: Partial<T> = { ...loadFilter, [filterKey]: key } as any // we know [filterKey] is a keyof T
     toLoadedData(() => loadQuery({ filter })).then(
-      value => dispatch(slice.actions.setForKey({ key, value }))
+      data => dispatch(slice.actions.setForKey({ value: { key, data } }))
     )
   }, [key, loadFilter, dispatch, didFetch, loadQuery])
 
@@ -421,7 +436,7 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
     didFetch[key + 'socket'] = true
 
     session.subscribe({ [key]: modelName }, {
-      'created-chats': (cs: T[]) => addLocalElementsForKey(key, cs)
+      'created-chats': (cs: T[]) => addLocalElementsForKey(key, cs, {})
     })
 
     return () => { 
@@ -448,6 +463,7 @@ const useResolvedSession = (type: SessionType) => {
 
 export type HookOptions<T> = {
   loadFilter?: Partial<T>,
+  addTo?: AddOptions['addTo'],
 }
 
 export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRoom>) => {

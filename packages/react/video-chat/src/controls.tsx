@@ -14,10 +14,8 @@ import {
 } from "@tellescope/react-components/lib/esm/mui"
 import { LabeledIconButton } from "@tellescope/react-components/lib/esm/controls"
 import { Flex } from "@tellescope/react-components/lib/esm/layout"
-import {
-  CurrentCallContext,
-  useStartVideoCall,
-} from "./video"
+import { CurrentCallContext } from "./video_shared"
+import { useStartVideoCall } from "./video"
 
 const DEFAULT_BUTTON_SIZE = 30
 interface ButtonProps {

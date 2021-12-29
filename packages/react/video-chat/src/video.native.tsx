@@ -20,12 +20,7 @@ import { Flex } from "@tellescope/react-components/lib/esm/layout"
 import { 
   Button, 
   Typography, 
-  convert_CSS_to_RNStyles,
-
-  VideoIcon,
-  VideoOffIcon,
-  MicrophoneIcon,
-  MicrophoneOffIcon,
+  convert_CSS_to_RNStyles, // requires mui.native
 } from "@tellescope/react-components/lib/esm/mui.native"
 
 import {
@@ -35,7 +30,7 @@ import {
   VideoProps,
   AttendeeDisplayInfo,
   VideoViewProps,
-} from "./video.js"
+} from "./video_shared"
 
 import {
   getSDKEventEmitter,
