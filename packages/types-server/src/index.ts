@@ -29,6 +29,7 @@ export type Ticket = ServerModelForName['tickets']
 export type User = ServerModelForName['users']
 export type Meeting = ServerModelForName['meetings']
 export type Note = ServerModelForName['notes']
+export type WebHook = ServerModelForName['webhooks']
 
 export type Organization = ToServerModel<BaseOrganization>
 export type DatabaseModel = ServerModelForName[keyof ModelForName]
@@ -41,11 +42,14 @@ export interface CustomUpdateOptions {
   replaceObjectFields?: boolean,
 }
 
-export type DelayedEvent = {
+export interface InternalBusinessRecord {
   _id: ObjectId,
+  businessId: string,
+}
+
+export interface DelayedEvent extends InternalBusinessRecord {
   type: 'sessionTimeout',
   triggerAt: number,
-  businessId: string,
   fields: object,
 }
 export interface SessionTimeoutEvent extends DelayedEvent {

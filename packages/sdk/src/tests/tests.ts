@@ -973,47 +973,48 @@ const enduserAccessTests = async () => {
   for (const n in schema) {
     const endpoint = url_safe_path(n)
     const model = schema[n as keyof typeof schema]
+    if (n === 'webhooks') continue // no default endpoints implemented
 
     if (!model?.enduserActions?.read && (model.defaultActions.read || model.customActions.read)) {
       await async_test(
         `no-enduser-access getOne (${endpoint})`,
         () => enduserSDK.GET(`/v1/${endpoint.substring(0, endpoint.length - 1)}/:id`), 
-        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+        { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
     if (!model.enduserActions?.readMany && (model.defaultActions.readMany || model.customActions.readMany)) {
       await async_test(
         `no-enduser-access getSome (${endpoint})`,
         () => enduserSDK.GET(`/v1/${endpoint}`), 
-        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+        { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
     if (!model.enduserActions?.create && (model.defaultActions.create || model.customActions.create)) {
       await async_test(
         `no-enduser-access createOne (${endpoint})`,
         () => enduserSDK.POST(`/v1/${endpoint.substring(0, endpoint.length - 1)}`), 
-        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+        { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
     if (!model.enduserActions?.createMany && (model.defaultActions.createMany || model.customActions.createMany)) {
       await async_test(
         `no-enduser-access createMany (${endpoint})`,
         () => enduserSDK.POST(`/v1/${endpoint}`), 
-        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+        { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
     if (!model.enduserActions?.update && (model.defaultActions.update || model.customActions.update)) {
       await async_test(
         `no-enduser-access update (${endpoint})`,
         () => enduserSDK.PATCH(`/v1/${endpoint.substring(0, endpoint.length - 1)}/:id`), 
-        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+        { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
     if (!model.enduserActions?.delete && (model.defaultActions.delete || model.customActions.delete)) {
       await async_test(
         `no-enduser-access delete (${endpoint})`,
         () => enduserSDK.DELETE(`/v1/${endpoint.substring(0, endpoint.length - 1)}/:id`), 
-        { shouldError: true, onError: (e: string) => e === 'Unauthenticated' }
+        { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
   }
@@ -1076,6 +1077,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   tickets: () => {},
   meetings: () => {},
   notes: () => {},
+  webhooks: () => {},
 };
 
 (async () => {

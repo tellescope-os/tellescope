@@ -1,12 +1,16 @@
 import { ObjectId } from "bson"
 
 import {
+  CUD as CUDType,
   CustomUpdateOptions,
   Indexable,
   JSONType,
 } from "@tellescope/types-utilities"
 
 import {
+  WEBHOOK_MODELS,
+  WebhookSupportedModel, 
+
   FilterType,
 
   CustomField,
@@ -22,6 +26,7 @@ import {
   SessionType,
   AttendeeInfo,
   MeetingInfo,
+  CUDSubscription,
 } from "@tellescope/types-models"
 
 import v from 'validator'
@@ -31,6 +36,7 @@ export const {
   isMobilePhone,
   isMongoId,
   isMimeType,
+  isURL,
 } = v
 import isBoolean from "validator/lib/isBoolean" // better for tree-shaking in more configurations
 
@@ -404,6 +410,15 @@ export const exactMatchValidator = <T extends string>(matches: T[]): EscapeBuild
   }, 
   { ...o, listOf: false }
 )
+export const exactMatchListValidator = <T extends string>(matches: T[]): EscapeBuilder<T[]> => (o={}) => build_validator(
+  (match: JSONType) => {
+    if (matches.filter(m => m === match).length === 0) {
+      throw new Error(`Value must match one of ${matches}`)
+    }
+    return match
+  }, 
+  { ...o, listOf: true }
+)
 
 export const journeysValidator: EscapeBuilder<Indexable> = (options={}) => build_validator(
   (journeys) => {
@@ -447,6 +462,16 @@ export const fileTypeValidator: EscapeBuilder<string> = (options={}) => build_va
   (s: any) => {
     if (typeof s !== 'string') throw new Error("fileType must be a string")
     if (!isMimeType(s)) throw new Error(`${s} is not a valid file type`)
+
+    return s
+  }, 
+  { ...options, listOf: false }
+)
+
+export const urlValidator: EscapeBuilder<string> = (options={}) => build_validator(
+  (s: any) => {
+    if (typeof s !== 'string') throw new Error("URL must be a string")
+    if (!isURL(s)) throw new Error(`${s} is not a valid URL`)
 
     return s
   }, 
@@ -700,6 +725,27 @@ const _MEETING_STATUSES: { [K in MeetingStatus]: any } = {
 }
 export const MEETING_STATUSES = Object.keys(_MEETING_STATUSES) as MeetingStatus[]
 export const meetingStatusValidator = exactMatchValidator<MeetingStatus>(MEETING_STATUSES)
+
+const _CUD: { [K in CUDType]: any } = {
+  create: '',
+  update: '',
+  delete: '',
+}
+export const CUD = Object.keys(_CUD) as CUDType[]
+
+export const CUDValidator = objectValidator<CUDSubscription>({
+  create: booleanValidator(),
+  update: booleanValidator(),
+  delete: booleanValidator(),
+})
+
+const WebhookSubscriptionValidatorObject = {} as { [K in WebhookSupportedModel]: EscapeFunction<CUDSubscription> } 
+for (const model in WEBHOOK_MODELS) {
+  WebhookSubscriptionValidatorObject[model as WebhookSupportedModel] = CUDValidator({ listOf: false })
+}
+export const WebhookSubscriptionValidator = objectValidator<{ [K in WebhookSupportedModel]: CUDSubscription}>(
+  WebhookSubscriptionValidatorObject
+)
 
 export const sessionTypeValidator = exactMatchValidator<SessionType>(['user', 'enduser'])
 

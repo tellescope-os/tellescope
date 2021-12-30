@@ -12,17 +12,21 @@ import {
   Operation,
   JSONType,
   CRUD,
+  CUD,
   HTTPMethod,
   SessionType,
   UserIdentity,
 } from "@tellescope/types-utilities"
 import {
+  WEBHOOK_MODELS,
+
   EnduserSession,
   ChatRoom,
   JourneyState,
   UserSession,
   AttendeeInfo,
   MeetingStatus,
+  WebhookSubscriptionsType,
 } from "@tellescope/types-models"
 
 import {
@@ -68,6 +72,8 @@ import {
   attendeeInfoValidator,
   listOfObjectAnyFieldsValidator,
   meetingsListValidator,
+  urlValidator,
+  WebhookSubscriptionValidator,
 } from "@tellescope/validation"
 
 import {
@@ -273,6 +279,10 @@ export type CustomActions = {
     add_attendees_to_meeting: CustomAction<{ id: string, attendees: UserIdentity[] }, { }>, 
     my_meetings: CustomAction<{}, { id: string, updatedAt: string, status: MeetingStatus }[]>
     attendee_info: CustomAction<{ id: string }, { attendee: AttendeeInfo, others: UserIdentity[] }>,
+  },
+  webhooks: {
+    configure: CustomAction<{ url: string, secret: string, subscriptions?: WebhookSubscriptionsType }, { }>,
+    update: CustomAction<{ url?: string, secret?: string, subscriptionUpdates?: WebhookSubscriptionsType }, { }>,
   },
 } 
 
@@ -1332,6 +1342,67 @@ export const schema: SchemaV1 = {
       fields: {
         validator: fieldsValidator,
       }
+    }
+  },
+  webhooks: {
+    info: {
+      description: `Allows you to subscribe to Webhooks when models in Tellescope are created, updated, and deleted.
+        Each webhook is a POST request to the given URL, of the form { model: string, type: 'create' | 'update' | 'delete', records: object[], timestamp: string, integrity: string }.
+        This includes the name of the model, the type of operation performed, and an array of the new, updated, or deleted model(s).
+
+        The integrity field is a sha256 hash of (record ids concatenated from index 0 to the end, with the timestamp and then secret appended)
+        For example hook: { records: [{ id: '1', ... }, { id: '4', ... }], timestamp: "1029358" } with secret set as "secret",
+        integrity = sha256('141029358secret')
+        Each time you handle a webhook, you should verify the integrity field is correct to ensure that the request is actually coming from Tellescope. 
+
+        Supported Models: ${Object.keys(WEBHOOK_MODELS).join(', ')}
+      `
+    },
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: {},
+    customActions: {
+      configure: {
+        op: "custom", access: 'create', method: "post",
+        name: 'Configure Webhooks (Admin Only)',
+        path: '/configure-webhooks',
+        description: "Sets the URL, secret, and initial subscriptions for your organization. Only one webhooks configuration per organization is allowed at this time. Your secret must exceed 15 characters and should be generated randomly.",
+        parameters: { 
+          url: { validator: urlValidator, required: true },
+          secret: { validator: stringValidator5000, required: true },
+          subscriptions: { validator: WebhookSubscriptionValidator },
+        },
+        returns: {},
+      },
+      update: {
+        op: "custom", access: 'update', method: "patch",
+        name: 'Update Webhooks (Admin Only)',
+        path: '/update-webhooks',
+        description: "Modifies only subscriptions to models included in subscriptionUpdates. To remove subscriptions for a given model, set all values to false.",
+        parameters: { 
+          url: { validator: urlValidator },
+          secret: { validator: stringValidator5000 },
+          subscriptionUpdates: { validator: WebhookSubscriptionValidator },
+        },
+        returns: {},
+      },
+    },
+    enduserActions: {},
+    fields: {
+      ...BuiltInFields, 
+      secret: {
+        validator: stringValidator250,
+        examples: ["Text"],
+      },
+      url: {
+        validator: urlValidator,
+        examples: ["Text"],
+      },
+      subscriptions: {
+        validator: WebhookSubscriptionValidator,
+      },
     }
   },
 }

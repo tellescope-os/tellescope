@@ -38,7 +38,8 @@ export interface CustomUpdateOptions {
   replaceObjectFields?: boolean,
 }
 
-export type CRUD = 'create' | 'update' | 'read' | 'delete' 
+export type CUD = 'create' | 'update' | 'delete' 
+export type CRUD = CUD | 'read'
 export type HTTPMethod = 'post' | 'get' | 'patch' | 'delete' 
 export type Operation = CRUD | 'createMany' | 'readMany' 
 

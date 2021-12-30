@@ -1,4 +1,4 @@
-import { Indexable, UserIdentity } from "@tellescope/types-utilities"
+import { CUD, Indexable, UserIdentity } from "@tellescope/types-utilities"
 
 export type AccessType = "All" | "Assigned" | null
 export type AccessAction = "create" | "read" | "update" | "delete"
@@ -366,6 +366,40 @@ export interface Note extends Note_readonly, Note_required, Note_updatesDisabled
   fields?: Indexable<string | CustomField>,
 }
 
+export const WEBHOOK_MODELS = {
+  'chats': '',
+  'meetings': '',
+}
+export type WebhookSupportedModel = keyof typeof WEBHOOK_MODELS
+export type CUDSubscription = {
+  [K in CUD]?: boolean
+}
+export type WebhookSubscriptionsType = { [K in WebhookSupportedModel]?: CUDSubscription }
+export const is_webhook_supported_model = (m: ModelName): m is WebhookSupportedModel => (
+  WEBHOOK_MODELS[m as keyof typeof WEBHOOK_MODELS] !== undefined
+)
+
+export interface WebHook_readonly extends ClientRecord {}
+export interface WebHook_required {}
+export interface WebHook_updatesDisabled {}
+export interface WebHook extends WebHook_readonly, WebHook_required, WebHook_updatesDisabled {
+  url: string,
+  secret: string,
+  subscriptions: WebhookSubscriptionsType
+}
+
+export type WebhookRecord = {
+  id: string,
+  [index: string]: any,
+}
+export interface WebhookCall {  
+  model: WebhookSupportedModel,
+  type: CUD,
+  records: WebhookRecord[],
+  timestamp: string,
+  integrity: string,
+}
+
 export type ModelForName_required = {
   endusers: Enduser_required;
   engagement_events: EngagementEvent_required;
@@ -382,6 +416,7 @@ export type ModelForName_required = {
   tickets: Ticket_required;
   meetings: Meeting_required;
   notes: Note_required;
+  webhooks: WebHook_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
 
@@ -401,6 +436,7 @@ export interface ModelForName_readonly {
   tickets: Ticket_readonly;
   meetings: Meeting_readonly;
   notes: Note_readonly;
+  webhooks: WebHook_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
 
@@ -420,6 +456,7 @@ export interface ModelForName_updatesDisabled {
   tickets: Ticket_updatesDisabled;
   meetings: Meeting_updatesDisabled;
   notes: Note_updatesDisabled;
+  webhooks: WebHook_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
 
@@ -439,6 +476,7 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   tickets: Ticket;
   meetings: Meeting;
   notes: Note;
+  webhooks: WebHook;
 }
 export type ModelName = keyof ModelForName
 export type Model = ModelForName[keyof ModelForName]

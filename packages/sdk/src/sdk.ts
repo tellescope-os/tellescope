@@ -5,6 +5,7 @@ import {
   UserSession,
   MeetingInfo,
   ReadFilter,
+  WebhookSubscriptionsType,
 } from "@tellescope/types-models"
 
 import {
@@ -82,6 +83,7 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   tickets: defaultQueries(s, 'tickets'),
   meetings: defaultQueries(s, 'meetings'),
   notes: defaultQueries(s, 'notes'),
+  webhooks: defaultQueries(s, 'webhooks')
 })
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
@@ -110,6 +112,10 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   chat_rooms: {
     join_room: (args: { id: string }) => Promise<{ room: ChatRoom }>,
   },
+  webhooks: {
+    configure: (args: { url: string, secret: string, subscriptions?: WebhookSubscriptionsType }) => Promise<void>,
+    update: (args: { url?: string, secret?: string, subscriptionUpdates?: WebhookSubscriptionsType }) => Promise<void>
+  },
 }
 
 export class Session extends SessionManager {
@@ -136,6 +142,9 @@ export class Session extends SessionManager {
     queries.meetings.add_attendees_to_meeting = a => this._POST('/v1/add-attendees-to-meeting', a)
     queries.meetings.attendee_info = a => this._GET('/v1/attendee-info', a)
     queries.meetings.my_meetings = () => this._GET('/v1/my-meetings')
+
+    queries.webhooks.configure = a => this._POST('/v1/configure-webhooks', a)
+    queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)
 
     this.api = queries
 
