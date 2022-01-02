@@ -197,7 +197,7 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
         session.api.meetings.add_attendees_to_meeting({ id: meeting.Meeting.ExternalMeetingId, attendees: initialAttendees }) 
       }
 
-      NativeFunction.startMeeting(meeting.Meeting, host.Attendee)
+      NativeFunction.startMeeting(meeting.Meeting, host.info.Attendee)
 
       setMeeting(meeting.Meeting)
       setIsHost(true)

@@ -7,8 +7,6 @@ export type AccessResources = ModelName
   | "automations"
   | "automationSteps"
   | "automationUsers"
-  | "emails"
-  | "endusers"
   | "enduserNotes"
   | "engagement"
   | "files"

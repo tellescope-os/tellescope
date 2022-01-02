@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/validation",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "description": "Input validation functions for server, client, and schema definition",
   "main": "./lib/cjs/validation.js",
   "module": "./lib/esm/validation.js",
@@ -23,11 +23,11 @@
   },
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "dependencies": {
-    "@tellescope/constants": "^0.0.21",
-    "@tellescope/types-models": "^0.0.21",
-    "@tellescope/types-utilities": "^0.0.21",
-    "@tellescope/utilities": "^0.0.21",
-    "validator": "^13.1.17"
+    "@tellescope/constants": "^0.0.22",
+    "@tellescope/types-models": "^0.0.22",
+    "@tellescope/types-utilities": "^0.0.22",
+    "@tellescope/utilities": "^0.0.22",
+    "validator": "^13.5.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.13",

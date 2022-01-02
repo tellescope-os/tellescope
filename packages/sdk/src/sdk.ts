@@ -6,6 +6,7 @@ import {
   MeetingInfo,
   ReadFilter,
   WebhookSubscriptionsType,
+  Attendee,
 } from "@tellescope/types-models"
 
 import {
@@ -103,11 +104,11 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
   },
   meetings: {
-    start_meeting: () => Promise<{ id: string, meeting: { Meeting: MeetingInfo }, host: { Attendee: AttendeeInfo } }>, 
+    start_meeting: () => Promise<{ id: string, meeting: { Meeting: MeetingInfo }, host: Attendee }>, 
     end_meeting: (args: { id: string }) => Promise<void>, 
     add_attendees_to_meeting: (args: { id: string, attendees: UserIdentity[] }) => Promise<void>, 
     my_meetings: () => Promise<Meeting[]>,
-    attendee_info: (args: { id: string }) => Promise<{ attendee: AttendeeInfo, others: UserIdentity[] }>,
+    attendee_info: (args: { id: string }) => Promise<{ attendee: Attendee, others: UserIdentity[] }>,
   },
   chat_rooms: {
     join_room: (args: { id: string }) => Promise<{ room: ChatRoom }>,

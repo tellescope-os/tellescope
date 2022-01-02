@@ -12,9 +12,7 @@ import {
   Operation,
   JSONType,
   CRUD,
-  CUD,
   HTTPMethod,
-  SessionType,
   UserIdentity,
 } from "@tellescope/types-utilities"
 import {
@@ -27,6 +25,7 @@ import {
   AttendeeInfo,
   MeetingStatus,
   WebhookSubscriptionsType,
+  Attendee,
 } from "@tellescope/types-models"
 
 import {
@@ -74,6 +73,7 @@ import {
   meetingsListValidator,
   urlValidator,
   WebhookSubscriptionValidator,
+  attendeeValidator,
 } from "@tellescope/validation"
 
 import {
@@ -274,11 +274,11 @@ export type CustomActions = {
     join_room: CustomAction<{ id: string }, { room: ChatRoom }>,
   },
   meetings: {
-    start_meeting: CustomAction<{ }, { id: string, meeting: object, host: AttendeeInfo }>, 
+    start_meeting: CustomAction<{ }, { id: string, meeting: object, host: Attendee }>, 
     end_meeting: CustomAction<{ id: string }, { }>, 
     add_attendees_to_meeting: CustomAction<{ id: string, attendees: UserIdentity[] }, { }>, 
     my_meetings: CustomAction<{}, { id: string, updatedAt: string, status: MeetingStatus }[]>
-    attendee_info: CustomAction<{ id: string }, { attendee: AttendeeInfo, others: UserIdentity[] }>,
+    attendee_info: CustomAction<{ id: string }, { attendee: Attendee, others: UserIdentity[] }>,
   },
   webhooks: {
     configure: CustomAction<{ url: string, secret: string, subscriptions?: WebhookSubscriptionsType }, { }>,
@@ -1241,15 +1241,9 @@ export const schema: SchemaV1 = {
         description: "Generates an video meeting room",
         parameters: { },
         returns: { 
-          id: {
-            validator: mongoIdStringValidator,
-          },
-          meeting: {
-            validator: objectAnyFieldsValidator,
-          },
-          host: {
-            validator: attendeeInfoValidator,
-          },
+          id: { validator: mongoIdStringValidator, required: true },
+          meeting: { validator: objectAnyFieldsValidator, required: true },
+          host: { validator: attendeeValidator, required: true },
         },
       },
       end_meeting: { 
@@ -1280,7 +1274,7 @@ export const schema: SchemaV1 = {
           id: { validator: mongoIdStringValidator, required: true },
         },
         returns: { 
-          attendee: { validator: attendeeInfoValidator, required: true },
+          attendee: { validator: attendeeValidator, required: true },
           others: { validator: listOfUserIndentitiesValidator, required: true },
         },
       },

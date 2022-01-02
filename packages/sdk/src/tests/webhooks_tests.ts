@@ -144,6 +144,16 @@ const run_tests = async () => {
     { shouldError: true, onError: e => e.message === "Only one webhook configuration is supported per organization. Use /update-webooks to update your configuration." }
   )
   await async_test(
+    'update webhook (set empty subscription)',
+    () => sdk.api.webhooks.update({ subscriptionUpdates: {} }),
+    { onResult: _ => true }
+  )
+  await async_test(
+    'update webhook (set partial subscription)',
+    () => sdk.api.webhooks.update({ subscriptionUpdates: { chats: { create: true }} }),
+    { onResult: _ => true }
+  )
+  await async_test(
     'update webhook (set subscriptions)',
     () => sdk.api.webhooks.update({ subscriptionUpdates: fullSubscription }),
     { onResult: _ => true }

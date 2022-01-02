@@ -6,6 +6,7 @@ import { url_safe_path } from "@tellescope/utilities"
 
 import { S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
 import { 
+  Attendee,
   AttendeeInfo, 
   Meeting,
 } from "@tellescope/types-models"
@@ -50,7 +51,7 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
     file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
   },
   meetings: {
-    attendee_info: (args: { id: string }) => Promise<{ attendee: AttendeeInfo, others: UserIdentity[] }>,
+    attendee_info: (args: { id: string }) => Promise<{ attendee: Attendee, others: UserIdentity[] }>,
     my_meetings: () => Promise<Meeting[]>,
   },
 }

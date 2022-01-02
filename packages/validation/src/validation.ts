@@ -222,12 +222,16 @@ export const filterCommandsValidator: EscapeBuilder<FilterType> = (o={}) => buil
   }, { ...o, isObject: true, listOf: false }
 )
 
-export const objectValidator = <T extends object>(i: InputValidation<Required<T>>): EscapeBuilder<T>  => (o={}) => build_validator(
+export const objectValidator = <T extends object>(i: InputValidation<Required<T>>, objectOptions={ emptyOk: true }): EscapeBuilder<T>  => (o={}) => build_validator(
   (object: any) => {
+    const emptyOk = objectOptions.emptyOk ?? true
     const validated = {} as T
 
     if (!is_object(object)) {
       throw new Error(`Expected a non-null object by got ${object}`)
+    }
+    if (!emptyOk && object_is_empty(object)) {
+      throw new Error(`Expected a non-empty object`)
     }
 
     const unrecognizedFields = []
@@ -734,14 +738,14 @@ const _CUD: { [K in CUDType]: any } = {
 export const CUD = Object.keys(_CUD) as CUDType[]
 
 export const CUDValidator = objectValidator<CUDSubscription>({
-  create: booleanValidator(),
-  update: booleanValidator(),
-  delete: booleanValidator(),
+  create: booleanValidator({ isOptional: true }),
+  update: booleanValidator({ isOptional: true }),
+  delete: booleanValidator({ isOptional: true }),
 })
 
 const WebhookSubscriptionValidatorObject = {} as { [K in WebhookSupportedModel]: EscapeFunction<CUDSubscription> } 
 for (const model in WEBHOOK_MODELS) {
-  WebhookSubscriptionValidatorObject[model as WebhookSupportedModel] = CUDValidator({ listOf: false })
+  WebhookSubscriptionValidatorObject[model as WebhookSupportedModel] = CUDValidator({ listOf: false, isOptional: true })
 }
 export const WebhookSubscriptionValidator = objectValidator<{ [K in WebhookSupportedModel]: CUDSubscription}>(
   WebhookSubscriptionValidatorObject
