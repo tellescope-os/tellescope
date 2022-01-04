@@ -29,7 +29,6 @@ type UserDisplayInfo = { fname?: string, lname?: string, id: string, lastActive?
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
 const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')
 const meetingsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
-const chatRoomsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
 
 const store = configureStore({
   reducer: { 
@@ -51,6 +50,10 @@ export const WithEnduserState = ({ children }: { children: React.ReactNode  }) =
   </WithFetchContext>
 )
 export const useUserDisplayNames = (options={} as HookOptions<UserDisplayInfo>) => {
+  console.warn("DEPRECATED: This hook has been renamed useUserDisplayInfo")
+  return useUserDisplayInfo(options)
+} 
+export const useUserDisplayInfo = (options={} as HookOptions<UserDisplayInfo>) => {
   const session = useEnduserSession()  
   const state = useTypedSelector(s => s.users)
   return useListStateHook(

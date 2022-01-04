@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { TouchableHighlight } from 'react-native';
+import { TouchableHighlight, KeyboardAvoidingView, SafeAreaView, Platform, ViewStyle } from 'react-native';
 import { 
-  Avatar,
+  Avatar as MuiAvatar,
   ActivityIndicator as MuiCircularProgress,
   BottomNavigation as MuiBottomNavigation,
   Card as MuiCard,
@@ -16,6 +16,7 @@ import {
 import transform, { StyleTuple } from 'css-to-react-native';
 
 import {
+  AvatarProps,
   BottomNavigationProps,
   ButtonProps,
   CardProps,
@@ -31,8 +32,8 @@ import {
 } from "./mui.js"
 import { DEFAULT_ICON_SIZE } from "./constants"
 
-export const convert_CSS_to_RNStyles = (style?: React.CSSProperties) => {
-  if (!style) return style
+export const convert_CSS_to_RNStyles = (style?: React.CSSProperties | ViewStyle): ViewStyle | undefined => {
+  if (!style) return style as ViewStyle | undefined
 
   const input: StyleTuple[] = []
   for (const k in style) {
@@ -45,18 +46,23 @@ export const convert_CSS_to_RNStyles = (style?: React.CSSProperties) => {
     input.push([k, smoothed])
   }
 
-  return transform(input)
+  try {
+    return transform(input)
+  } catch(err) {
+    return style as ViewStyle
+  }
 }
 
-export const DownloadIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="download"/>
-export const SendIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="send"/>
-export const NavigateBeforeIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-left"/>
-export const NavigateNextIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-right"/>
-export const VideoIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video"/>
-export const VideoOffIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video-off"/>
-export const MicrophoneIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone"/>
-export const MicrophoneOffIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone-off"/>
-export const CallEndIcon = (p : IconProps) => <Avatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="phone-hangup"/>
+export const DownloadIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="download"/>
+export const SendIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="send"/>
+export const NavigateBeforeIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-left"/>
+export const NavigateNextIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-right"/>
+export const VideoIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video"/>
+export const VideoOffIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video-off"/>
+export const MicrophoneIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone"/>
+export const MicrophoneOffIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone-off"/>
+export const CallEndIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="phone-hangup"/>
+export const AccountIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="account"/>
 
 export const Card = ({ style, flex, children, ...props } : CardProps) => (
   <MuiCard style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style)}} {...props}>
@@ -126,6 +132,17 @@ export const TextField = ({
   )
 }
 
+export const KeyboardAvoidingTextField = (props : TextFieldProps) => {
+  return (
+    <KeyboardAvoidingView 
+      /* May want to change behavior depending on ios/android */ 
+      behavior={Platform.OS === "ios" ? 'padding' : 'padding'} 
+    >
+      <TextField {...props}/>
+    </KeyboardAvoidingView>
+  )
+}
+
 export const Button = ({ type, variant, children, color, style, onClick, onPress, ...props }: ButtonProps) => (
   <MuiButton { ...props }
     onPress={onPress ?? onClick}
@@ -165,3 +182,8 @@ export const LinearProgress = ({ style, ...props }: LinearProgressProps) => (
 
 // nop 
 export const Tooltip = ({ children, ...props }: TooltipProps) => children
+
+export const Avatar = ({ size, src }: AvatarProps) => (
+  src ? <MuiAvatar.Image size={size} source={{ uri: src }}/>
+      : <AccountIcon size={size}/>
+)

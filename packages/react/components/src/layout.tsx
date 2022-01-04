@@ -115,7 +115,10 @@ export type ItemClickable<T> = {
   onClick?: (item: T) => void;
   onPress?: (item: T) => void;
 }
-export type ItemRenderer <T extends Item, P={}> = (item: T, props: { onClick?: (s: string) => void, index: number } & P) => React.ReactElement
+export type ItemRenderer <T extends Item, P={}> = (
+  item: T, 
+  props: { onClick?: (item: T) => void, index: number } & P
+) => React.ReactElement
 export interface ListOptions <T extends Item, P={}>{
   render: ItemRenderer<T, P>,
   renderProps?: P,
@@ -123,7 +126,7 @@ export interface ListOptions <T extends Item, P={}>{
 export interface ItemOptions <T extends Item>{
   item: T,
   index: number,
-  onClick?: (id: string) => void;
+  onClick?: (item: T) => void;
 }
 
 export const ObjectHeader = <T extends Item>({ item }: ItemOptions<T>) => {
@@ -146,7 +149,7 @@ export const ObjectRow = <T extends Item>({ item, onClick, index }: ItemOptions<
       Object.keys(item).map((_k, i) => {
         const key = _k as keyof T
         return (
-          <Flex column key={_k ?? i} onClick={() => onClick?.(item.id ?? index.toString())}>
+          <Flex column key={_k ?? i} onClick={() => onClick?.(item)}>
             {typeof item[key] === 'object' 
               ? JSON.stringify(item[key])
               : item[key]
@@ -170,8 +173,8 @@ export interface List_T <T extends Item, P={}> extends ListOptions<T, P> {
   items: T[],
   emptyComponent?: React.ReactElement,
   header?: React.ReactNode,
-  onClick?: (id: string) => void;
-  onPress?: (id: string) => void;
+  onClick?: (item: T) => void;
+  onPress?: (item: T) => void;
   reverse?: boolean
 }
 export const List = <T extends Item, P={}>({ items, emptyComponent, render, renderProps, onClick, reverse, style }: List_T<T> & Styled) => {

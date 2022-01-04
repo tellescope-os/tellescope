@@ -1,7 +1,6 @@
 import {
   AttendeeInfo,
   JourneyState, 
-  Meeting,
   UserSession,
   MeetingInfo,
   ReadFilter,
@@ -17,6 +16,7 @@ import {
   ChatRoom,
   Enduser,
   File,
+  Meeting,
 } from "@tellescope/types-client"
 import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"

@@ -123,7 +123,7 @@ export const UserLogin = ({ onLogin, style }: LoginHandler<UserSessionModel & { 
   return (
     <LoginForm style={style} onSubmit={async ({ email, password }) => {
       const { authToken, ...userInfo } = await session.authenticate(email, password)
-      setSession?.(session => ({ ...session, authToken, userInfo: userInfo  }))
+      setSession?.(s => new Session({ host: s.host, authToken, userInfo: userInfo  }))
       onLogin?.({ authToken, ...userInfo })
     }}/>
   )
@@ -136,7 +136,7 @@ export const EnduserLogin = ({ onLogin }: LoginHandler<Enduser & { authToken: st
   return (
     <LoginForm onSubmit={async ({ email, password }) => {
       const { authToken, enduser } = await enduserSession.authenticate(email, password)
-      setEnduserSession?.(enduserSession => ({ ...enduserSession, authToken, userInfo: enduser }))
+      setEnduserSession?.(s => new EnduserSession({ host: s.host , authToken, enduser }))
       onLogin?.({ authToken, ...enduser })
     }}/>
   )

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ViewStyle, TouchableHighlight, FlatList } from "react-native"
+import { View, ViewStyle, TouchableHighlight, FlatList, SafeAreaView } from "react-native"
 
 import {
   Flex_T,
@@ -13,13 +13,15 @@ import {
 
 import {
   ClickableNative,
-  Styled,
+  NativeStyled,
 } from "./mui"
 import {
   convert_CSS_to_RNStyles
 } from "./mui.native"
 
-interface Flex_Native extends Flex_T, Styled, ClickableNative {}
+
+
+interface Flex_Native extends Flex_T, NativeStyled, ClickableNative {}
 
 export const Flex = (props: Flex_Native) => {
   const direction = resolve_direction_for_props(props.row, props.column)
@@ -53,7 +55,7 @@ export const Flex = (props: Flex_Native) => {
 export const Form = ({ children }: FormProps) =>  <>{children}</>
 export const SUPPORTS_FORMS = false
 
-export const List = <T extends Item>({ items, emptyComponent, render, onClick, onPress, reverse, style }: List_T<T> & Styled) => {
+export const List = <T extends Item>({ items, emptyComponent, render, onClick, onPress, reverse, style }: List_T<T> & NativeStyled) => {
   if (items.length === 0 && emptyComponent) return emptyComponent
   
   return (

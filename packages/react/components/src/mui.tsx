@@ -1,6 +1,8 @@
 import React, { CSSProperties } from "react"
+import { ViewStyle } from "react-native"
 import { GestureResponderEvent } from "react-native"
 
+import MuiAvatar from "@mui/material/Avatar"
 import MuiCard from "@mui/material/Card"
 import MuiPaper from "@mui/material/Paper"
 import MuiTextField from "@mui/material/TextField"
@@ -23,6 +25,7 @@ import VideoOffIconMui from '@mui/icons-material/VideocamOff';
 import MicrophoneIconMui from '@mui/icons-material/Mic';
 import MicrophoneOffIconMui from '@mui/icons-material/MicOff';
 import CallEndIconMui from '@mui/icons-material/CallEnd';
+import AccountIconMui from '@mui/icons-material/Person';
 
 const Icon = ({ Component, size=DEFAULT_ICON_SIZE, ...props } : IconBuilderProps) => (
   <Component style={{ fontSize: size }}/>
@@ -36,9 +39,13 @@ export const VideoOffIcon = (p : IconProps) => <Icon {...p} Component={VideoOffI
 export const MicrophoneIcon = (p : IconProps) => <Icon {...p} Component={MicrophoneIconMui}/>
 export const MicrophoneOffIcon = (p : IconProps) => <Icon {...p} Component={MicrophoneOffIconMui}/>
 export const CallEndIcon = (p : IconProps) => <Icon {...p} Component={CallEndIconMui}/>
+export const AccountIcon = (p : IconProps) => <Icon {...p} Component={AccountIconMui}/>
 
 export type Styled = {
   style?: CSSProperties,
+}
+export type NativeStyled = {
+  style?: CSSProperties | ViewStyle,
 }
 export type CanFlex = {
   flex?: boolean,
@@ -162,6 +169,7 @@ export const TextField = ({ autoCapitalize, autoCorrect, variant, onChange, ...p
     {...props}
   />
 }
+export const KeyboardAvoidingTextField = TextField
 
 export type ButtonProps = {
   color?: "primary" | "secondary",
@@ -237,3 +245,12 @@ export const Tooltip = ({ label, placement, arrow=true, open, children, enterDel
     </MuiTooltip>
   )
 }
+
+export interface AvatarProps {
+  src?: string,
+  size?: number,
+  alt?: string,
+}
+export const Avatar = ({ size, ...props }: AvatarProps) => (
+  <MuiAvatar style={size ? { height: size, width: size } : {}} {...props}/>
+)

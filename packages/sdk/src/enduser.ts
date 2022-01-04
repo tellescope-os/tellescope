@@ -8,13 +8,14 @@ import { S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
 import { 
   Attendee,
   AttendeeInfo, 
-  Meeting,
 } from "@tellescope/types-models"
 import {
   ClientModelForName,
   ClientModelForName_required,
   Enduser,
   File,
+  Meeting,
+  UserDisplayInfo,
 } from "@tellescope/types-client"
 
 export interface EnduserSessionOptions extends SessionOptions {}
@@ -44,7 +45,7 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
     logout: () => Promise<void>;
   },
   users: {
-    display_info: () => Promise<{ fname?: string, lname?: string, id: string, lastActive?: Date, lastLogout?: Date }[]>
+    display_info: () => Promise<UserDisplayInfo[]>
   },
   files: {
     prepare_file_upload: (args: { name: string, size: number, type: string }) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
@@ -79,7 +80,7 @@ export class EnduserSession extends Session {
       logout: () => this._POST('/v1/logout-enduser'),
     }
     this.api.users = { 
-      display_info: () => this._GET<{}, { fname: string, lname: string, id: string }[] >(`/v1/user-display-info`),
+      display_info: () => this._GET<{}, UserDisplayInfo[] >(`/v1/user-display-info`),
     }
     this.api.meetings = { 
       attendee_info: a => this._GET('/v1/attendee-info', a),

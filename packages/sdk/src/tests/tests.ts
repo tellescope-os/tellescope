@@ -1061,6 +1061,20 @@ const files_tests = async () => {
   assert(downloaded === buff.toString(), 'downloaded file does not match uploaded file', 'upload, download comparison') 
 }
 
+const enduser_session_tests = async () => {
+  const email = 'enduser@tellescope.com'
+  const password = 'testpassword'
+
+  const enduser = await sdk.api.endusers.createOne({ email })
+  await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
+  await enduserSDK.authenticate(email, password).catch(console.error)
+
+  const users = await enduserSDK.api.users.display_info()
+  assert(users && users.length > 0, 'No users returned', 'Get user display info for enduser')
+
+  await sdk.api.endusers.deleteOne(enduser.id)
+}
+
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -1093,6 +1107,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
     await threadKeyTests()
     await enduserAccessTests()
     await generateEnduserAuthTests()
+    await enduser_session_tests()
   } catch(err) {
     console.error("Failed during custom test")
     console.error(err)
@@ -1109,7 +1124,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
       model: schema[n] as any, 
       name: n,
       returns: {
-        create: returnValidation as ModelFields<ClientModel>,
+        create: returnValidation as any// ModelFields<ClientModel>,
       }
     })
   }

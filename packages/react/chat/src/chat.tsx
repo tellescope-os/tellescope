@@ -12,6 +12,7 @@ import {
   Styled,
   Typography,
   TextField,
+  KeyboardAvoidingTextField,
 } from "@tellescope/react-components/lib/esm/mui"
 import {
   LoadingLinear,
@@ -29,15 +30,17 @@ import {
   useEndusers,
 } from "@tellescope/react-components/lib/esm/user_state"
 import {
-  useUserDisplayNames,
+  useUserDisplayInfo,
 } from "@tellescope/react-components/lib/esm/enduser_state"
 
 import {
   ChatRoom,
   ChatMessage,
+  UserDisplayInfo,
 } from "@tellescope/types-client"
 
 import {
+  Indexable,
   LoadedData, 
   LoadingStatus,
   SessionType,
@@ -55,6 +58,10 @@ import {
   Session,
   EnduserSession,
 } from "@tellescope/sdk"
+
+export {
+  user_display_name, // for convenience
+}
 
 const defaultMessagesStyle: CSSProperties = {
   borderRadius: 5,
@@ -166,7 +173,7 @@ const defaultMessagePreviewStyle: CSSProperties = {
 }
 
 export interface ConversationPreviewProps {
-  onClick?: (roomId: string) => void;
+  onClick?: (room: ChatRoom) => void;
   room: ChatRoom;
   selected?: boolean;
   resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
@@ -186,7 +193,7 @@ interface SidebarInfo {
 }
 
 const ConversationPreview = ({ onClick, selected, room, resolveSenderName, style, selectedStyle }: ConversationPreviewProps) => (
-  <Flex flex={1} column onClick={() => !selected && onClick?.(room.id)} 
+  <Flex flex={1} column onClick={() => !selected && onClick?.(room)} 
     style={selected ? (selectedStyle ?? defaultSidebarItemStyleSelected) : (style ?? defaultSidebarItemStyle) }
   >
     <Typography style={defaultMessageNameStyle}>
@@ -205,7 +212,7 @@ interface ConversationsProps extends SidebarInfo {
 }
 export const Conversations = ({ rooms, selectedRoom, onRoomSelect, resolveSenderName, PreviewComponent=ConversationPreview, style, selectedItemStyle, itemStyle } : ConversationsProps) => ( 
   <LoadingLinear data={rooms} render={rooms =>
-    <List style={style ?? defaultSidebarStyle} items={rooms} onClick={onRoomSelect} render={(room, { onClick, index }) => 
+    <List style={style ?? defaultSidebarStyle} items={rooms} onClick={r => onRoomSelect(r.id)} render={(room, { onClick, index }) => 
       <PreviewComponent key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
         resolveSenderName={resolveSenderName ?? (() => room.id)}
         selectedStyle={selectedItemStyle} style={itemStyle}
@@ -217,7 +224,7 @@ export const Conversations = ({ rooms, selectedRoom, onRoomSelect, resolveSender
 
 export const EndusersConversations = ({ enduserId, ...p } : SidebarInfo & { enduserId: string }) => {
   const [rooms] = useChatRooms('enduser')
-  const [displayNames] = useUserDisplayNames()
+  const [displayNames] = useUserDisplayInfo()
 
   const resolveChatName = useCallback((r: ChatRoom) => {
     if (r.title) return r.title
@@ -289,7 +296,7 @@ export const SendMessage = ({
           onChange={setSending}
         />
       </Flex>
-    </Flex>
+    </Flex> 
   )
 }
 
@@ -344,4 +351,19 @@ export const EnduserChatSplit = ({ style=defaultSplitChatStyle } : Styled) => {
   return (
     <SplitChat session={session} type="enduser" style={style}/>
   )
+}
+
+export const useUserDisplayNamesForEnduser = (userIds: string[]): Indexable<UserDisplayInfo | undefined> => {
+  if (!userIds || userIds?.length === 0) return {}
+
+  const [userInfo, { findById: findUser }] = useUserDisplayInfo()
+
+  const idToInfo = {} as Indexable
+  if (userInfo.status !== LoadingStatus.Loaded) return idToInfo
+
+  for (const id of userIds) {
+    idToInfo[id] = findUser(id)
+  }
+
+  return idToInfo
 }
