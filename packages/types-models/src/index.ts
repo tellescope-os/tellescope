@@ -394,6 +394,7 @@ export interface WebhookCall {
   model: WebhookSupportedModel,
   type: CUD,
   records: WebhookRecord[],
+  relatedRecords: { [index: string]: WebhookRecord },
   timestamp: string,
   integrity: string,
 }
@@ -481,3 +482,9 @@ export type Model = ModelForName[keyof ModelForName]
 
 export type ConfiguredSessionInfo = { username: string, orgEmail: string, orgName: string, fname: string, lname: string }
 export type ConfiguredSession = UserSession & ConfiguredSessionInfo
+
+export interface UserActivityInfo {
+  lastActive: string | Date, 
+  lastLogout: string | Date,
+}
+export type UserActivityStatus = 'Active' | 'Away' | 'Unavailable'

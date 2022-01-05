@@ -8,5 +8,11 @@
   "include": ["src"],
   "references": [
     { "path": "../components" },
+    { "path": "../../sdk" },
+    { "path": "../../utilities" },
+    { "path": "../../types-client" },
+    { "path": "../../types-models" },
+    { "path": "../../types-utilities" },
+    { "path": "../../constants" },
   ]
 }

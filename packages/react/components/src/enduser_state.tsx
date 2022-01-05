@@ -8,6 +8,7 @@ import {
   ChatMessage,
   Ticket,
   Meeting,
+  UserDisplayInfo,
 } from '@tellescope/types-client'
 
 import {
@@ -23,8 +24,6 @@ import {
   useChats as useChatsShared,
   useChatRooms as useChatRoomsShared,
 } from "./state"
-
-type UserDisplayInfo = { fname?: string, lname?: string, id: string, lastActive?: Date, lastLogout?: Date }
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
 const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')

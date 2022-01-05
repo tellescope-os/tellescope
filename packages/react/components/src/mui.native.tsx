@@ -3,6 +3,7 @@ import { TouchableHighlight, KeyboardAvoidingView, SafeAreaView, Platform, ViewS
 import { 
   Avatar as MuiAvatar,
   ActivityIndicator as MuiCircularProgress,
+  Badge as MuiBadge,
   BottomNavigation as MuiBottomNavigation,
   Card as MuiCard,
   TextInput as MuiTextField,
@@ -17,6 +18,7 @@ import transform, { StyleTuple } from 'css-to-react-native';
 
 import {
   AvatarProps,
+  BadgeProps,
   BottomNavigationProps,
   ButtonProps,
   CardProps,
@@ -63,6 +65,15 @@ export const MicrophoneIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ??
 export const MicrophoneOffIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone-off"/>
 export const CallEndIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="phone-hangup"/>
 export const AccountIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="account"/>
+
+export const Badge = ({ children, color, style, ...props } : BadgeProps) => (
+  <MuiBadge style={{ backgroundColor: color, ...convert_CSS_to_RNStyles(style) }} {...props}>
+    {(typeof children === 'number' || typeof children === 'string')
+      ? (children ?? ' ')
+      : ' '
+    }
+  </MuiBadge>
+)
 
 export const Card = ({ style, flex, children, ...props } : CardProps) => (
   <MuiCard style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style)}} {...props}>

@@ -1341,7 +1341,13 @@ export const schema: SchemaV1 = {
   webhooks: {
     info: {
       description: `Allows you to subscribe to Webhooks when models in Tellescope are created, updated, and deleted.
-        Each webhook is a POST request to the given URL, of the form { model: string, type: 'create' | 'update' | 'delete', records: object[], timestamp: string, integrity: string }.
+        Each webhook is a POST request to the given URL, of the form <pre>{ 
+          model: string, type: 'create' | 'update' | 'delete', 
+          records: object[], 
+          timestamp: string, 
+          integrity: string, 
+          relatedRecords: { [id: string]: object } 
+}</pre>
         This includes the name of the model, the type of operation performed, and an array of the new, updated, or deleted model(s).
 
         The integrity field is a sha256 hash of (record ids concatenated from index 0 to the end, with the timestamp and then secret appended)
@@ -1349,7 +1355,10 @@ export const schema: SchemaV1 = {
         integrity = sha256('141029358secret')
         Each time you handle a webhook, you should verify the integrity field is correct to ensure that the request is actually coming from Tellescope. 
 
-        Supported Models: ${Object.keys(WEBHOOK_MODELS).join(', ')}
+        For performance, a relatedRecords object is provided as a cache. This object maps some ids referenced in the webhook records to the corresponding models in Tellescope. 
+        For a given webhook, relatedRecords may be empty, or may not include all related ids. In such cases, you'll need to query against the Tellescope API for an up-to-date reference.
+
+        Currently supported models for Webhooks: ${Object.keys(WEBHOOK_MODELS).join(', ')}
       `
     },
     constraints: {

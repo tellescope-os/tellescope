@@ -1,4 +1,5 @@
 import { ObjectId } from "bson"
+import { UserActivityInfo, UserActivityStatus } from "@tellescope/types-models"
 export type Indexable<T=any> = { [index: string]: T }
 
 export const first_letter_capitalized = (s='') => s.charAt(0).toUpperCase() + s.slice(1)
@@ -56,6 +57,28 @@ export const user_display_name = (user?: { fname?: string, lname?: string, email
   if (phone) return phone
 
   return `User ${id}`
+}
+
+export interface ActivityOptions {
+  activeThresholdMS?: number, 
+  inactiveThresholdMS?: number 
+}
+export const user_is_active = (user?: UserActivityInfo, options?: ActivityOptions): UserActivityStatus | null => {
+  if (!user) return null 
+
+  const activeThresholdMS = options?.activeThresholdMS || 300000 // 5 minutes
+  const inactiveThresholdMS = options?.inactiveThresholdMS || 1500000 // 15 minutes
+  if (activeThresholdMS < 0) throw new Error('activeThresholdMS must be positive')
+  if (inactiveThresholdMS < 0) throw new Error('inactiveThresholdMS must be positive')
+
+  const lastLogout = new Date(user.lastLogout).getTime()
+  const lastActive = new Date(user.lastActive).getTime()
+
+  if (lastLogout > lastActive) return 'Unavailable'
+  if (Date.now() - lastActive < activeThresholdMS) return 'Active'
+  if (Date.now() - lastActive < inactiveThresholdMS) return 'Away'
+
+  return 'Unavailable'
 }
 
 export const defined_fields = <T extends {}>(o: T): Partial<T> => {

@@ -21,6 +21,7 @@ import {
 } from "@tellescope/types-models"
 
 import { Session } from "../sdk"
+import { ChatMessage } from "@tellescope/types-client"
 
 const [email, password] = [process.env.TEST_EMAIL, process.env.TEST_PASSWORD]
 const [email2, password2] = [process.env.TEST_EMAIL_2, process.env.TEST_PASSWORD_2]
@@ -92,7 +93,20 @@ const chats_tests = async (isSubscribed: boolean) => {
   const room = await sdk.api.chat_rooms.createOne({ userIds: [sdk.userInfo.id] })
 
   const chat = await sdk.api.chats.createOne({ roomId: room.id, message: "Hello hello hi hello" })
-  await check_next_webhook(a => objects_equivalent(a.records, [chat]), 'Create chat error', 'Create chat webhook', isSubscribed)
+  await check_next_webhook(
+    ({ records, relatedRecords }) => {
+      const record = records[0] as ChatMessage
+
+      return (
+        objects_equivalent(record, chat) && 
+        relatedRecords[record.roomId] !== undefined &&
+        relatedRecords[record.senderId as string] !== undefined &&
+        relatedRecords[record.roomId]?.id  === room.id &&
+        relatedRecords[record.senderId as string]?.id === room.userIds?.[0]
+      )
+    },
+    'Create chat error', 'Create chat webhook', isSubscribed
+  )
 
   // cleanup
   await sdk.api.chat_rooms.deleteOne(room.id) // also cleans up messages

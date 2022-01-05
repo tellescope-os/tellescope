@@ -8,11 +8,11 @@ import {
   AsyncIconButton,
 } from "@tellescope/react-components/lib/esm/controls"
 import {
+  Badge,
   SendIcon,
   Styled,
   Typography,
   TextField,
-  KeyboardAvoidingTextField,
 } from "@tellescope/react-components/lib/esm/mui"
 import {
   LoadingLinear,
@@ -38,6 +38,10 @@ import {
   ChatMessage,
   UserDisplayInfo,
 } from "@tellescope/types-client"
+import {
+  UserActivityStatus,
+  UserActivityInfo,
+} from "@tellescope/types-models"
 
 import {
   Indexable,
@@ -47,7 +51,8 @@ import {
 } from "@tellescope/types-utilities"
 
 import {
-  user_display_name,
+  ActivityOptions,
+  user_display_name, user_is_active,
 } from "@tellescope/utilities"
 
 import {
@@ -354,9 +359,10 @@ export const EnduserChatSplit = ({ style=defaultSplitChatStyle } : Styled) => {
 }
 
 export const useUserDisplayNamesForEnduser = (userIds: string[]): Indexable<UserDisplayInfo | undefined> => {
-  if (!userIds || userIds?.length === 0) return {}
-
   const [userInfo, { findById: findUser }] = useUserDisplayInfo()
+
+
+  if (!userIds || userIds?.length === 0) return {}
 
   const idToInfo = {} as Indexable
   if (userInfo.status !== LoadingStatus.Loaded) return idToInfo
@@ -366,4 +372,21 @@ export const useUserDisplayNamesForEnduser = (userIds: string[]): Indexable<User
   }
 
   return idToInfo
+}
+
+const defaultColorForStatus: { [K in UserActivityStatus]: CSSProperties['color'] } = {
+  Active: '#15ba11',
+  Away: '#FFD125',
+  Unavailable: '#DC1717'
+}
+export const UserActiveBadge = ({ user, style, size, activeThresholdMS, inactiveThresholdMS }: { 
+  user?: UserActivityInfo, 
+  size?: number,
+} & ActivityOptions & Styled) => {
+  const status = user_is_active(user, { activeThresholdMS, inactiveThresholdMS }) 
+  if (status === null || status === 'Unavailable') return null
+ 
+  return (
+    <Badge color={defaultColorForStatus[status]} size={size} style={style}/>
+  )
 }

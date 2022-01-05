@@ -19,12 +19,11 @@ export type Ticket = ClientModelForName['tickets']
 export type Meeting = ClientModelForName['meetings']
 export type Note = ClientModelForName['notes']
 
-export type UserDisplayInfo = { 
+
+export interface UserDisplayInfo extends models.UserActivityInfo { 
   id: string,
   createdAt: Date,
   avatar?: string,
   fname?: string, 
   lname?: string,
-  lastActive?: Date, 
-  lastLogout?: Date 
 }

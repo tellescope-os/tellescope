@@ -2,6 +2,7 @@ import React, { CSSProperties } from "react"
 import { ViewStyle } from "react-native"
 import { GestureResponderEvent } from "react-native"
 
+import MuiBadge from "@mui/material/Badge"
 import MuiAvatar from "@mui/material/Avatar"
 import MuiCard from "@mui/material/Card"
 import MuiPaper from "@mui/material/Paper"
@@ -96,6 +97,11 @@ export interface ClickableNative extends Clickable {
 export interface Changeable<T=string> {
   onChange?: (s: T) => void;
 }
+
+export interface BadgeProps extends Styled, Partial<Parent> { size?: number, color?: CSSProperties['color'] }
+export const Badge = ({ children, style, color, ...props }: BadgeProps) => (
+  <MuiBadge {...props} style={{ color, ...style }}>{children}</MuiBadge>
+)
 
 export interface CardProps extends Styled, Parent, Elevated, CanFlex {}
 export const Card = ({ children, style, flex, ...props } : CardProps) => (
