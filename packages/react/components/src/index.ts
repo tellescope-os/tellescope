@@ -9,3 +9,5 @@ export * from "./hooks"
 export * from "./mui"
 export * from "./table";
 export * from "./state"
+export * from "./displays"
+export * from "./theme"

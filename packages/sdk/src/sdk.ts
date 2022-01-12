@@ -1,5 +1,4 @@
 import {
-  AttendeeInfo,
   JourneyState, 
   UserSession,
   MeetingInfo,
@@ -18,7 +17,7 @@ import {
   File,
   Meeting,
 } from "@tellescope/types-client"
-import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
+import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileBlob } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"
 
 import { Session as SessionManager, SessionOptions } from "./session"
@@ -93,7 +92,7 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   },
   endusers: {
     set_password: (args: { id: string, password: string }) => Promise<void>,
-    is_authenticated: (args: { id: string, authToken: string }) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
+    is_authenticated: (args: { id?: string, authToken: string }) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
     generate_auth_token: (args: { id?: string, phone?: string, email?: string, externalId?: string }) => Promise<{ authToken: string, enduser: Enduser }>
   },
   users: {
@@ -146,6 +145,15 @@ export class Session extends SessionManager {
 
     queries.webhooks.configure = a => this._POST('/v1/configure-webhooks', a)
     queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)
+
+    const updateUser = queries.users.updateOne
+    queries.users.updateOne = async (...a: Parameters<typeof updateUser>) => {
+      const updated = await updateUser(...a)
+      if (a[0] === this.userInfo.id) {  // ensure session userInfo is updated as well
+        await this.refresh_session()
+      }
+      return updated
+    }
 
     this.api = queries
 
@@ -203,6 +211,13 @@ export class Session extends SessionManager {
   logout = async () => {
     this.clearState()
     await this.POST('/logout-api').catch(console.error)
+  }
+
+  prepare_and_upload_file = async (file: FileBlob) => {
+    const { name, size, type } = file
+    const { presignedUpload, file: { secureName } } = await this.api.files.prepare_file_upload({ name, size, type })
+    await this.UPLOAD(presignedUpload, file)
+    return { secureName }
   }
 
   reset_db = () => this.POST('/reset-demo')

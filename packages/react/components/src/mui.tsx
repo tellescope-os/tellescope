@@ -28,8 +28,8 @@ import MicrophoneOffIconMui from '@mui/icons-material/MicOff';
 import CallEndIconMui from '@mui/icons-material/CallEnd';
 import AccountIconMui from '@mui/icons-material/Person';
 
-const Icon = ({ Component, size=DEFAULT_ICON_SIZE, ...props } : IconBuilderProps) => (
-  <Component style={{ fontSize: size }}/>
+const Icon = ({ Component, size=DEFAULT_ICON_SIZE, style, ...props } : IconBuilderProps) => (
+  <Component style={{ fontSize: size, ...style }}/>
 )
 export const DownloadIcon = (p : IconProps) => <Icon {...p} Component={DownloadIconMui}/>
 export const SendIcon = (p : IconProps) => <Icon {...p} Component={SendIconMui}/>
@@ -113,7 +113,7 @@ export const Paper = ({ children, style, flex, ...props } : PaperProps) => (
   <MuiPaper {...props} style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...style }}>{children}</MuiPaper>
 )
 
-export interface IconProps {
+export interface IconProps extends Styled {
   size?: number,
   color?: MuiColor | string,
 }
@@ -252,11 +252,11 @@ export const Tooltip = ({ label, placement, arrow=true, open, children, enterDel
   )
 }
 
-export interface AvatarProps {
+export interface AvatarProps extends Styled {
   src?: string,
   size?: number,
   alt?: string,
 }
-export const Avatar = ({ size, ...props }: AvatarProps) => (
-  <MuiAvatar style={size ? { height: size, width: size } : {}} {...props}/>
+export const Avatar = ({ size, style, ...props }: AvatarProps) => (
+  <MuiAvatar style={size ? { height: size, width: size, ...style } : style} {...props}/>
 )

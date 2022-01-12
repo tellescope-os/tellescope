@@ -4,6 +4,7 @@ import {
   Enduser,
 } from "@tellescope/types-client"
 import {
+  SessionType,
   UserSession as UserSessionModel,
 } from "@tellescope/types-models"
 import {
@@ -32,6 +33,10 @@ import {
 
 type UserSession = Session
 type UserSessionOptions = SessionOptions
+
+export interface WithAnySession {
+  session: UserSession | EnduserSession
+}
 
 interface SessionContext_T {
   session: UserSession,
@@ -84,7 +89,7 @@ export const useSession = (o={} as SessionHookOptions) => {
     throw new Error("useSession used outside of WithSession") 
   }
 
-  return session ?? {}
+  return session ?? null
 }
 export const useEnduserSession = (o={} as SessionHookOptions): EnduserSession => {
   const { enduserSession } = useContext(EnduserSessionContext)
@@ -92,7 +97,7 @@ export const useEnduserSession = (o={} as SessionHookOptions): EnduserSession =>
     throw new Error("useEnduserSession used outside of WithEnduserSession") 
   }
 
-  return enduserSession ?? {}
+  return enduserSession ?? null
 }
 
 interface LoginData {
@@ -167,4 +172,19 @@ export const Logout = ({ onLogout, children } : {
   }, [session, enduserSession, setSession, setEnduserSession, loggedOut])
 
   return <>{children}</>
+}
+
+export const useResolvedSession = (type?: SessionType) => {
+  const u_session = useSession({ throwIfMissingContext: type === 'user' })
+  const e_session = useEnduserSession({ throwIfMissingContext: type === 'enduser' })
+
+  if (u_session === null && e_session === null) {
+    throw new Error("Could not resolve session for user or enduser. Ensure you are using the proper WithSession or WithEnduserSession provider.")
+  }
+
+  return (
+      type === 'user' ? u_session 
+    : type === 'enduser' ? e_session
+    : (u_session ?? e_session)
+  )
 }

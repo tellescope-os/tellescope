@@ -17,6 +17,44 @@ import {
   SUPPORTS_FORMS,
 } from "./layout"
 
+
+export interface HasValidator { validator: Yup.AnySchema }
+export interface HasValidators { [index: string]: HasValidator }
+
+export type InputSchema<T extends HasValidators> = {
+  [K in (keyof T) & string]: {
+    validator: T[K]['validator'];
+    initialValue?: Yup.InferType<T[K]['validator']>,
+    id?: string,
+    name?: string,
+    label?: string,
+    style?: CSSProperties,
+  }
+}
+
+// for help with type inference, flexibility to add modifications later
+export const create_input_schema = <T extends InputSchema<any>>(o: T): InputSchema<T> => o
+
+export const validation_for_input_schema = <T extends InputSchema<any>>(schema: T) => {
+  const validationObject = {} as { [K in keyof T]: T[K]['validator'] }
+  for (const field in schema) {
+    validationObject[field] = schema[field].validator
+  }
+  return Yup.object(validationObject)
+}
+export const initial_values_for_input_schema = <T extends InputSchema<any>>(schema: T, dynamicallySet={} as { [K in keyof T]?: Yup.InferType<T[K]['validator']> }) => {
+  const initial_values = {} as { [K in keyof T]?: Yup.InferType<T[K]['validator']> }
+  for (const field in schema) {
+    initial_values[field] = dynamicallySet[field] ?? schema[field].initialValue
+  }
+  return initial_values
+}
+
+// formik requires string signature but will cast numbers appropriately
+export const initial_values_for_formik = <T extends InputSchema<any>>(schema: T, dynamicallySet={} as { [K in keyof T]?: Yup.InferType<T[K]['validator']> }) => (
+  initial_values_for_input_schema(schema, dynamicallySet) as {[ K in keyof T]: string }
+)
+
 export type AutoComplete = "name"
   | "honorific-prefix"
   | "given-name"
@@ -161,9 +199,9 @@ export interface SubmitButtonOptions {
 
 interface FormikSubmitButtonProps extends SubmitButtonOptions, Styled {
   formik: FormikProps<any>,
-  onClick: () => void, // to handle submit in environment where html form type handleSubmit is not supported
+  onClick?: () => void, // to handle submit in environment where html form type handleSubmit is not supported
 }
-const FormikSubmitButton = ({ formik, onClick, submitText, submittingText, style }: FormikSubmitButtonProps) => (
+export const FormikSubmitButton = ({ formik, onClick, submitText, submittingText, style }: FormikSubmitButtonProps) => (
   <SubmitButton onClick={onClick} submitText={submitText} submittingText={submittingText}
     disabled={!formik.isValid || !formik.dirty} style={style}
     submitting={formik.isSubmitting}

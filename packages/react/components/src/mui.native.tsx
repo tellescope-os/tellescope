@@ -55,16 +55,20 @@ export const convert_CSS_to_RNStyles = (style?: React.CSSProperties | ViewStyle)
   }
 }
 
-export const DownloadIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="download"/>
-export const SendIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="send"/>
-export const NavigateBeforeIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-left"/>
-export const NavigateNextIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="chevron-right"/>
-export const VideoIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video"/>
-export const VideoOffIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="video-off"/>
-export const MicrophoneIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone"/>
-export const MicrophoneOffIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="microphone-off"/>
-export const CallEndIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="phone-hangup"/>
-export const AccountIcon = (p : IconProps) => <MuiAvatar.Icon size={p.size ?? DEFAULT_ICON_SIZE} icon="account"/>
+export const MuiNaviveIcon = ({ icon, style, size, ...props }: IconProps & { icon: string }) => (
+  <MuiAvatar.Icon icon={icon} style={convert_CSS_to_RNStyles(style)} size={size ?? DEFAULT_ICON_SIZE} {...props}/>
+)
+
+export const DownloadIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="download" />
+export const SendIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="send"/>
+export const NavigateBeforeIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="chevron-left"/>
+export const NavigateNextIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="chevron-right"/>
+export const VideoIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="video"/>
+export const VideoOffIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="video-off"/>
+export const MicrophoneIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="microphone"/>
+export const MicrophoneOffIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="microphone-off"/>
+export const CallEndIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="phone-hangup"/>
+export const AccountIcon = (p : IconProps) => <MuiNaviveIcon {...p} icon="account"/>
 
 export const Badge = ({ children, color, style, ...props } : BadgeProps) => (
   <MuiBadge style={{ backgroundColor: color, ...convert_CSS_to_RNStyles(style) }} {...props}>
@@ -194,7 +198,7 @@ export const LinearProgress = ({ style, ...props }: LinearProgressProps) => (
 // nop 
 export const Tooltip = ({ children, ...props }: TooltipProps) => children
 
-export const Avatar = ({ size, src }: AvatarProps) => (
-  src ? <MuiAvatar.Image size={size} source={{ uri: src }}/>
+export const Avatar = ({ size, style, src }: AvatarProps) => (
+  src ? <MuiAvatar.Image size={size} style={convert_CSS_to_RNStyles(style)} source={{ uri: src }}/>
       : <AccountIcon size={size}/>
 )

@@ -259,7 +259,7 @@ export type CustomActions = {
   endusers: {
     set_password: CustomAction<{ id: string, password: string }, { }>,
     is_authenticated: CustomAction<
-      { id: string, authToken: string }, 
+      { id?: string, authToken: string }, 
       { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
     >,
     refresh_session: CustomAction<{}, { enduser: Enduser, authToken: string }>,
@@ -430,7 +430,7 @@ export const schema: SchemaV1 = {
         path: '/enduser-is-authenticated',
         description: "Checks the validity of an enduser's authToken",
         parameters: { 
-          id: { validator: mongoIdStringValidator, required: true },
+          id: { validator: mongoIdStringValidator },
           authToken: { validator: stringValidator5000, required: true },
         },
         returns: { 
@@ -1000,9 +1000,17 @@ export const schema: SchemaV1 = {
     constraints: { 
       unique: ['username'],
       globalUnique: ['email', 'phone'],
-      relationship: [],
+      relationship: [{
+        explanation: '',
+        evaluate: ({ _id }, _, session) => {
+          if (_id && _id.toString() === session.id) return
+          if ((session as UserSession)?.roles?.includes('Admin')) return
+
+          return "Only admin users can update others' profiles"
+        }
+      }],
     },
-    defaultActions: { read: {}, readMany: {} },
+    defaultActions: { read: {}, readMany: {}, update: { description: "Users can only be updated by self or an organization admin"} },
     customActions: {
       display_info: {
         op: "custom", access: 'read', method: "get",
@@ -1039,6 +1047,7 @@ export const schema: SchemaV1 = {
       },
       username: {
         validator: subdomainValidator,
+        readonly: true, // able to set once, then not change (for now, due to email configuration)
       },
       fname: {
         validator: nameValidator,
@@ -1048,19 +1057,25 @@ export const schema: SchemaV1 = {
       },
       organization: {
         validator: mongoIdStringValidator,
+        updatesDisabled: true,
       },
       orgEmail: {
         validator: emailValidator,
-        readonly: true,
+        readonly: true,  // able to set once, then not change (for now, due to email configuration)
       },
       accountType: {
         validator: accountTypeValidator,
       },
       roles: {
         validator: listOfStringsValidator,
+        updatesDisabled: true, // implement with separate endpoint with tight restrictions
       },
       skills: {
         validator: listOfStringsValidator,
+      },
+      hashedPassword: {
+        validator: stringValidator,
+        readonly: true, // update via separate password reset function
       },
       avatar: {
         validator: stringValidator100,

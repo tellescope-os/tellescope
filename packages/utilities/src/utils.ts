@@ -100,3 +100,7 @@ export const truncate_string = (s='', options={} as { showEllipsis?: boolean, le
       (showEllipsis && s.length > length ? '...' : '')
   )
 }
+
+export const map_object = <T extends object, R>(object: T, handler: (key: keyof T, value: T[typeof key]) => R): R[] => (
+  Object.keys(object).map((key) => handler(key as keyof typeof object, object[key as keyof typeof object]))
+)

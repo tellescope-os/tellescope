@@ -52,7 +52,11 @@ export const Flex = (props: Flex_Native) => {
   return (<View style={style}>{children}</View>)
 }
 
-export const Form = ({ children }: FormProps) =>  <>{children}</>
+export const Form = ({ children, style }: FormProps) => (
+  style 
+    ? <View style={convert_CSS_to_RNStyles(style)}>{children}</View>
+    : <>{children}</>
+)
 export const SUPPORTS_FORMS = false
 
 export const List = <T extends Item>({ items, emptyComponent, render, onClick, onPress, reverse, style }: List_T<T> & NativeStyled) => {

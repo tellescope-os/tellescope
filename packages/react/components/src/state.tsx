@@ -21,8 +21,7 @@ import {
 } from "@tellescope/types-models"
 
 import {
-  useSession,
-  useEnduserSession,
+  useResolvedSession
 } from "./authentication"
 import { 
   LoadFunction,
@@ -454,12 +453,6 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
 }
 
 // const useSocketConnectionForList = <T extends { id: string }>(session: Session | EnduserSession) => {}
-
-const useResolvedSession = (type: SessionType) => {
-  const u_session = useSession({ throwIfMissingContext: type === 'user' })
-  const e_session = useEnduserSession({ throwIfMissingContext: type === 'enduser' })
-  return type === 'user' ? u_session : e_session
-}
 
 export type HookOptions<T> = {
   loadFilter?: Partial<T>,

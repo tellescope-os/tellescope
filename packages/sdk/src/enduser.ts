@@ -4,10 +4,9 @@ import { Session, SessionOptions } from "./session"
 import { APIQuery } from "./sdk"
 import { url_safe_path } from "@tellescope/utilities"
 
-import { S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
+import { FileBlob, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
 import { 
   Attendee,
-  AttendeeInfo, 
 } from "@tellescope/types-models"
 import {
   ClientModelForName,
@@ -112,6 +111,13 @@ export class EnduserSession extends Session {
   _DELETE = async <A,R=void>(endpoint: string, args?: A, authenticated=true) => {
     await this.refresh_session_if_expiring_soon()
     return await this.DELETE<A,R>(endpoint, args, authenticated)
+  }
+
+  prepare_and_upload_file = async (file: FileBlob) => {
+    const { name, size, type } = file
+    const { presignedUpload, file: { secureName } } = await this.api.files.prepare_file_upload({ name, size, type })
+    await this.UPLOAD(presignedUpload, file)
+    return { secureName }
   }
 
   handle_new_session = async ({ authToken, enduser }: { authToken: string, enduser: Enduser }) => {

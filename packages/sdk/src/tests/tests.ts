@@ -49,6 +49,7 @@ import {
 const host = process.env.TEST_URL || 'http://localhost:8080'
 const [email, password] = [process.env.TEST_EMAIL, process.env.TEST_PASSWORD]
 const [email2, password2] = [process.env.TEST_EMAIL_2, process.env.TEST_PASSWORD_2]
+const [nonAdminEmail, nonAdminPassword] = [process.env.NON_ADMIN_EMAIL, process.env.NON_ADMIN_PASSWORD]
 
 const userId = '60398b0231a295e64f084fd9'
 
@@ -73,10 +74,11 @@ const userId = '60398b0231a295e64f084fd9'
 
 const sdk = new Session({ host })
 const sdkOther = new Session({ host, apiKey: "ba745e25162bb95a795c5fa1af70df188d93c4d3aac9c48b34a5c8c9dd7b80f7" })
+const sdkNonAdmin = new Session({ host })
 const enduserSDK = new EnduserSession({ host })
 // const sdkOtherEmail = "sebass@tellescope.com"
 
-if (!(email && password && email2 && password2)) {
+if (!(email && password && email2 && password2 && nonAdminEmail && nonAdminPassword)) {
   console.error("Set TEST_EMAIL and TEST_PASSWORD")
   process.exit()
 }
@@ -293,8 +295,13 @@ const generateEnduserAuthTests = async () => {
 
   const { authToken, enduser } = await sdk.api.endusers.generate_auth_token({ id: e.id })
   assert(!!authToken && !!enduser, 'invalid returned values', 'Generate authToken and get enduser')
-  const { isAuthenticated } = await sdk.api.endusers.is_authenticated({ id: enduser.id, authToken })
+  let { isAuthenticated } = await sdk.api.endusers.is_authenticated({ id: enduser.id, authToken })
   assert(isAuthenticated, 'invalid authToken generated for enduser', 'Generate authToken for enduser is valid')
+  assert(
+    (await sdk.api.endusers.is_authenticated({ authToken })).isAuthenticated,
+    'id omitted results in failed authentication',
+    'id optional for is_authenticated'
+  )
 
   const { authToken: authTokenUID, enduser: enduser2 } = await sdk.api.endusers.generate_auth_token({ externalId })
   assert(!!authTokenUID && !!enduser2, 'invalid returned values eid', 'Generate authToken and get enduser eid')
@@ -1075,6 +1082,43 @@ const enduser_session_tests = async () => {
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
+const users_tests = async () => {
+  log_header("Users Tests")
+  /* Update user tests */
+  await async_test(
+    `update user (non-admin, other user)`,
+    () => sdkNonAdmin.api.users.updateOne(sdk.userInfo.id, { fname: 'Failure' }),
+    { shouldError: true, onError: e => e.message === "Only admin users can update others' profiles" }
+  )
+  await async_test(
+    `update user (non-admin, self)`,
+    () => sdkNonAdmin.api.users.updateOne(sdkNonAdmin.userInfo.id, { fname: 'Updated' }),
+    { onResult: u => u.id === sdkNonAdmin.userInfo.id && u.fname === "Updated" }
+  )
+  await async_test(
+    `verify user update with admin get`,
+    () => sdk.api.users.getOne(sdkNonAdmin.userInfo.id), 
+    { onResult: u => u.id === sdkNonAdmin.userInfo.id && u.fname === "Updated" }
+  )
+
+  // reset fname to "Non" if this test throws, otherwise will falsely pass on next run
+  assert(sdkNonAdmin.userInfo.fname === 'Updated', 'refresh_session not called on self after update', 'sdk updated on user update')
+
+  await async_test(
+    `update user (admin, other user)`,
+    () => sdk.api.users.updateOne(sdkNonAdmin.userInfo.id, { fname: 'Non' }), // change back
+    { onResult: u => u.id === sdkNonAdmin.userInfo.id && u.fname === "Non" }
+  )
+  sdkNonAdmin.userInfo.fname = 'Non' // update back in sdk instance as well
+
+  await async_test(
+    `verify user update with admin get`,
+    () => sdk.api.users.getOne(sdkNonAdmin.userInfo.id), 
+    { onResult: u => u.id === sdkNonAdmin.userInfo.id && u.fname === "Non" }
+  )
+
+}
+
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -1085,7 +1129,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   emails: email_tests,
   sms_messages: sms_tests,
   chat_rooms: chat_room_tests,
-  users: () => {},
+  users: users_tests,
   templates: () => {},
   files: files_tests,
   tickets: () => {},
@@ -1098,7 +1142,10 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   log_header("API")
 
   try {
-    await sdk.authenticate(email, password)
+    await Promise.all([
+      sdk.authenticate(email, password),
+      sdkNonAdmin.authenticate(nonAdminEmail, nonAdminPassword),
+    ])
     await setup_tests()
     await multi_tenant_tests() // should come right after setup tests
     await badInputTests()

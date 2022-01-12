@@ -100,12 +100,12 @@ export const Flex = (props: Flex_Web) => {
   )
 }
 
-export interface FormProps {
+export interface FormProps extends Styled {
   onSubmit: () => void;
   children?: React.ReactNode;
 }
-export const Form = ({ onSubmit, children }: FormProps) =>  {
-  return <form onSubmit={e => { e.preventDefault(); onSubmit() }}>{children}</form>
+export const Form = ({ onSubmit, children, style }: FormProps) =>  {
+  return <form style={style} onSubmit={e => { e.preventDefault(); onSubmit() }}>{children}</form>
 }
 export const SUPPORTS_FORMS = true
 

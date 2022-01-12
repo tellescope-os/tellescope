@@ -101,7 +101,7 @@ export const useStartVideoCall = () => {
     try {
       const { meeting, host } = await session.api.meetings.start_meeting()
 
-      await meetingManager.join({ meetingInfo: meeting, attendeeInfo: host }); // Use the join API to create a meeting session
+      await meetingManager.join({ meetingInfo: meeting, attendeeInfo: host.info }); // Use the join API to create a meeting session
       await meetingManager.start(); // At this point you can let users setup their devices, or start the session immediately
 
       if (initialAttendees) {

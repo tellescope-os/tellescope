@@ -18,6 +18,7 @@ export type Task = ClientModelForName['tasks']
 export type Ticket = ClientModelForName['tickets']
 export type Meeting = ClientModelForName['meetings']
 export type Note = ClientModelForName['notes']
+export type User = ClientModelForName['users']
 
 
 export interface UserDisplayInfo extends models.UserActivityInfo { 
