@@ -1,6 +1,6 @@
 export interface Indexable<T=any> { [index: string] : T }
 export enum LoadingStatus {
-  Unloaded,
+  Unloaded = 0,
   Fetching,
   Error,
   Loaded,
@@ -48,10 +48,30 @@ export type Operation = CRUD | 'createMany' | 'readMany'
 export interface FileBlob extends Blob {
   name: string;
 }
+export interface FileDetails {
+  name: string;
+  size: number;
+  type: string;
+}
+export interface FileBuffer extends Buffer, FileDetails {} 
+export interface ReactNativeFile {
+  uri: string,
+  name: string,
+  type: string,
+}
 
 export interface S3PresignedPost {
   url: string,
-  fields: Indexable,
+  fields: {
+    'Content-Type': string,
+    key: string,
+    bucket: string,
+    'X-Amz-Algorithm': string,
+    'X-Amz-Credential': string,
+    'X-Amz-Date': string,
+    Policy: string,
+    'X-Amz-Signature': string,
+  },
 }
 
 export type UserIdentity = {

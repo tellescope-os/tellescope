@@ -12,23 +12,26 @@ interface DisplayPictureProps extends AvatarProps {
 export const DisplayPicture = ({ user, onError=console.error, ...avatarProps } : DisplayPictureProps & Styled) => {
   const session = useResolvedSession()
 
-  const [loadedImage, setLoadedImage] = useState({ uri: '', id: '' })
+  const [loadedImage, setLoadedImage] = useState({ uri: '', cacheKey: '' })
   const fetchRef = useRef({ } as { [index: string]: boolean })
+
+  const cacheKey = user.id + (user.avatar ?? '')
 
   useEffect(() => {
     if (!user.avatar) return
-    if (loadedImage.id === user.id) return 
-    if (fetchRef.current[user.id]) return // already fetching
-    fetchRef.current[user.id] = true
+
+    if (loadedImage.cacheKey === cacheKey) return 
+    if (fetchRef.current[cacheKey]) return // already fetching
+    fetchRef.current[cacheKey] = true
 
     session?.api.files.file_download_URL({ secureName: user.avatar })
-    .then(({ downloadURL }) => setLoadedImage({ uri: downloadURL, id: user.id }))
+    .then(({ downloadURL }) => setLoadedImage({ uri: downloadURL, cacheKey }))
     .catch(onError)
     
-  }, [fetchRef, user, loadedImage, onError])
+  }, [cacheKey, fetchRef, user, loadedImage, onError, session])
 
   // if user doesn't have picture, or it's still loading
-  if (loadedImage.id !== user.id) return <Avatar {...avatarProps}/>
+  if (loadedImage.cacheKey === '') return <Avatar {...avatarProps}/>
 
   return (
     <Avatar {...avatarProps} src={loadedImage.uri}/>

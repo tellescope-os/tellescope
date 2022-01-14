@@ -81,6 +81,7 @@ import {
   DEFAULT_OPERATIONS,
   PLACEHOLDER_ID,
   ENDUSER_SESSION_TYPE,
+  USER_SESSION_TYPE,
 } from "@tellescope/constants"
 export type RelationshipConstraint<T> = {
   explanation: string; // human readable, for documentation purposes
@@ -321,11 +322,18 @@ export const schema: SchemaV1 = {
           if (!(email || phone))
             return 'One of email or phone is required'
           } 
+        },
+        {
+          explanation: 'Endusers can only access and modify their own profile',
+          evaluate: ({ _id }, _, session) => {
+            if (session.type === USER_SESSION_TYPE) return
+            if (session.id !== _id?.toString()) return "Endusers may only update their own profile"
+          } 
         }
       ],
     },
     defaultActions: DEFAULT_OPERATIONS,
-    enduserActions: { logout: {}, refresh_session: {} },
+    enduserActions: { logout: {}, refresh_session: {}, update: {} },
     fields: {
       ...BuiltInFields,   
       externalId: {
@@ -1147,7 +1155,7 @@ export const schema: SchemaV1 = {
         readonly: true,
       },
     },
-    enduserActions: { prepare_file_upload: {} },
+    enduserActions: { prepare_file_upload: {}, file_download_URL: {} },
     customActions: {
       prepare_file_upload: {
         op: "custom", access: 'create', method: "post",

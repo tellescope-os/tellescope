@@ -4,6 +4,7 @@ import { Socket, io } from 'socket.io-client'
 
 import { 
   FileBlob,
+  ReactNativeFile,
   S3PresignedPost,
 } from "@tellescope/types-utilities"
 import { 
@@ -152,27 +153,17 @@ export class Session {
     } catch(err) { throw await this.errorHandler(err) }
   }
 
-  UPLOAD = async (presigned: S3PresignedPost, file?: FileBlob, buffer?: FileBlob) => {
-    const formData = IN_BROWSER ? new FormData() : new NodeFormData();
+  UPLOAD = async (presigned: S3PresignedPost, file: Blob | Buffer | ReactNativeFile) => {
+    const formData = new NodeFormData();
     Object.keys(presigned.fields).forEach(key => {
-      formData.append(key, presigned.fields[key]);
+      formData.append(key, presigned.fields[key as keyof S3PresignedPost['fields']]);
     });
+    formData.append("file", file) // must be appended last
 
-    // has to be appended last 
-    if (!IN_BROWSER) file = buffer || file // use raw buffer if file is Node Blob
-    formData.append("file", file as Blob)
+    const headers = formData.getHeaders ? { ...formData.getHeaders(), 'Content-Length' : (formData as any).maxDataSize  }
+                  : { 'Content-Type': 'multipart/form-data' }
 
-    try {
-      await axios.post(presigned.url, formData,  {
-        headers: IN_BROWSER 
-          ? { 'Content-Type': 'multipart/form-data'} 
-          : { 
-              ...(formData as NodeFormData).getHeaders(), 
-              'Content-Length' : (formData as any).maxDataSize 
-            }
-      })
-    }
-    catch(err) { console.error(err); throw err }
+    await axios.post(presigned.url, formData,  { headers })
   }
 
   DOWNLOAD = async (downloadURL: string) => { 
@@ -181,6 +172,9 @@ export class Session {
   }
 
   EMIT = async (route: string, args: object, authenticated=true, options={} as RequestOptions) => {
+    if (!this.socket) {
+      this.authenticate_socket() // sets namespace correctly
+    }
     this.socket?.emit(route, { ...args, ...authenticated ? { authToken: this.authToken } : {} } )
   }
 
@@ -199,6 +193,7 @@ export class Session {
   removeAllSocketListeners = (s: string) => this.socket?.removeAllListeners(s)
 
   authenticate_socket = () => {
+    if (!this.userInfo?.businessId) return
     this.socket = io(`${this.host}/${this.userInfo.businessId}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
     this.socket.on('disconnect', () => { this.socketAuthenticated = false })
     this.socket.on('authenticated', () => { this.socketAuthenticated = true })

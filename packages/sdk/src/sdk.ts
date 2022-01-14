@@ -17,7 +17,7 @@ import {
   File,
   Meeting,
 } from "@tellescope/types-client"
-import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileBlob } from "@tellescope/types-utilities"
+import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileBlob, FileBuffer, FileDetails, ReactNativeFile } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"
 
 import { Session as SessionManager, SessionOptions } from "./session"
@@ -99,7 +99,7 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     display_names: () => Promise<{ fname: string, lname: string, id: string }[]>,
   },
   files: {
-    prepare_file_upload: (args: { name: string, size: number, type: string }) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
+    prepare_file_upload: (args: FileDetails) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
     file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
   },
   meetings: {
@@ -146,18 +146,7 @@ export class Session extends SessionManager {
     queries.webhooks.configure = a => this._POST('/v1/configure-webhooks', a)
     queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)
 
-    const updateUser = queries.users.updateOne
-    queries.users.updateOne = async (...a: Parameters<typeof updateUser>) => {
-      const updated = await updateUser(...a)
-      if (a[0] === this.userInfo.id) {  // ensure session userInfo is updated as well
-        await this.refresh_session()
-      }
-      return updated
-    }
-
     this.api = queries
-
-    // if (this.userInfo) this.refresh_session()
   }
 
   _POST = async <A,R=void>(endpoint: string, args?: A, authenticated=true) => {
@@ -213,8 +202,8 @@ export class Session extends SessionManager {
     await this.POST('/logout-api').catch(console.error)
   }
 
-  prepare_and_upload_file = async (file: FileBlob) => {
-    const { name, size, type } = file
+  prepare_and_upload_file = async (details: FileDetails, file: Blob | Buffer | ReactNativeFile) => {
+    const { name, size, type } = details
     const { presignedUpload, file: { secureName } } = await this.api.files.prepare_file_upload({ name, size, type })
     await this.UPLOAD(presignedUpload, file)
     return { secureName }

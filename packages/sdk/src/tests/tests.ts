@@ -974,6 +974,7 @@ const enduserAccessTests = async () => {
   const password = 'testpassword'
 
   const enduser = await sdk.api.endusers.createOne({ email })
+  const enduser2 = await sdk.api.endusers.createOne({ email: 'hi' + email })
   await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
   await enduserSDK.authenticate(email, password).catch(console.error)
 
@@ -1026,6 +1027,17 @@ const enduserAccessTests = async () => {
     } 
   }
 
+  await async_test(
+    `enduser can update self`,
+    () => enduserSDK.api.endusers.updateOne(enduser.id, { fname: "Sebastian", lname: "Coates" }), 
+    { onResult: e => e.id === enduser.id && e.fname === 'Sebastian' && e.lname === "Coates" }
+  )
+  await async_test(
+    `enduser can't update other enduser`,
+    () => enduserSDK.api.endusers.updateOne(enduser2.id, { fname: "Shouldn't Work"}), 
+    { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
+  )
+
   const ticketAccessible = await sdk.api.tickets.createOne({ enduserId: enduser.id, title: "Accessible ticket" })
   const ticketInaccessible = await sdk.api.tickets.createOne({ enduserId: PLACEHOLDER_ID, title: "Inaccessible ticket" })
   await async_test(
@@ -1052,6 +1064,7 @@ const enduserAccessTests = async () => {
   await sdk.api.tickets.deleteOne(ticketAccessible.id)
   await sdk.api.tickets.deleteOne(ticketInaccessible.id)
   await sdk.api.endusers.deleteOne(enduser.id)
+  await sdk.api.endusers.deleteOne(enduser2.id)
 }
 
 const files_tests = async () => {
@@ -1060,7 +1073,7 @@ const files_tests = async () => {
   const { presignedUpload, file } = await sdk.api.files.prepare_file_upload({ 
     name: 'Test File', size: buff.byteLength, type: 'text/plain' 
   })
-  await sdk.UPLOAD(presignedUpload, undefined, buff as any)
+  await sdk.UPLOAD(presignedUpload, buff)
 
   const { downloadURL } = await sdk.api.files.file_download_URL({ secureName: file.secureName })
   const downloaded: string = await sdk.DOWNLOAD(downloadURL)

@@ -94,7 +94,7 @@ export const createSliceForList = <T extends { id: string }, N extends string>(n
   name,
   initialState: UNLOADED as LoadedData<T[]>,
   reducers: {
-    set: (_, action) => action.payload,
+    set: (_, action) => action.payload.value,
     setFetching: (s) => s.status === LoadingStatus.Unloaded ? { status: LoadingStatus.Fetching, value: undefined } : s,
     add: (state, action) => add_elements_to_array(state, [action.payload.value], action.payload.options),
     addSome: (state, action) => add_elements_to_array(state, action.payload.value, action.payload.options),

@@ -21,11 +21,10 @@ interface LoadingElement <T>{
 }
 
 export const LoadingLinear = <T,>({ data, render, onError }: LoadingElement<T>) => {
-  if (data.status === LoadingStatus.Unloaded) return <LinearProgress/>
-  if (data.status === LoadingStatus.Fetching) return <LinearProgress/>
-  if (data.status === LoadingStatus.Error) return onError?.(data.value) ?? null
+  if (data.status === LoadingStatus.Loaded) return render(data.value)
+  if (data.status === LoadingStatus.Error) return (onError?.(data.value) ?? null)
 
-  return render(data.value)
+  return <LinearProgress/>
 }
 
 export const value_is_loaded = <T,>(data: LoadedData<T>): data is { status: LoadingStatus.Loaded, value: T } => (

@@ -2,8 +2,8 @@ import React from 'react';
 import {
   BrowserRouter as Router,
   Route,
-  Switch,
-  useHistory,
+  Routes,
+  useNavigate,
 } from "react-router-dom"
 
 import {
@@ -25,29 +25,32 @@ import {
   UserChatSplit,
 } from "@tellescope/chat"
 
+
 const ViewSelector = () => {
-  const history = useHistory()
+  const navigate = useNavigate()
 
   return (
     <div>
       Select Test Page <br/>
-      {Object.keys(routes).map(r => 
-        <button key={r} onClick={() => history.push(r)}>{r}</button>
+      {routes.map(r => 
+        <button key={r} onClick={() => navigate(r)}>{r}</button>
       )}
     </div>
   )
 }
 
+const routes = [
+  '/chats-for-user',
+  '/chats-for-enduser',
+]
+
 const Routing = () => (
   <Router>
-  <Switch>   
-    {Object.keys(routes).map(r => 
-      <Route path={r} key={r}>
-        {routes[r as keyof typeof routes]()}
-      </Route>
-    )}
-    <Route> <ViewSelector/> </Route>
-  </Switch>
+  <Routes>   
+    <Route path='/chats-for-user' element={<ChatsForUser/>}/>
+    <Route path='/chats-for-enduser' element={<ChatsForEnduser/>}/>
+    <Route path='/*' element={<ViewSelector/>}/>
+  </Routes>
   </Router>
 )
 
@@ -91,9 +94,6 @@ const ChatsForEnduserWithProvider = () => {
   return <EnduserChatSplit/>
 }
 
-const routes = {
-  '/chats-for-user': ChatsForUser,
-  '/chats-for-enduser': ChatsForEnduser,
-}
+
 
 export default App;

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import {
-  Enduser,
+  Enduser, User,
 } from "@tellescope/types-client"
 import {
   SessionType,
@@ -41,13 +41,20 @@ export interface WithAnySession {
 interface SessionContext_T {
   session: UserSession,
   setSession: React.Dispatch<React.SetStateAction<Session>>
+  updateUserInfo: (u: Partial<User>, authToken?: string) => void
 }
 export const SessionContext = createContext({} as SessionContext_T)
 export const WithSession = (p : { children: React.ReactNode, sessionOptions?: UserSessionOptions }) => {
   const [session, setSession] = useState(() => new Session(p.sessionOptions))
 
   return (
-    <SessionContext.Provider value={{ session, setSession }}>
+    <SessionContext.Provider value={{ 
+      session, setSession,
+      updateUserInfo: (u, a)=> setSession(s => new Session({ 
+        host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken,  // preserve other important info
+        userInfo: { ...s.userInfo, ...u }
+      }))
+    }}>
       {p.children}
     </SessionContext.Provider>
   )
@@ -56,13 +63,20 @@ export const WithSession = (p : { children: React.ReactNode, sessionOptions?: Us
 interface EnduserSessionContext_T {
   enduserSession: EnduserSession,
   setEnduserSession: React.Dispatch<React.SetStateAction<EnduserSession>>
+  updateEnduserInfo: (u: Partial<Enduser>, authToken?: string) => void
 }
 export const EnduserSessionContext = createContext({} as EnduserSessionContext_T)
 export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptions?: EnduserSessionOptions }) => {
   const [enduserSession, setEnduserSession] = useState(() => new EnduserSession(p.sessionOptions))
 
   return (
-    <EnduserSessionContext.Provider value={{ enduserSession, setEnduserSession }}>
+    <EnduserSessionContext.Provider value={{ 
+      enduserSession, setEnduserSession,
+      updateEnduserInfo: (u, a) => setEnduserSession(s => new EnduserSession({ 
+        host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken, // preserve other important info
+        enduser: { ...s.userInfo, ...u } 
+      }))
+    }}>
       {p.children}
     </EnduserSessionContext.Provider>
   )

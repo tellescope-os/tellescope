@@ -4,7 +4,7 @@ import { Session, SessionOptions } from "./session"
 import { APIQuery } from "./sdk"
 import { url_safe_path } from "@tellescope/utilities"
 
-import { FileBlob, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
+import { FileBlob, FileBuffer, FileDetails, ReactNativeFile, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
 import { 
   Attendee,
 } from "@tellescope/types-models"
@@ -19,7 +19,7 @@ import {
 
 export interface EnduserSessionOptions extends SessionOptions {}
 
-type EnduserAccessibleModels = "chat_rooms" | 'chats' | 'files' | 'tickets'
+type EnduserAccessibleModels = 'endusers' | "chat_rooms" | 'chats' | 'files' | 'tickets' 
 
 export const defaultQueries = <N extends keyof ClientModelForName>(
   s: EnduserSession, n: keyof ClientModelForName_required
@@ -47,7 +47,7 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
     display_info: () => Promise<UserDisplayInfo[]>
   },
   files: {
-    prepare_file_upload: (args: { name: string, size: number, type: string }) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
+    prepare_file_upload: (args: FileDetails) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
     file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
   },
   meetings: {
@@ -60,6 +60,7 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
 const loadDefaultQueries = (s: EnduserSession): { [K in EnduserAccessibleModels] : APIQuery<K> } => ({
   chat_rooms: defaultQueries(s, 'chat_rooms'),
   chats: defaultQueries(s, 'chats'),
+  endusers: defaultQueries(s, 'endusers'),
   files: defaultQueries(s, 'files'),
   tickets: defaultQueries(s, 'tickets'),
 })
@@ -75,9 +76,8 @@ export class EnduserSession extends Session {
     
     this.api = loadDefaultQueries(this) as EnduserQueries 
 
-    this.api.endusers = {
-      logout: () => this._POST('/v1/logout-enduser'),
-    }
+    this.api.endusers.logout = () => this._POST('/v1/logout-enduser'),
+
     this.api.users = { 
       display_info: () => this._GET<{}, UserDisplayInfo[] >(`/v1/user-display-info`),
     }
@@ -113,8 +113,8 @@ export class EnduserSession extends Session {
     return await this.DELETE<A,R>(endpoint, args, authenticated)
   }
 
-  prepare_and_upload_file = async (file: FileBlob) => {
-    const { name, size, type } = file
+  prepare_and_upload_file = async (details: FileDetails, file: Blob | Buffer | ReactNativeFile) => {
+    const { name, size, type } = details
     const { presignedUpload, file: { secureName } } = await this.api.files.prepare_file_upload({ name, size, type })
     await this.UPLOAD(presignedUpload, file)
     return { secureName }
