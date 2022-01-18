@@ -1,7 +1,7 @@
 import React from 'react'
 
-import { Provider, useSelector, TypedUseSelectorHook, useDispatch } from 'react-redux'
-import { configureStore } from '@reduxjs/toolkit'
+import { Provider, createSelectorHook, TypedUseSelectorHook } from 'react-redux'
+import { configureStore, Action, EnhancedStore } from '@reduxjs/toolkit'
 
 import {
   ChatRoom,
@@ -19,35 +19,45 @@ import {
   createSliceForList,
   sharedConfig,
   useListStateHook,
-  WithFetchContext,
   HookOptions,
   useChats as useChatsShared,
   useChatRooms as useChatRoomsShared,
+  WithFetchContext,
+  TellescopeStoreContext,
 } from "./state"
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
 const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')
 const meetingsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
 
-const store = configureStore({
+export const enduserConfig = {
   reducer: { 
     users: usersSlice.reducer,
     tickets: ticketsSlice.reducer,
     meetings: meetingsSlice.reducer,
     ...sharedConfig.reducer,
   },
-})
-type RootState = ReturnType<typeof store.getState>
-type AppDispatch = typeof store.dispatch
-const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
+}
+const store = configureStore(enduserConfig)
 
-export const WithEnduserState = ({ children }: { children: React.ReactNode  }) => (
+type RootState = ReturnType<typeof store.getState>
+const useTypedSelector = createSelectorHook(TellescopeStoreContext) as any as TypedUseSelectorHook<RootState>
+
+export const EnduserProvider = (props: { children: React.ReactNode }) => (
   <WithFetchContext>
-  <Provider store={store}>
-    {children}
+  <Provider store={store} context={TellescopeStoreContext}>
+    {props.children}
   </Provider>
   </WithFetchContext>
 )
+export const ExtendedEnduserProvider = <A,B extends Action<any>>(props: { children: React.ReactNode, store: EnhancedStore<A,B> }) => (
+  <WithFetchContext>
+  <Provider store={props.store} context={TellescopeStoreContext}>
+    {props.children}
+  </Provider>
+  </WithFetchContext>
+)
+
 export const useUserDisplayNames = (options={} as HookOptions<UserDisplayInfo>) => {
   console.warn("DEPRECATED: This hook has been renamed useUserDisplayInfo")
   return useUserDisplayInfo(options)

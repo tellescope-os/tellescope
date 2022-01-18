@@ -198,7 +198,7 @@ export interface SubmitButtonOptions {
 }
 
 interface FormikSubmitButtonProps extends SubmitButtonOptions, Styled {
-  formik: FormikProps<any>,
+  formik: { isValid: boolean, dirty: boolean, isSubmitting: boolean },
   onClick?: () => void, // to handle submit in environment where html form type handleSubmit is not supported
 }
 export const FormikSubmitButton = ({ formik, onClick, submitText, submittingText, style }: FormikSubmitButtonProps) => (

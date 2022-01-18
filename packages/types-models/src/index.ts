@@ -488,3 +488,24 @@ export interface UserActivityInfo {
   lastLogout: string | Date,
 }
 export type UserActivityStatus = 'Active' | 'Away' | 'Unavailable'
+
+export const modelNameChecker: { [K in ModelName] : true } = {
+  endusers: true,
+  engagement_events: true,
+  journeys: true,
+  api_keys: true,
+  tasks: true,
+  emails: true,
+  sms_messages: true,
+  chat_rooms: true,
+  chats: true,
+  users: true,
+  templates: true,
+  files: true, 
+  tickets: true,
+  meetings: true, 
+  notes: true, 
+  webhooks: true, 
+}
+
+export const isModelName = (s: string): s is ModelName => modelNameChecker[s as ModelName]

@@ -15,13 +15,6 @@ import {
 } from "@tellescope/sdk"
 
 import {
-  WithUserState,
-} from "./user_state"
-import {
-  WithEnduserState,
-} from "./enduser_state"
-
-import {
   emailInput,
   passwordInput,
   FormBuilder,
@@ -29,7 +22,6 @@ import {
 import {
   Styled,
 } from "./mui"
-
 
 type UserSession = Session
 type UserSessionOptions = SessionOptions
@@ -82,17 +74,8 @@ export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptio
   )
 }
 
-export const UserProvider = (props: { children: React.ReactNode }) => (
-  <WithUserState>
-      {props.children}
-  </WithUserState>
-)
 
-export const EnduserProvider = (props: { children: React.ReactNode }) => (
-  <WithEnduserState>
-      {props.children}
-  </WithEnduserState>
-)
+
 
 interface SessionHookOptions {
   throwIfMissingContext?: boolean,

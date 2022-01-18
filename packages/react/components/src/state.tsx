@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, createContext } from 'react'
 
-import { useSelector, TypedUseSelectorHook, useDispatch } from 'react-redux'
+import { TypedUseSelectorHook, createDispatchHook, createSelectorHook, ReactReduxContextValue } from 'react-redux'
 import { createSlice, configureStore, PayloadAction, Slice } from '@reduxjs/toolkit'
  
 import {
@@ -16,9 +16,7 @@ import {
   ChatRoom,
   ChatMessage,
 } from "@tellescope/types-client"
-import {
-  ModelName,
-} from "@tellescope/types-models"
+import { isModelName } from "@tellescope/types-models"
 
 import {
   useResolvedSession
@@ -28,6 +26,9 @@ import {
   Session, 
   EnduserSession,
 } from '@tellescope/sdk'
+
+export const TellescopeStoreContext = React.createContext<ReactReduxContextValue<AppDispatch>>(null as any);
+export const createTellescopeSelector = () => createSelectorHook(TellescopeStoreContext)
 
 const FetchContext = createContext({} as Indexable<boolean>)
 export const WithFetchContext = ( { children } : { children: React.ReactNode }) => (
@@ -158,8 +159,8 @@ const _store = configureStore(sharedConfig)
 type RootState = ReturnType<typeof _store.getState>
 type AppDispatch = typeof _store.dispatch
 
-const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
-const useTypedDispatch = () => useDispatch<AppDispatch>()
+const useTypedSelector = createTellescopeSelector() as any as TypedUseSelectorHook<RootState> 
+const useTellescopeDispatch = createDispatchHook(TellescopeStoreContext) 
 
 export type AddOptions = {
   addTo?: 'start' | 'end'
@@ -178,8 +179,8 @@ export interface ListUpdateMethods <T, ADD> {
   removeLocalElements: (ids: string[]) => void,
 }
 export type ListStateReturnType <T extends { id: string }, ADD=Partial<T>> = [LoadedData<T[]>, ListUpdateMethods<T, ADD>]
-export const useListStateHook = <T extends { id: string }, ADD extends Partial<T>>(
-  modelName: ModelName,
+export const useListStateHook = <T extends { id: string }, ADD extends Partial<T>> (
+  modelName: string,
   state: LoadedData<T[]>, 
   session: Session | EnduserSession,
   slice: Slice<any, ListReducers<T>>,
@@ -204,7 +205,7 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
   const socketConnection = options?.socketConnection ?? 'model'
   const loadFilter = options?.loadFilter
 
-  const dispatch = useTypedDispatch()
+  const dispatch = useTellescopeDispatch()
   const didFetch = useContext(FetchContext)
 
   const addLocalElement = useCallback((e: T, o?: AddOptions) => {
@@ -299,6 +300,7 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
   }, [state, socketConnection, didFetch, loadFilter, loadQuery])
 
   useEffect(() => {
+    if (!isModelName(modelName)) return // a custom extension without our socket support
     if (socketConnection === 'none') return 
     if (didFetch[modelName + 'socket']) return
     didFetch[modelName + 'socket'] = true
@@ -325,7 +327,7 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
       session.removeAllSocketListeners(`updated-${modelName}`)
       session.removeAllSocketListeners(`deleted-${modelName}`)
     }
-  }, [session, socketConnection, didFetch])
+  }, [session, socketConnection, didFetch, isModelName])
 
   return [state, {
     addLocalElement, addLocalElements,
@@ -344,7 +346,7 @@ export type MappedListStateReturnType <T extends { id: string }, ADD=Partial<T>>
   MappedListUpdateMethods<T, ADD>
 ]
 export const useMappedListStateHook = <T extends { id: string }, ADD extends Partial<T>>(
-  modelName: ModelName,
+  modelName: string,
   filterKey: (keyof T) & string,
   state:  Indexable<LoadedData<T[]>>, 
   session: EnduserSession | Session,
@@ -370,7 +372,7 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
   const loadFilter = options?.loadFilter
   const socketConnection = options?.socketConnection ?? 'keys'
 
-  const dispatch = useTypedDispatch()
+  const dispatch = useTellescopeDispatch()
   const didFetch = useContext(FetchContext)
 
   const addLocalElementForKey = useCallback((key: string, e: T, o?: AddOptions) => {
@@ -429,20 +431,22 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
   }, [key, loadFilter, dispatch, didFetch, loadQuery])
 
   useEffect(() => {
+    if (!isModelName(modelName)) return // a custom extension without our socket support
     if (!key) return
     if (socketConnection === 'none') return
     if (didFetch[key + 'socket']) return
     didFetch[key + 'socket'] = true
 
+    // TODO: Add update and delete subscriptions
     session.subscribe({ [key]: modelName }, {
-      'created-chats': (cs: T[]) => addLocalElementsForKey(key, cs, {})
+      [`created-${modelName}`]: (cs: T[]) => addLocalElementsForKey(key, cs, {})
     })
 
     return () => { 
       session.unsubscribe([key]) 
       didFetch[key + 'socket'] = false
     }
-  }, [modelName, session, key, didFetch, socketConnection, addLocalElementForKey])
+  }, [modelName, isModelName, session, key, didFetch, socketConnection, addLocalElementForKey])
 
   return [state[key] ?? UNLOADED, {
     addLocalElement,

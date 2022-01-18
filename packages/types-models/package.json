@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/types-models",
-  "version": "0.0.27",
+  "version": "0.0.29",
   "description": "Models used in Tellescope across the stack",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "devDependencies": {
-    "@tellescope/types-utilities": "^0.0.27",
+    "@tellescope/types-utilities": "^0.0.29",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "eslint": "^7.32.0",

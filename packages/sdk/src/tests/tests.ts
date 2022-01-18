@@ -1079,6 +1079,9 @@ const files_tests = async () => {
   const downloaded: string = await sdk.DOWNLOAD(downloadURL)
 
   assert(downloaded === buff.toString(), 'downloaded file does not match uploaded file', 'upload, download comparison') 
+
+  const { downloadURL: cachedURL } = await sdk.api.files.file_download_URL({ secureName: file.secureName })
+  assert(downloadURL === cachedURL, 'cache download url failed', 'download url cache')
 }
 
 const enduser_session_tests = async () => {
@@ -1115,14 +1118,15 @@ const users_tests = async () => {
   )
 
   // reset fname to "Non" if this test throws, otherwise will falsely pass on next run
-  assert(sdkNonAdmin.userInfo.fname === 'Updated', 'refresh_session not called on self after update', 'sdk updated on user update')
+  // NOT Supported behavior any more
+  // assert(sdkNonAdmin.userInfo.fname === 'Updated', 'refresh_session not called on self after update', 'sdk updated on user update')
 
   await async_test(
     `update user (admin, other user)`,
     () => sdk.api.users.updateOne(sdkNonAdmin.userInfo.id, { fname: 'Non' }), // change back
     { onResult: u => u.id === sdkNonAdmin.userInfo.id && u.fname === "Non" }
   )
-  sdkNonAdmin.userInfo.fname = 'Non' // update back in sdk instance as well
+  // sdkNonAdmin.userInfo.fname = 'Non' // update back in sdk instance as well
 
   await async_test(
     `verify user update with admin get`,

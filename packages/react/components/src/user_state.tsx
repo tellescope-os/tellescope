@@ -1,7 +1,7 @@
 import React, { useRef } from 'react'
 
-import { Provider, useSelector, TypedUseSelectorHook, useDispatch } from 'react-redux'
-import { configureStore } from '@reduxjs/toolkit'
+import { Provider, useSelector, TypedUseSelectorHook, createSelectorHook } from 'react-redux'
+import { configureStore, EnhancedStore, Action } from '@reduxjs/toolkit'
 
 import {
   useSession,
@@ -16,6 +16,7 @@ import {
 
   useChats as useChatsShared,
   useChatRooms as useChatRoomsShared,
+  TellescopeStoreContext,
 } from "./state"
 
 import {
@@ -36,7 +37,7 @@ const meetingsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
 const filesSlice = createSliceForList<File, 'files'>('files')
 const notesSlice = createSliceForList<Note, 'notes'>('notes')
 
-const store = configureStore({
+export const userConfig = {
   reducer: { 
     endusers: endusersSlice.reducer,
     tasks: tasksSlice.reducer,
@@ -45,16 +46,24 @@ const store = configureStore({
     files: filesSlice.reducer,
     notes: notesSlice.reducer,
     ...sharedConfig.reducer,
-  },
-})
+  }
+}
+const store = configureStore(userConfig)
 type RootState = ReturnType<typeof store.getState>
-type AppDispatch = typeof store.dispatch
-const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector
+const useTypedSelector = createSelectorHook(TellescopeStoreContext) as any as TypedUseSelectorHook<RootState>
 
-export const WithUserState = ({ children }: { children: React.ReactNode  }) => (
+export const UserProvider = (props: { children: React.ReactNode }) => (
   <WithFetchContext>
-  <Provider store={store}>
-    {children}
+  <Provider store={store} context={TellescopeStoreContext}>
+    {props.children}
+  </Provider>
+  </WithFetchContext>
+)
+
+export const ExtendedUserProvider = <A,B extends Action<any>>(props: { children: React.ReactNode, store: EnhancedStore<A,B> }) => (
+  <WithFetchContext>
+  <Provider context={TellescopeStoreContext} store={props.store}>
+    {props.children}
   </Provider>
   </WithFetchContext>
 )
@@ -147,3 +156,4 @@ export const useNotes = (options={} as HookOptions<File>) => {
 
 export const useChatRooms = (o={} as HookOptions<ChatRoom>) => useChatRoomsShared('user', o)
 export const useChats = (roomId: string, o={} as HookOptions<ChatMessage>) => useChatsShared(roomId, 'user', o)
+
