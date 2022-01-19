@@ -58,7 +58,7 @@ interface EnduserSessionContext_T {
   updateEnduserInfo: (u: Partial<Enduser>, authToken?: string) => void
 }
 export const EnduserSessionContext = createContext({} as EnduserSessionContext_T)
-export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptions?: EnduserSessionOptions }) => {
+export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptions: EnduserSessionOptions }) => {
   const [enduserSession, setEnduserSession] = useState(() => new EnduserSession(p.sessionOptions))
 
   return (
@@ -66,6 +66,7 @@ export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptio
       enduserSession, setEnduserSession,
       updateEnduserInfo: (u, a) => setEnduserSession(s => new EnduserSession({ 
         host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken, // preserve other important info
+        businessId: s.businessId,
         enduser: { ...s.userInfo, ...u } 
       }))
     }}>
@@ -132,13 +133,13 @@ export const UserLogin = ({ onLogin, style }: LoginHandler<UserSessionModel & { 
 }
 
 export const EnduserLogin = ({ onLogin }: LoginHandler<Enduser & { authToken: string }>) => {
-  const { enduserSession, setEnduserSession } = useContext(EnduserSessionContext)
-  if (!(enduserSession && setEnduserSession)) throw new Error("EnduserLogin used outside of WithEnduserSession")
+  const { enduserSession, updateEnduserInfo } = useContext(EnduserSessionContext)
+  if (!(enduserSession && updateEnduserInfo)) throw new Error("EnduserLogin used outside of WithEnduserSession")
 
   return (
     <LoginForm onSubmit={async ({ email, password }) => {
       const { authToken, enduser } = await enduserSession.authenticate(email, password)
-      setEnduserSession?.(s => new EnduserSession({ host: s.host , authToken, enduser }))
+      updateEnduserInfo?.(enduser, authToken)
       onLogin?.({ authToken, ...enduser })
     }}/>
   )

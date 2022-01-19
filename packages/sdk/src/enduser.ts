@@ -16,8 +16,9 @@ import {
   Meeting,
   UserDisplayInfo,
 } from "@tellescope/types-client"
+import { schema, CustomActions, extractFields } from '@tellescope/schema'
 
-export interface EnduserSessionOptions extends SessionOptions {}
+export interface EnduserSessionOptions extends SessionOptions { enduser?: Enduser, businessId: string }
 
 type EnduserAccessibleModels = 'endusers' | "chat_rooms" | 'chats' | 'files' | 'tickets' 
 
@@ -54,6 +55,10 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
     attendee_info: (args: { id: string }) => Promise<{ attendee: Attendee, others: UserIdentity[] }>,
     my_meetings: () => Promise<Meeting[]>,
   },
+  chat_rooms: {
+    display_info: (args: extractFields<CustomActions['chat_rooms']['display_info']['parameters']>) => 
+                    Promise<extractFields<CustomActions['chat_rooms']['display_info']['returns']>>,
+  }
 }
 
 
@@ -69,12 +74,16 @@ const loadDefaultQueries = (s: EnduserSession): { [K in EnduserAccessibleModels]
 export class EnduserSession extends Session {
   userInfo!: Enduser; 
   api: EnduserQueries;
+  businessId: string;
 
-  constructor(o?: EnduserSessionOptions & { enduser?: Enduser }) {
+  constructor(o: EnduserSessionOptions) {
     super({ ...o, cacheKey: o?.cacheKey || "tellescope_enduser" })
     if (o?.enduser) this.userInfo = o.enduser
     
+    this.businessId = o?.businessId
+
     this.api = loadDefaultQueries(this) as EnduserQueries 
+    this.api.chat_rooms.display_info = a => this._GET(`/v1${schema.chat_rooms.customActions.display_info.path}`, a),
 
     this.api.endusers.logout = () => this._POST('/v1/logout-enduser'),
 
@@ -136,9 +145,9 @@ export class EnduserSession extends Session {
 
   authenticate = async (email: string, password: string, o?: { expirationInSeconds?: number }) => this.handle_new_session(
     await this.POST<
-      {email: string, password: string, expirationInSeconds?: number }, 
+      { email: string, password: string, businessId: string, expirationInSeconds?: number }, 
       { authToken: string, enduser: Enduser }
-    >('/v1/login-enduser', { email, password, ...o })
+    >('/v1/login-enduser', { email, password, businessId: this.businessId, ...o })
   )
 
   refresh_session = async () => {

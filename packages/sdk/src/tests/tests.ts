@@ -1,11 +1,12 @@
 require('source-map-support').install();
-import * as fs from "fs"
+import crypto from "crypto"
 import * as buffer from "buffer" // only node >=15.7.0
 
 import {
   Enduser,
   ClientModelForName,
   ClientModelForName_required,
+  UserDisplayInfo,
 } from "@tellescope/types-client"
 import { 
   Model as ClientModel,
@@ -52,6 +53,7 @@ const [email2, password2] = [process.env.TEST_EMAIL_2, process.env.TEST_PASSWORD
 const [nonAdminEmail, nonAdminPassword] = [process.env.NON_ADMIN_EMAIL, process.env.NON_ADMIN_PASSWORD]
 
 const userId = '60398b0231a295e64f084fd9'
+const businessId = '60398b1131a295e64f084ff6'
 
 // const example_SDK_usage = async () => {
 //   // initialize SDK and authenticate a user
@@ -75,7 +77,8 @@ const userId = '60398b0231a295e64f084fd9'
 const sdk = new Session({ host })
 const sdkOther = new Session({ host, apiKey: "ba745e25162bb95a795c5fa1af70df188d93c4d3aac9c48b34a5c8c9dd7b80f7" })
 const sdkNonAdmin = new Session({ host })
-const enduserSDK = new EnduserSession({ host })
+const enduserSDK = new EnduserSession({ host, businessId })
+const enduserSDKDifferentBusinessId = new EnduserSession({ host, businessId: '80398b1131a295e64f084ff6' })
 // const sdkOtherEmail = "sebass@tellescope.com"
 
 if (!(email && password && email2 && password2 && nonAdminEmail && nonAdminPassword)) {
@@ -102,6 +105,16 @@ const setup_tests = async () => {
   await async_test<string, string>('test_authenticated - (logout invalidates jwt)', sdk.test_authenticated, { shouldError: true, onError: e => e === 'Unauthenticated' })
   await sdk.authenticate(email, password)
   await async_test('test_authenticated (re-authenticated)', sdk.test_authenticated, { expectedResult: 'Authenticated!' })
+
+  const uInfo = sdk.userInfo
+  const originalAuthToken = sdk.authToken
+  await sdk.refresh_session()
+  assert(uInfo.id === sdk.userInfo.id, 'userInfo mismatch', 'userInfo id preserved after refresh') 
+  assert(
+    !!originalAuthToken && !!sdk.authToken && sdk.authToken !== originalAuthToken, 
+    'same authToken after refresh', 
+    'authToken refresh'
+  ) 
 
   await async_test('reset_db', () => sdk.reset_db(), passOnVoid)
 }
@@ -837,13 +850,61 @@ const chat_room_tests = async () => {
   const sdk2 = new Session({ host })
   await sdk2.authenticate(email2, password2) 
 
-  const room = await sdk.api.chat_rooms.createOne({ type: 'internal', userIds: [userId] })
+  const email='enduser@tellescope.com', password='enduserPassword!';
+  const enduser = await sdk.api.endusers.createOne({ email })
+  await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
+  await enduserSDK.authenticate(email, password).catch(console.error) 
+
+  const room = await sdk.api.chat_rooms.createOne({ type: 'internal', userIds: [userId], enduserIds: [enduserSDK.userInfo.id] })
   await async_test(
     `get-chat-room (not a user)`, 
     () => sdk2.api.chat_rooms.getOne(room.id), 
     { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
   )
-  await sdk.api.chat_rooms.deleteOne(room.id)
+  await async_test(
+    `user_display_info for room (not a user)`, 
+    () => sdk2.api.chat_rooms.display_info({ id: room.id }), 
+    { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
+  )
+
+  const verifyRoomDisplayInfo = (info: Indexable<UserDisplayInfo>) => {
+    if (!info) return false
+    if (typeof info !== 'object') return false
+    if (Object.keys(info).length !== 2) return false
+    if (!info[sdk.userInfo.id]) return false
+    if (!info[enduserSDK.userInfo.id]) return false
+    const [user, enduser] = [info[sdk.userInfo.id], info[enduserSDK.userInfo.id]]
+    if (!(
+      user.id === sdk.userInfo.id &&
+      user.fname === sdk.userInfo.fname &&
+      user.lname === sdk.userInfo.lname &&
+      user.avatar === sdk.userInfo.avatar &&
+      !!user.createdAt &&
+      !!user.lastActive &&
+      !!user.lastLogout 
+    )) return false
+    if (!(
+      enduser.id === enduserSDK.userInfo.id &&
+      enduser.fname === enduserSDK.userInfo.fname &&
+      enduser.lname === enduserSDK.userInfo.lname &&
+      enduser.avatar === enduserSDK.userInfo.avatar &&
+      !!enduser.createdAt &&
+      !!enduser.lastActive &&
+      !!enduser.lastLogout 
+    )) return false
+    return true
+  }
+  await async_test(
+    `user_display_info for room (for user)`, 
+    () => sdk.api.chat_rooms.display_info({ id: room.id }), 
+    { onResult: r => r.id === room.id && verifyRoomDisplayInfo(r.display_info) }
+  )
+  await async_test(
+    `user_display_info for room (for enduser)`, 
+    () => enduserSDK.api.chat_rooms.display_info({ id: room.id }), 
+    { onResult: r => r.id === room.id && verifyRoomDisplayInfo(r.display_info) }
+    )
+    await sdk.api.chat_rooms.deleteOne(room.id)
 
   
   const emptyRoom = await sdk.api.chat_rooms.createOne({ })
@@ -868,6 +929,8 @@ const chat_room_tests = async () => {
     { onResult: r => r.id === emptyRoom.id }
   ) 
   await sdk.api.chat_rooms.deleteOne(emptyRoom.id)
+
+  await sdk.api.endusers.deleteOne(enduser.id)
 }
 
 const chat_tests = async() => {
@@ -978,11 +1041,30 @@ const enduserAccessTests = async () => {
   await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
   await enduserSDK.authenticate(email, password).catch(console.error)
 
+  await wait(undefined, 1000) // wait so that refresh_session generates a new authToken (different timestamp)
+
+  const uInfo = enduserSDK.userInfo
+  const originalAuthToken = enduserSDK.authToken
+  await enduserSDK.refresh_session()
+  assert(uInfo.id === enduserSDK.userInfo.id, 'userInfo mismatch', 'userInfo id preserved after refresh') 
+  assert(
+    !!originalAuthToken && !!enduserSDK.authToken && enduserSDK.authToken !== originalAuthToken, 
+    'same authToken after refresh', 
+    'authToken refresh'
+  ) 
+
+  await async_test(
+    `no-enduser-access for different businessId`,
+    () => enduserSDKDifferentBusinessId.authenticate(email, password), 
+    { shouldError: true, onError: (e: any) => e?.message === "Could not find a corresponding account" }
+  )
+
   for (const n in schema) {
     const endpoint = url_safe_path(n)
     const model = schema[n as keyof typeof schema]
     if (n === 'webhooks') continue // no default endpoints implemented
 
+    //@ts-ignore
     if (!model?.enduserActions?.read && (model.defaultActions.read || model.customActions.read)) {
       await async_test(
         `no-enduser-access getOne (${endpoint})`,
@@ -990,6 +1072,7 @@ const enduserAccessTests = async () => {
         { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
+    //@ts-ignore
     if (!model.enduserActions?.readMany && (model.defaultActions.readMany || model.customActions.readMany)) {
       await async_test(
         `no-enduser-access getSome (${endpoint})`,
@@ -997,6 +1080,7 @@ const enduserAccessTests = async () => {
         { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
+    //@ts-ignore
     if (!model.enduserActions?.create && (model.defaultActions.create || model.customActions.create)) {
       await async_test(
         `no-enduser-access createOne (${endpoint})`,
@@ -1004,6 +1088,7 @@ const enduserAccessTests = async () => {
         { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
+    //@ts-ignore
     if (!model.enduserActions?.createMany && (model.defaultActions.createMany || model.customActions.createMany)) {
       await async_test(
         `no-enduser-access createMany (${endpoint})`,
@@ -1011,6 +1096,7 @@ const enduserAccessTests = async () => {
         { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
+    //@ts-ignore
     if (!model.enduserActions?.update && (model.defaultActions.update || model.customActions.update)) {
       await async_test(
         `no-enduser-access update (${endpoint})`,
@@ -1018,6 +1104,7 @@ const enduserAccessTests = async () => {
         { shouldError: true, onError: (e: any) => e === 'Unauthenticated' || e?.message === 'This action is not allowed' }
       )
     } 
+    //@ts-ignore
     if (!model.enduserActions?.delete && (model.defaultActions.delete || model.customActions.delete)) {
       await async_test(
         `no-enduser-access delete (${endpoint})`,
@@ -1134,6 +1221,19 @@ const users_tests = async () => {
     { onResult: u => u.id === sdkNonAdmin.userInfo.id && u.fname === "Non" }
   )
 
+  const randomFieldValue = crypto.randomBytes(32).toString('hex')
+  await async_test(
+    `update user (custom fields)`,
+    () => sdk.api.users.updateOne(sdk.userInfo.id, { fields: { f1: randomFieldValue, f2: randomFieldValue } }), // change back
+    { onResult: u => u.id === sdk.userInfo.id && u.fields?.f1 === randomFieldValue && u.fields?.f2 === randomFieldValue }
+  )
+  // sdkNonAdmin.userInfo.fname = 'Non' // update back in sdk instance as well
+
+  await async_test(
+    `verify user update (custom fields)`,
+    () => sdk.api.users.getOne(sdk.userInfo.id), 
+    { onResult: u => u.id === sdk.userInfo.id && u.fields?.f1 === randomFieldValue && u.fields?.f2 === randomFieldValue }
+  )
 }
 
 const tests: { [K in keyof ClientModelForName]: () => void } = {
@@ -1181,7 +1281,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
 
   let n: keyof typeof schema;
   for (n in schema) {
-    const returnValidation = schema[n].customActions?.create?.returns
+    const returnValidation = (schema[n].customActions as any)?.create?.returns
 
     await run_generated_tests({
       queries: sdk.api[n] as any, 

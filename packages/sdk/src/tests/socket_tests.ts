@@ -23,10 +23,11 @@ export const get_sha256 = (s='') => createHash('sha256').update(s).digest('hex')
 const host = process.env.TEST_URL || 'http://localhost:8080'
 const [email, password] = [process.env.TEST_EMAIL, process.env.TEST_PASSWORD]
 const [email2, password2] = [process.env.TEST_EMAIL_2, process.env.TEST_PASSWORD_2]
+const businessId = '60398b1131a295e64f084ff6'
 
 const user1 = new Session({ host })
 const user2 = new Session({ host })
-const enduserSDK = new EnduserSession({ host })
+const enduserSDK = new EnduserSession({ host, businessId })
 if (!(email && password && email2 && password2)) {
   console.error("Set TEST_EMAIL and TEST_PASSWORD")
   process.exit()

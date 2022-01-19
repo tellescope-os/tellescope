@@ -101,6 +101,7 @@ export interface UserSession extends Session, User, OrganizationLimits { // User
 export type AccountType = "Business"// | "joining org"
 export interface User_readonly extends ClientRecord {
   organization?: string 
+  username?: string;
   orgEmail?: string;
   lastActive?: Date;
   lastLogout?: Date;
@@ -111,12 +112,12 @@ export interface User_required {
 export interface User_updatesDisabled {}
 export interface User extends User_required, User_readonly, User_updatesDisabled {
   phone?: string;
-  username?: string;
   fname?: string;
   lname?: string;
   accountType?: AccountType;
   roles?: string[];
   avatar?: string,
+  fields?: Indexable<string | CustomField>;
 }
 
 export type Preference = 'email' | 'sms' | 'call' | 'chat'
@@ -130,6 +131,8 @@ export interface Enduser_readonly extends ClientRecord {
   lastCommunication?: Date;
   recentMessagePreview?: string;
   hashedPassword: string;
+  lastActive?: Date;
+  lastLogout?: Date;
 } 
 export interface Enduser_required {}
 export interface Enduser_updatesDisabled {}

@@ -28,6 +28,9 @@ import {
   MeetingInfo,
   CUDSubscription,
 } from "@tellescope/types-models"
+import {
+  UserDisplayInfo,
+} from "@tellescope/types-client"
 
 import v from 'validator'
 export const {
@@ -670,8 +673,7 @@ export const journeyStatesValidator = listValidator(journeyStateValidator())
 
 export const emailEncodingValidator = exactMatchValidator<EmailEncoding>(['', 'base64'])
 
-export const indexableValidator = <V>(keyValidator: EscapeFunction<string | number>, valueValidator: EscapeFunction<V>): EscapeBuilder<{ [index: string | number]: V }> =>
-  o => build_validator(
+export const validateIndexable = <V>(keyValidator: EscapeFunction<string | number>, valueValidator: EscapeFunction<V>): EscapeBuilder<{ [index: string | number]: V }> => o => build_validator(
     v => {
       if (!is_object(v)) throw new Error("Expecting an object")
 
@@ -683,13 +685,19 @@ export const indexableValidator = <V>(keyValidator: EscapeFunction<string | numb
     },
     { ...o, isObject: true, listOf: false }
   )
+export const indexableValidator = <V>(keyValidator: EscapeFunction<string>, valueValidator: EscapeFunction<V>): EscapeBuilder<{ [index: string]: V }> => (
+  validateIndexable(keyValidator, valueValidator)
+)
+export const indexableNumberValidator = <V>(keyValidator: EscapeFunction<number>, valueValidator: EscapeFunction<V>): EscapeBuilder<{ [index: number]: V }> => (
+  validateIndexable(keyValidator, valueValidator)
+)
 
 export const rejectionWithMessage: EscapeBuilder<undefined> = o => build_validator(
   v => { throw new Error(o?.errorMessage || 'This field is not valid') }, 
   { ...o, isOptional: true, listOf: false, }
 )
 
-export const numberToDateValidator = indexableValidator(numberValidator(), dateValidator())
+export const numberToDateValidator = indexableNumberValidator(numberValidator(), dateValidator())
 export const idStringToDateValidator = indexableValidator(mongoIdStringValidator(), dateValidator())
 
 // to ensure all topics in type have coverage at compile-time
@@ -797,3 +805,14 @@ export const meetingsListValidator = listValidator(objectValidator<{
   updatedAt: stringValidator(),
   status: meetingStatusValidator(),
 })())
+
+export const userDisplayInfoValidator = objectValidator<UserDisplayInfo>({
+  id: mongoIdRequired,
+  createdAt: dateValidator(),
+  avatar: stringValidator(),
+  fname: nameValidator(), 
+  lname: nameValidator(),
+  lastActive: dateValidator(),
+  lastLogout: dateValidator(),
+})
+export const meetingDisplayInfoValidator = indexableValidator(mongoIdStringRequired, userDisplayInfoValidator())

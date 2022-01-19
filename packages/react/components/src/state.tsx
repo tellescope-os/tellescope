@@ -15,6 +15,7 @@ import {
 import {
   ChatRoom,
   ChatMessage,
+  UserDisplayInfo,
 } from "@tellescope/types-client"
 import { isModelName } from "@tellescope/types-models"
 
@@ -112,12 +113,12 @@ export const createSliceForList = <T extends { id: string }, N extends string>(n
   }
 })
 
-interface MappedListReducers<T extends { id: string }> {
+interface MappedListReducers<T extends { id: string | number }> {
   setForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, data: LoadedData<T[]> }, AddOptions>) => void;
   addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, elements: T[] }, AddOptions>) => void; 
   [index: string]: any
 }
-export const createSliceForMappedListState = <T extends { id: string }, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
+export const createSliceForMappedList = <T extends { id: string }, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
   name,
   initialState: {} as Indexable<LoadedData<T[]>>,
   reducers: {
@@ -145,13 +146,17 @@ export const createSliceForMappedListState = <T extends { id: string }, N extend
   }
 })
 
+export type MeetingDisplayInfo = { id: string } & { [index: string]: UserDisplayInfo }
+
 const chatRoomsSlice = createSliceForList<ChatRoom, 'chat_rooms'>('chat_rooms')
-const chatsSlice = createSliceForMappedListState<ChatMessage, 'chats'>('chats')
+const chatsSlice = createSliceForMappedList<ChatMessage, 'chats'>('chats')
+const meetingDisplayInfoSlice = createSliceForMappedList<MeetingDisplayInfo, 'meeting-display-info'>('meeting-display-info')
 
 export const sharedConfig = {
   reducer: { 
     chat_rooms: chatRoomsSlice.reducer,
     chats: chatsSlice.reducer,
+    meetingDisplayInfo: meetingDisplayInfoSlice.reducer,
   },
 }
 
@@ -178,8 +183,8 @@ export interface ListUpdateMethods <T, ADD> {
   removeElement: (id: string) => Promise<void>,
   removeLocalElements: (ids: string[]) => void,
 }
-export type ListStateReturnType <T extends { id: string }, ADD=Partial<T>> = [LoadedData<T[]>, ListUpdateMethods<T, ADD>]
-export const useListStateHook = <T extends { id: string }, ADD extends Partial<T>> (
+export type ListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [LoadedData<T[]>, ListUpdateMethods<T, ADD>]
+export const useListStateHook = <T extends { id: string | number }, ADD extends Partial<T>> (
   modelName: string,
   state: LoadedData<T[]>, 
   session: Session | EnduserSession,
@@ -281,6 +286,8 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
         if (es.status === LoadingStatus.Loaded) {
           dispatch(slice.actions.addSome({ value: es.value }))
 
+          if (!isModelName(modelName)) return // a custom extension without our socket support
+
           if (socketConnection !== 'keys') return
           const subscription = { } as Indexable         
           for (const e of es.value) {
@@ -295,9 +302,11 @@ export const useListStateHook = <T extends { id: string }, ADD extends Partial<T
 
     return () => {
       if (state.status !== LoadingStatus.Loaded || socketConnection !== 'keys') return
-      session.unsubscribe(state.value.map(e => e.id))
+      if (!isModelName(modelName)) return // a custom extension without our socket support
+
+      session.unsubscribe(state.value.map(e => e.id.toString()))
     }
-  }, [state, socketConnection, didFetch, loadFilter, loadQuery])
+  }, [state, socketConnection, didFetch, modelName, isModelName, loadFilter, loadQuery])
 
   useEffect(() => {
     if (!isModelName(modelName)) return // a custom extension without our socket support
@@ -341,11 +350,11 @@ export interface MappedListUpdateMethods <T, ADD>{
   createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
 }
-export type MappedListStateReturnType <T extends { id: string }, ADD=Partial<T>> = [
+export type MappedListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
   LoadedData<T[]>,
   MappedListUpdateMethods<T, ADD>
 ]
-export const useMappedListStateHook = <T extends { id: string }, ADD extends Partial<T>>(
+export const useMappedListStateHook = <T extends { id: string | number }, ADD extends Partial<T>>(
   modelName: string,
   filterKey: (keyof T) & string,
   state:  Indexable<LoadedData<T[]>>, 
@@ -456,6 +465,56 @@ export const useMappedListStateHook = <T extends { id: string }, ADD extends Par
   }]
 }
 
+export interface MappedStateUpdateMethods <T, ADD>{
+  addLocalElement: (e: T, o?: AddOptions) => void,
+  createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
+}
+export type MappedStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
+  LoadedData<T>,
+  MappedStateUpdateMethods<T, ADD>
+]
+export const useMappedStateHook = <T extends { id: string | number }, ADD extends Partial<T>>(
+  modelName: string,
+  filterKey: (keyof T) & string,
+  state:  Indexable<LoadedData<T[]>>, 
+  session: EnduserSession | Session,
+  key: string, 
+  slice: Slice<any, MappedListReducers<T>>,
+  apiCalls: {
+    loadQuery: LoadFunction<T>, 
+    addOne?: (value: ADD) => Promise<T>,
+    addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
+    updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
+    deleteOne?: (id: string) => Promise<void>,
+  },
+  options?: {
+    socketConnection?: 'keys' | 'none',
+    loadFilter?: Partial<T>,
+    onAdd?: (n: T[]) => void;
+    onUpdate?: (n: Partial<T>[]) => void;
+    onDelete?: (id: string[]) => void;
+  }
+): MappedStateReturnType<T, ADD>=> {
+  // rely on mappedList state, using singleton lists, to avoid code duplication (minor(?) perf hit)
+  const [data, { addLocalElement, createElement }] = useMappedListStateHook<T, ADD>(modelName, filterKey, state, session, key, slice, apiCalls, options)
+
+  // convert back from singleton list to individual element
+  const parsedData = { status: data.status } as LoadedData<T>
+  if (data.status === LoadingStatus.Loaded) {
+    parsedData.value = data.value[0] // singleton list
+  } else {
+    parsedData.value = data.value // not a list anyway
+  }
+
+  return [
+    parsedData,
+    {
+      addLocalElement,
+      createElement,
+    }
+  ]
+}
+
 // const useSocketConnectionForList = <T extends { id: string }>(session: Session | EnduserSession) => {}
 
 export type HookOptions<T> = {
@@ -501,6 +560,23 @@ export const useChats = (roomId: string, type: SessionType, options={} as HookOp
         updateLocalChatRoom(roomId, { recentMessage: newest.message, recentSender: newest.senderId ?? '' })
     }
   }) 
+
+  return toReturn
+}
+
+export const useMeetingDisplayInfo = (roomId: string, type: SessionType, options={} as HookOptions<MeetingDisplayInfo>) => {
+  const session = useResolvedSession(type)
+  const state = useTypedSelector(s => s.meetingDisplayInfo)
+  const toReturn = useMappedStateHook(
+    'meeting-display-info', 'id', state, session, roomId, 
+    meetingDisplayInfoSlice,
+    { 
+      loadQuery: async () => {
+        const { id, display_info } = await session.api.chat_rooms.display_info({ id: roomId })
+        return [{ id, ...display_info }] as MeetingDisplayInfo[]
+      }
+    },
+  ) 
 
   return toReturn
 }

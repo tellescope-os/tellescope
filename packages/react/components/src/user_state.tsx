@@ -16,6 +16,8 @@ import {
 
   useChats as useChatsShared,
   useChatRooms as useChatRoomsShared,
+  MeetingDisplayInfo,
+  useMeetingDisplayInfo as useMeetingDisplayInfoShared,
   TellescopeStoreContext,
 } from "./state"
 
@@ -50,7 +52,7 @@ export const userConfig = {
 }
 const store = configureStore(userConfig)
 type RootState = ReturnType<typeof store.getState>
-const useTypedSelector = createSelectorHook(TellescopeStoreContext) as any as TypedUseSelectorHook<RootState>
+export const useTypedSelector = createSelectorHook(TellescopeStoreContext) as any as TypedUseSelectorHook<RootState>
 
 export const UserProvider = (props: { children: React.ReactNode }) => (
   <WithFetchContext>
@@ -156,4 +158,6 @@ export const useNotes = (options={} as HookOptions<File>) => {
 
 export const useChatRooms = (o={} as HookOptions<ChatRoom>) => useChatRoomsShared('user', o)
 export const useChats = (roomId: string, o={} as HookOptions<ChatMessage>) => useChatsShared(roomId, 'user', o)
+export const useMeetingDisplayInfo = (roomId: string, o={} as HookOptions<MeetingDisplayInfo>) =>
+               useMeetingDisplayInfoShared(roomId, 'user', o)
 

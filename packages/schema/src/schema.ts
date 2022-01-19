@@ -26,7 +26,13 @@ import {
   MeetingStatus,
   WebhookSubscriptionsType,
   Attendee,
+  ChatRoomType,
+  MessageTemplateType,
 } from "@tellescope/types-models"
+
+import {
+  UserDisplayInfo,
+} from "@tellescope/types-client"
 
 import {
   EscapeBuilder,
@@ -74,6 +80,7 @@ import {
   urlValidator,
   WebhookSubscriptionValidator,
   attendeeValidator,
+  meetingDisplayInfoValidator,
 } from "@tellescope/validation"
 
 import {
@@ -83,6 +90,7 @@ import {
   ENDUSER_SESSION_TYPE,
   USER_SESSION_TYPE,
 } from "@tellescope/constants"
+
 export type RelationshipConstraint<T> = {
   explanation: string; // human readable, for documentation purposes
   evaluate: (v: T, dependencies: Indexable<Partial<DatabaseModel>>, session: UserSession | EnduserSession) => string | void;
@@ -99,7 +107,7 @@ export type UniqueArrayConstraint <T> = { array: keyof T, itemKey?: string }
 export type Constraint <T> = {
   unique: (keyof T & string | UniqueArrayConstraint<T>)[];
   globalUnique?: (keyof T)[];
-  relationship: RelationshipConstraint<Partial<T>>[];
+  relationship: (RelationshipConstraint<Partial<T>>)[];
   access?: AccessConstraint<T>[];
 }
 
@@ -273,6 +281,7 @@ export type CustomActions = {
   },
   chat_rooms: {
     join_room: CustomAction<{ id: string }, { room: ChatRoom }>,
+    display_info: CustomAction<{ id: string }, { id: string, display_info: { [index: string]: UserDisplayInfo } }>,
   },
   meetings: {
     start_meeting: CustomAction<{ }, { id: string, meeting: object, host: Attendee }>, 
@@ -305,7 +314,9 @@ export type SchemaV1 = Schema & {
   }
 }
 
-export const schema: SchemaV1 = {
+export const build_schema = <T extends Schema>(schema: T) => schema
+
+export const schema: SchemaV1 = build_schema({
   endusers: {
     info: {
       sideEffects: {
@@ -887,7 +898,7 @@ export const schema: SchemaV1 = {
       },
       type: {
         validator: chatRoomTypeValidator,
-        initializer: () => 'internal'
+        initializer: () => 'internal' as ChatRoomType
       },
       topic: {
         validator: chatRoomTopicValidator,
@@ -926,7 +937,7 @@ export const schema: SchemaV1 = {
       },
     },
     defaultActions: DEFAULT_OPERATIONS,
-    enduserActions: { create: {}, read: {}, readMany: {} },
+    enduserActions: { create: {}, read: {}, readMany: {}, display_info: {} },
     customActions: {
       join_room: {
         op: "custom", access: 'update', method: "post",
@@ -937,6 +948,17 @@ export const schema: SchemaV1 = {
         returns: { 
           room: { validator:  'Room' }, 
         } as any // add room eventually, when validator defined
+      },
+      display_info: {
+        op: "custom", access: 'read', method: "get",
+        name: 'Attendee display info',
+        path: '/chat-room-display-info',
+        description: "Returns an object which maps userIds/enduserIds to display information. Includes the roomId as the 'id' field.",
+        parameters: { id: { validator: mongoIdStringValidator, required: true } },
+        returns: { 
+          display_info: { validator: meetingDisplayInfoValidator, required: true },
+          id: { validator: mongoIdStringValidator },
+        } 
       },
     },
   },
@@ -1053,6 +1075,9 @@ export const schema: SchemaV1 = {
       phone: {
         validator: phoneValidator,
       },
+      fields: {
+        validator: fieldsValidator,
+      },
       username: {
         validator: subdomainValidator,
         readonly: true, // able to set once, then not change (for now, due to email configuration)
@@ -1125,7 +1150,7 @@ export const schema: SchemaV1 = {
       },
       type: {
         validator: messageTemplateTypeValidator,
-        initializer: () => 'enduser'
+        initializer: () => 'enduser' as MessageTemplateType
       },
     }
   },
@@ -1317,7 +1342,7 @@ export const schema: SchemaV1 = {
       status: {
         validator: meetingStatusValidator,
         readonly: true,
-        initializer: () => 'scheduled',
+        initializer: () => 'scheduled' as MeetingStatus,
       },
       attendees: {
         validator: listOfAttendeesValidator,
@@ -1431,4 +1456,7 @@ export const schema: SchemaV1 = {
       },
     }
   },
-}
+})
+
+// export type SchemaType = typeof schema
+// export type SchemaV1 = SchemaType// & Schema

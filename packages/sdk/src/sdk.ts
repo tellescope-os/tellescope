@@ -1,4 +1,10 @@
 import {
+  CustomActions,
+  schema,
+  extractFields,
+} from "@tellescope/schema"
+
+import {
   JourneyState, 
   UserSession,
   MeetingInfo,
@@ -111,6 +117,8 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   },
   chat_rooms: {
     join_room: (args: { id: string }) => Promise<{ room: ChatRoom }>,
+    display_info: (args: extractFields<CustomActions['chat_rooms']['display_info']['parameters']>) => 
+                    Promise<extractFields<CustomActions['chat_rooms']['display_info']['returns']>>,
   },
   webhooks: {
     configure: (args: { url: string, secret: string, subscriptions?: WebhookSubscriptionsType }) => Promise<void>,
@@ -136,6 +144,7 @@ export class Session extends SessionManager {
     queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args),
     queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a),
     queries.chat_rooms.join_room = a => this._POST('/v1/join-chat-room', a),
+    queries.chat_rooms.display_info = a => this._GET(`/v1${schema.chat_rooms.customActions.display_info.path}`, a),
 
     queries.meetings.start_meeting = () => this._POST('/v1/start-meeting')
     queries.meetings.end_meeting = a => this._POST('/v1/end-meeting', a)

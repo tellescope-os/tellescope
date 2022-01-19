@@ -24,6 +24,8 @@ import {
   useChatRooms as useChatRoomsShared,
   WithFetchContext,
   TellescopeStoreContext,
+  MeetingDisplayInfo,
+  useMeetingDisplayInfo as useMeetingDisplayInfoShared,
 } from "./state"
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
@@ -41,7 +43,7 @@ export const enduserConfig = {
 const store = configureStore(enduserConfig)
 
 type RootState = ReturnType<typeof store.getState>
-const useTypedSelector = createSelectorHook(TellescopeStoreContext) as any as TypedUseSelectorHook<RootState>
+export const useTypedSelector = createSelectorHook(TellescopeStoreContext) as any as TypedUseSelectorHook<RootState>
 
 export const EnduserProvider = (props: { children: React.ReactNode }) => (
   <WithFetchContext>
@@ -97,3 +99,5 @@ export const useMeetings = (options={} as HookOptions<Meeting>) => {
 
 export const useChatRooms = (o={} as HookOptions<ChatRoom>) => useChatRoomsShared('enduser', o)
 export const useChats = (roomId: string, o={} as HookOptions<ChatMessage>) => useChatsShared(roomId, 'enduser', o)
+export const useMeetingDisplayInfo = (roomId: string, o={} as HookOptions<MeetingDisplayInfo>) =>
+               useMeetingDisplayInfoShared(roomId, 'enduser', o)
