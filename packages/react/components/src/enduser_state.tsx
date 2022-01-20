@@ -24,8 +24,8 @@ import {
   useChatRooms as useChatRoomsShared,
   WithFetchContext,
   TellescopeStoreContext,
-  MeetingDisplayInfo,
-  useMeetingDisplayInfo as useMeetingDisplayInfoShared,
+  ChatRoomDisplayInfo,
+  useChatRoomDisplayInfo as useChatRoomDisplayInfoShared,
 } from "./state"
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
@@ -99,5 +99,5 @@ export const useMeetings = (options={} as HookOptions<Meeting>) => {
 
 export const useChatRooms = (o={} as HookOptions<ChatRoom>) => useChatRoomsShared('enduser', o)
 export const useChats = (roomId: string, o={} as HookOptions<ChatMessage>) => useChatsShared(roomId, 'enduser', o)
-export const useMeetingDisplayInfo = (roomId: string, o={} as HookOptions<MeetingDisplayInfo>) =>
-               useMeetingDisplayInfoShared(roomId, 'enduser', o)
+export const useChatRoomDisplayInfo = (roomId: string, o={} as HookOptions<ChatRoomDisplayInfo>) =>
+               useChatRoomDisplayInfoShared(roomId, 'enduser', o)

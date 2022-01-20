@@ -121,7 +121,7 @@ export interface User extends User_required, User_readonly, User_updatesDisabled
 }
 
 export type Preference = 'email' | 'sms' | 'call' | 'chat'
-export interface CustomField {
+export type CustomField  = string | number | object | {
   value: string | object;
   title?: string;
   description?: string;

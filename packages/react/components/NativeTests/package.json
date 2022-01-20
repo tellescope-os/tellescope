@@ -1,6 +1,6 @@
 {
   "name": "nativetests",
-  "version": "0.0.32",
+  "version": "0.0.34",
   "private": true,
   "scripts": {
     "android": "react-native run-android",

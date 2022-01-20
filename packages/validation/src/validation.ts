@@ -622,29 +622,33 @@ export const fieldsValidator: EscapeBuilder<Indexable<string | CustomField>> = (
       if (typeof val === 'string') {
         if (val.length > 512) fields[k] = val.substring(0, 512)
         continue
+      } else if (typeof val === 'number') {
+        continue // nothing to restrict on number type yet
       } else if (typeof val === 'object') {
-        try {
-          if (val.type && typeof val.type === 'string') { // form responses can be stored as custom fields (form responses is simple array)
-            FORM_FIELD_VALIDATORS_BY_TYPE[val.type as keyof typeof FORM_FIELD_VALIDATORS_BY_TYPE](val, undefined as never, undefined as never)
-            continue
-          }
-          if (val.length && typeof val.length === 'number') { // array of strings is ok too, (inclusive of multiple-choice responses)
-            if (val.find((s: any) => typeof s !== 'string') !== undefined) {
-              throw new Error('List must contain only strings')
-            }
-            continue 
-          }
+        if (JSON.stringify(val).length > 1024) throw new Error(`object value for key ${k} exceeds the maximum length of 1024 characters in string representation`)
+        // previous restricted structure for fields object
+        // try {
+        //   if (val.type && typeof val.type === 'string') { // form responses can be stored as custom fields (form responses is simple array)
+        //     FORM_FIELD_VALIDATORS_BY_TYPE[val.type as keyof typeof FORM_FIELD_VALIDATORS_BY_TYPE](val, undefined as never, undefined as never)
+        //     continue
+        //   }
+        //   if (val.length && typeof val.length === 'number') { // array of strings is ok too, (inclusive of multiple-choice responses)
+        //     if (val.find((s: any) => typeof s !== 'string') !== undefined) {
+        //       throw new Error('List must contain only strings')
+        //     }
+        //     continue 
+        //   }
 
-          if (val.value === undefined) throw new Error(`value field is undefined for key ${k}`)
-          if (JSON.stringify(val).length > 1024) throw new Error(`object value for key ${k} exceeds the maximum length of 1024 characters in string representation`)
+        //   if (val.value === undefined) throw new Error(`value field is undefined for key ${k}`)
+        //   if (JSON.stringify(val).length > 1024) throw new Error(`object value for key ${k} exceeds the maximum length of 1024 characters in string representation`)
 
-          const escaped = { value: val.value } as Indexable // create new object to omit unrecognized fields
-          escaped.title = val.title // optional
-          escaped.description = val.description // optional
-          fields[k] = escaped
-        } catch(err) {
-          throw new Error(`object value is invalid JSON for key ${k}`)
-        }
+        //   const escaped = { value: val.value } as Indexable // create new object to omit unrecognized fields
+        //   escaped.title = val.title // optional
+        //   escaped.description = val.description // optional
+        //   fields[k] = escaped
+        // } catch(err) {
+        //   throw new Error(`object value is invalid JSON for key ${k}`)
+        // }
       } else {
         throw new Error(`Expecting value to be a string or object but got ${typeof val} for key {k}`)
       }

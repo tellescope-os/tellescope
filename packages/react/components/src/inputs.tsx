@@ -99,7 +99,7 @@ export const useFileUpload = (o={} as UseFileUploaderOptions) => {
 export const useDisplayPictureUploadForSelf = (o={} as UseFileUploaderOptions) => {
   const session = useResolvedSession()
   const { updateUserInfo } = useContext(SessionContext)
-  const { updateEnduserInfo } = useContext(EnduserSessionContext)
+  const { updateUserInfo: updateEnduserInfo } = useContext(EnduserSessionContext)
 
   const { uploading, handleUpload: hookHandleUpload  } = useFileUpload(o)
   const [updating, setUpdating] = useState(false)
@@ -110,13 +110,9 @@ export const useDisplayPictureUploadForSelf = (o={} as UseFileUploaderOptions) =
     const { secureName } = await hookHandleUpload(details, file, options)
     try {
       if (session instanceof Session) {
-        await session.api.users.updateOne(session.userInfo.id, { avatar: secureName })
-        await session.refresh_session() // refresh session to include new avatar in userInfo, authToken
-        updateUserInfo({ avatar: secureName })
+        await updateUserInfo({ avatar: secureName })
       } else {
-        await session.api.endusers.updateOne(session.userInfo.id, { avatar: secureName })
-        await session.refresh_session()
-        updateEnduserInfo({ avatar: secureName })
+        await updateEnduserInfo({ avatar: secureName })
       }
     } catch(err) {
       throw (err)

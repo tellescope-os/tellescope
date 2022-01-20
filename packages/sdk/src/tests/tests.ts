@@ -1222,17 +1222,18 @@ const users_tests = async () => {
   )
 
   const randomFieldValue = crypto.randomBytes(32).toString('hex')
+  const randomFieldNumber = Math.random()
   await async_test(
     `update user (custom fields)`,
-    () => sdk.api.users.updateOne(sdk.userInfo.id, { fields: { f1: randomFieldValue, f2: randomFieldValue } }), // change back
-    { onResult: u => u.id === sdk.userInfo.id && u.fields?.f1 === randomFieldValue && u.fields?.f2 === randomFieldValue }
+    () => sdk.api.users.updateOne(sdk.userInfo.id, { fields: { f1: randomFieldValue, f2: randomFieldNumber, f3: { object: randomFieldValue } } }), // change back
+    { onResult: u => u.id === sdk.userInfo.id && u.fields?.f1 === randomFieldValue && u.fields?.f2 === randomFieldNumber && (u.fields?.f3 as any).object == randomFieldValue }
   )
   // sdkNonAdmin.userInfo.fname = 'Non' // update back in sdk instance as well
 
   await async_test(
     `verify user update (custom fields)`,
     () => sdk.api.users.getOne(sdk.userInfo.id), 
-    { onResult: u => u.id === sdk.userInfo.id && u.fields?.f1 === randomFieldValue && u.fields?.f2 === randomFieldValue }
+    { onResult: u => u.id === sdk.userInfo.id && u.fields?.f1 === randomFieldValue && u.fields?.f2 === randomFieldNumber && (u.fields?.f3 as any).object == randomFieldValue }
   )
 }
 

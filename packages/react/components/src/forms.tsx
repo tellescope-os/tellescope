@@ -21,13 +21,15 @@ import {
 export interface HasValidator { validator: Yup.AnySchema }
 export interface HasValidators { [index: string]: HasValidator }
 
-export type InputSchema<T extends HasValidators> = {
+export type InputSchema<T extends HasValidators, V=any> = {
   [K in (keyof T) & string]: {
     validator: T[K]['validator'];
     initialValue?: Yup.InferType<T[K]['validator']>,
     id?: string,
     name?: string,
     label?: string,
+    type?: string,
+    values?: V[],
     style?: CSSProperties,
   }
 }

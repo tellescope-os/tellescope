@@ -4,7 +4,7 @@ import { Session, SessionOptions } from "./session"
 import { APIQuery } from "./sdk"
 import { url_safe_path } from "@tellescope/utilities"
 
-import { FileBlob, FileBuffer, FileDetails, ReactNativeFile, S3PresignedPost, UserIdentity } from "@tellescope/types-utilities"
+import { FileBlob, FileBuffer, FileDetails, ReactNativeFile, S3PresignedPost, SessionType, UserIdentity } from "@tellescope/types-utilities"
 import { 
   Attendee,
 } from "@tellescope/types-models"
@@ -75,6 +75,7 @@ export class EnduserSession extends Session {
   userInfo!: Enduser; 
   api: EnduserQueries;
   businessId: string;
+  type: SessionType = 'enduser';
 
   constructor(o: EnduserSessionOptions) {
     super({ ...o, cacheKey: o?.cacheKey || "tellescope_enduser" })

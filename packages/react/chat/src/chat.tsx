@@ -1,6 +1,9 @@
 import React, { useCallback, useState, CSSProperties } from "react"
 
 import {
+  DisplayPicture,
+} from "@tellescope/react-components"
+import {
   List,
   Flex,
 } from "@tellescope/react-components/lib/esm/layout"
@@ -17,14 +20,18 @@ import {
 import {
   LoadingLinear,
   Resolver,
+  value_is_loaded,
 } from "@tellescope/react-components/lib/esm/loading"
 import {
   useSession,
   useEnduserSession,
+  useResolvedSession,
 } from "@tellescope/react-components/lib/esm/authentication"
 import {
   useChatRooms,
   useChats,
+  useChatRoomDisplayInfo,
+  ChatRoomDisplayInfo,
 } from "@tellescope/react-components/lib/esm/state"
 import {
   useEndusers,
@@ -71,6 +78,18 @@ export {
 const defaultMessagesStyle: CSSProperties = {
   borderRadius: 5,
 }
+
+const defaultSentContainerStyle: CSSProperties = {
+  justifyContent: 'flex-end',
+  margin: 5,
+  marginLeft: 'auto',
+}
+const defaultReceivedContainerStyle: CSSProperties = {
+  justifyContent: 'flex-start',
+  margin: 5,
+  marginRight: 'auto',
+}
+
 const baseMessageStyle = {
   borderRadius: 25,
   paddingRight: 10,
@@ -80,14 +99,10 @@ const baseMessageStyle = {
 }
 const defaultSentStyle: CSSProperties = {
   ...baseMessageStyle,
-  justifyContent: 'flex-end',
-  marginLeft: 'auto',
   backgroundColor: PRIMARY_HEX,
 }
 const defaultReceivedStyle: CSSProperties = {
   ...baseMessageStyle,
-  justifyContent: 'flex-start',
-  marginRight: 'auto',
   backgroundColor: "#444444",
 }
 const baseTextStyle = {
@@ -117,16 +132,61 @@ const MessagesHeader = ({ room, resolveSenderName, ...p}: MessagesHeaderProps) =
   </Flex>
 )
 
-interface Messages_T {
+interface MessageStyles {
+  receivedMessageContainerStyle?: CSSProperties,
+  sentMessageContainerStyle?: CSSProperties,
+  receivedMessageStyle?: CSSProperties,
+  receivedMessageTextStyle?: CSSProperties,
+  sentMessageStyle?: CSSProperties,
+  sentMessageTextStyle?: CSSProperties,
+}
+
+interface MessageProps extends MessageStyles {
+  message: ChatMessage,
+  iconSize?: number,
+}
+export const Message = ({ 
+  message, 
+  iconSize=30,
+  sentMessageContainerStyle=defaultSentContainerStyle,
+  receivedMessageContainerStyle=defaultReceivedContainerStyle,
+  receivedMessageStyle=defaultReceivedStyle, 
+  receivedMessageTextStyle=defaultTextReceivedStyle, 
+  sentMessageStyle=defaultSentStyle,
+  sentMessageTextStyle=defaultTextSentStyle,
+}: MessageProps) => {
+  const session = useResolvedSession()
+  const chatUserId = session.userInfo.id
+
+  const [displayInfo] = useChatRoomDisplayInfo(message.roomId, session.type)
+  const displayInfoLookup = value_is_loaded(displayInfo) ? displayInfo.value : {} as ChatRoomDisplayInfo
+
+  const displayPicture = (
+    <DisplayPicture 
+      user={displayInfoLookup[message.senderId ?? ''] ?? { id: message.senderId, avatar: '' }}
+      size={iconSize}
+    />
+  )
+
+  return (
+    <Flex alignItems="center" style={message.senderId === chatUserId ? sentMessageContainerStyle : receivedMessageContainerStyle}>
+      {message.senderId !== chatUserId && displayPicture}
+      <Flex style={message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle}>
+        <Typography style={message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle}>
+          {message.message}
+        </Typography>    
+      </Flex>
+      {message.senderId === chatUserId && displayPicture}
+    </Flex>
+  )
+}
+
+interface Messages_T extends MessageStyles {
   resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
   messages: LoadedData<ChatMessage[]>,
   chatUserId: string,
   Header?: React.JSXElementConstructor<MessagesHeaderProps>,
   headerProps?: MessagesHeaderProps,
-  receivedMessageStyle?: CSSProperties,
-  receivedMessageTextStyle?: CSSProperties,
-  sentMessageStyle?: CSSProperties,
-  sentMessageTextStyle?: CSSProperties,
 }
 export const Messages = ({ 
   resolveSenderName,
@@ -135,20 +195,13 @@ export const Messages = ({
   Header=MessagesHeader,
   headerProps,
   style=defaultMessagesStyle,
-  receivedMessageStyle=defaultReceivedStyle, 
-  receivedMessageTextStyle=defaultTextReceivedStyle, 
-  sentMessageStyle=defaultSentStyle,
-  sentMessageTextStyle=defaultTextSentStyle,
+  ...messageStyles 
 }: Messages_T & Styled) => (
   <LoadingLinear data={messages} render={messages => (
     <Flex column flex={1}>
       {Header && <Header {...headerProps}/>}
-      <List reverse style={style} items={messages} render={(message) => (
-        <Flex key={message.id} style={message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle}>
-          <Typography style={message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle}>
-            {message.message}
-          </Typography>    
-        </Flex>
+      <List reverse style={style} items={messages} render={message => (
+        <Message key={message.id} message={message} {...messageStyles}/>
       )}/>    
     </Flex>
   )}/>

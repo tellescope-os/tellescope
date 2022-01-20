@@ -32,51 +32,73 @@ export interface WithAnySession {
 
 interface SessionContext_T {
   session: UserSession,
-  setSession: React.Dispatch<React.SetStateAction<Session>>
-  updateUserInfo: (u: Partial<User>, authToken?: string) => void
+  // setSession: React.Dispatch<React.SetStateAction<Session>>
+  updateUserInfo: (updates: Parameters<Session['api']['users']['updateOne']>[1]) => Promise<void>,
+  updateLocalSessionInfo: (u: Partial<User>, authToken?: string) => void
 }
 export const SessionContext = createContext({} as SessionContext_T)
 export const WithSession = (p : { children: React.ReactNode, sessionOptions?: UserSessionOptions }) => {
   const [session, setSession] = useState(() => new Session(p.sessionOptions))
 
+  const updateLocalSessionInfo: SessionContext_T['updateLocalSessionInfo'] = (u, a) => setSession(s => new Session({ 
+    host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken,  // preserve other important info
+    userInfo: { ...s.userInfo, ...u }
+  }))
+
+
+  const updateUserInfo: SessionContext_T['updateUserInfo'] = async updates => {
+    await session.api.users.updateOne(session.userInfo.id, updates)
+    const { authToken, user } = await session.refresh_session()
+    updateLocalSessionInfo(user, authToken)
+  }
+
   return (
     <SessionContext.Provider value={{ 
-      session, setSession,
-      updateUserInfo: (u, a)=> setSession(s => new Session({ 
-        host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken,  // preserve other important info
-        userInfo: { ...s.userInfo, ...u }
-      }))
+      session, //setSession,
+      updateUserInfo,
+      updateLocalSessionInfo,
     }}>
       {p.children}
     </SessionContext.Provider>
   )
 }
+export const useSessionContext = () => useContext(SessionContext)
 
 interface EnduserSessionContext_T {
   enduserSession: EnduserSession,
-  setEnduserSession: React.Dispatch<React.SetStateAction<EnduserSession>>
-  updateEnduserInfo: (u: Partial<Enduser>, authToken?: string) => void
+  // setEnduserSession: React.Dispatch<React.SetStateAction<EnduserSession>>
+  updateUserInfo: (updates: Parameters<EnduserSession['api']['endusers']['updateOne']>[1]) => Promise<void>,
+  updateLocalSessionInfo: (u: Partial<Enduser>, authToken?: string) => void
 }
 export const EnduserSessionContext = createContext({} as EnduserSessionContext_T)
 export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptions: EnduserSessionOptions }) => {
   const [enduserSession, setEnduserSession] = useState(() => new EnduserSession(p.sessionOptions))
 
+  const updateLocalSessionInfo: EnduserSessionContext_T['updateLocalSessionInfo'] = (u, a) => {
+    setEnduserSession(s => new EnduserSession({ 
+      host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken, // preserve other important info
+      businessId: s.businessId,
+      enduser: { ...s.userInfo, ...u } 
+    }))
+  }
+
+  const updateUserInfo: EnduserSessionContext_T['updateUserInfo'] = async updates => {
+    await enduserSession.api.endusers.updateOne(enduserSession.userInfo.id, updates)
+    const { enduser, authToken } = await enduserSession.refresh_session()
+    updateLocalSessionInfo(enduser, authToken)
+  }
+
   return (
     <EnduserSessionContext.Provider value={{ 
-      enduserSession, setEnduserSession,
-      updateEnduserInfo: (u, a) => setEnduserSession(s => new EnduserSession({ 
-        host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken, // preserve other important info
-        businessId: s.businessId,
-        enduser: { ...s.userInfo, ...u } 
-      }))
+      enduserSession, 
+      updateUserInfo,
+      updateLocalSessionInfo,
     }}>
       {p.children}
     </EnduserSessionContext.Provider>
   )
 }
-
-
-
+export const useEnduserSessionContext = () => useContext(EnduserSessionContext)
 
 interface SessionHookOptions {
   throwIfMissingContext?: boolean,
@@ -120,26 +142,26 @@ interface LoginHandler <S extends { authToken: string }> {
 }
 
 export const UserLogin = ({ onLogin, style }: LoginHandler<UserSessionModel & { authToken: string }> & Styled) => {
-  const { session, setSession } = useContext(SessionContext)
-  if (!(session && setSession)) throw new Error("UserLogin used outside of WithSession")
+  const { session, updateLocalSessionInfo } = useContext(SessionContext)
+  if (!(session && updateLocalSessionInfo)) throw new Error("UserLogin used outside of WithSession")
 
   return (
     <LoginForm style={style} onSubmit={async ({ email, password }) => {
       const { authToken, ...userInfo } = await session.authenticate(email, password)
-      setSession?.(s => new Session({ host: s.host, authToken, userInfo: userInfo  }))
+      updateLocalSessionInfo?.(userInfo, authToken)
       onLogin?.({ authToken, ...userInfo })
     }}/>
   )
 }
 
 export const EnduserLogin = ({ onLogin }: LoginHandler<Enduser & { authToken: string }>) => {
-  const { enduserSession, updateEnduserInfo } = useContext(EnduserSessionContext)
-  if (!(enduserSession && updateEnduserInfo)) throw new Error("EnduserLogin used outside of WithEnduserSession")
+  const { enduserSession, updateLocalSessionInfo } = useContext(EnduserSessionContext)
+  if (!(enduserSession && updateLocalSessionInfo)) throw new Error("EnduserLogin used outside of WithEnduserSession")
 
   return (
     <LoginForm onSubmit={async ({ email, password }) => {
       const { authToken, enduser } = await enduserSession.authenticate(email, password)
-      updateEnduserInfo?.(enduser, authToken)
+      updateLocalSessionInfo?.(enduser, authToken)
       onLogin?.({ authToken, ...enduser })
     }}/>
   )
@@ -149,8 +171,8 @@ export const Logout = ({ onLogout, children } : {
   children?: React.ReactNode, 
   onLogout?: () => void 
 }) => {
-  const { session, setSession } = useContext(SessionContext) ?? {}
-  const { enduserSession, setEnduserSession } = useContext(EnduserSessionContext) ?? {}
+  const { session, updateLocalSessionInfo } = useContext(SessionContext) ?? {}
+  const { enduserSession, updateLocalSessionInfo: updateLocalEnduserSessionInfo } = useContext(EnduserSessionContext) ?? {}
   const loggedOut = useRef(false)
 
 
@@ -163,11 +185,11 @@ export const Logout = ({ onLogout, children } : {
     
     s.logout()
     .finally(() => {
-      if (session) { setSession(s => ({ ...s, authToken: '', userInfo: {} as any })) }
-      else { setEnduserSession(s => ({ ...s, authToken: '', userInfo: {} as Enduser })) }
+      if (session) { updateLocalSessionInfo({}, '')}
+      else { updateLocalEnduserSessionInfo({}, '') }
       onLogout?.()
     })
-  }, [session, enduserSession, setSession, setEnduserSession, loggedOut])
+  }, [session, enduserSession, updateLocalSessionInfo, updateLocalEnduserSessionInfo, loggedOut])
 
   return <>{children}</>
 }

@@ -16,8 +16,8 @@ import {
 
   useChats as useChatsShared,
   useChatRooms as useChatRoomsShared,
-  MeetingDisplayInfo,
-  useMeetingDisplayInfo as useMeetingDisplayInfoShared,
+  ChatRoomDisplayInfo,
+  useChatRoomDisplayInfo as useChatRoomDisplayInfoShared,
   TellescopeStoreContext,
 } from "./state"
 
@@ -158,6 +158,6 @@ export const useNotes = (options={} as HookOptions<File>) => {
 
 export const useChatRooms = (o={} as HookOptions<ChatRoom>) => useChatRoomsShared('user', o)
 export const useChats = (roomId: string, o={} as HookOptions<ChatMessage>) => useChatsShared(roomId, 'user', o)
-export const useMeetingDisplayInfo = (roomId: string, o={} as HookOptions<MeetingDisplayInfo>) =>
-               useMeetingDisplayInfoShared(roomId, 'user', o)
+export const useChatRoomDisplayInfo = (roomId: string, o={} as HookOptions<ChatRoomDisplayInfo>) =>
+               useChatRoomDisplayInfoShared(roomId, 'user', o)
 

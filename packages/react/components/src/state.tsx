@@ -146,17 +146,17 @@ export const createSliceForMappedList = <T extends { id: string }, N extends str
   }
 })
 
-export type MeetingDisplayInfo = { id: string } & { [index: string]: UserDisplayInfo }
+export type ChatRoomDisplayInfo = { id: string } & { [index: string]: UserDisplayInfo }
 
 const chatRoomsSlice = createSliceForList<ChatRoom, 'chat_rooms'>('chat_rooms')
 const chatsSlice = createSliceForMappedList<ChatMessage, 'chats'>('chats')
-const meetingDisplayInfoSlice = createSliceForMappedList<MeetingDisplayInfo, 'meeting-display-info'>('meeting-display-info')
+const chatRoomDisplayInfoslice = createSliceForMappedList<ChatRoomDisplayInfo, 'chat-room-display-info'>('chat-room-display-info')
 
 export const sharedConfig = {
   reducer: { 
     chat_rooms: chatRoomsSlice.reducer,
     chats: chatsSlice.reducer,
-    meetingDisplayInfo: meetingDisplayInfoSlice.reducer,
+    chatRoomDisplayInfo: chatRoomDisplayInfoslice.reducer,
   },
 }
 
@@ -429,7 +429,8 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
   useEffect(() => {
     if (!key) return
 
-    const fetchKey = loadFilter ? JSON.stringify(loadFilter) + key : key
+    // same key might be used across different models!
+    const fetchKey = loadFilter ? JSON.stringify(loadFilter) + key + modelName : key + modelName 
     if (didFetch[fetchKey]) return
     didFetch[fetchKey] = true
 
@@ -564,16 +565,16 @@ export const useChats = (roomId: string, type: SessionType, options={} as HookOp
   return toReturn
 }
 
-export const useMeetingDisplayInfo = (roomId: string, type: SessionType, options={} as HookOptions<MeetingDisplayInfo>) => {
+export const useChatRoomDisplayInfo = (roomId: string, type: SessionType, options={} as HookOptions<ChatRoomDisplayInfo>) => {
   const session = useResolvedSession(type)
-  const state = useTypedSelector(s => s.meetingDisplayInfo)
+  const state = useTypedSelector(s => s.chatRoomDisplayInfo)
   const toReturn = useMappedStateHook(
-    'meeting-display-info', 'id', state, session, roomId, 
-    meetingDisplayInfoSlice,
+    'chat-room-display-info', 'id', state, session, roomId, 
+    chatRoomDisplayInfoslice,
     { 
       loadQuery: async () => {
         const { id, display_info } = await session.api.chat_rooms.display_info({ id: roomId })
-        return [{ id, ...display_info }] as MeetingDisplayInfo[]
+        return [{ id, ...display_info }] as ChatRoomDisplayInfo[]
       }
     },
   ) 

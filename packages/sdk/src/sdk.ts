@@ -23,7 +23,7 @@ import {
   File,
   Meeting,
 } from "@tellescope/types-client"
-import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileBlob, FileBuffer, FileDetails, ReactNativeFile } from "@tellescope/types-utilities"
+import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileBlob, FileBuffer, FileDetails, ReactNativeFile, SessionType } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"
 
 import { Session as SessionManager, SessionOptions } from "./session"
@@ -129,6 +129,7 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
 export class Session extends SessionManager {
   api: Queries;
   userInfo!: UserSession;
+  type: SessionType = 'user';
 
   constructor(o?: SessionOptions & { userInfo?: UserSession }) {
     super({ ...o, cacheKey: o?.cacheKey || "tellescope_user" })
