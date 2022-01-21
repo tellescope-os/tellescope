@@ -1155,6 +1155,10 @@ const enduserAccessTests = async () => {
 }
 
 const files_tests = async () => {
+  const enduser = await sdk.api.endusers.createOne({ email })
+  await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
+  await enduserSDK.authenticate(email, password).catch(console.error)
+
   const buff = buffer.Buffer.from('test file data')
 
   const { presignedUpload, file } = await sdk.api.files.prepare_file_upload({ 
@@ -1169,6 +1173,11 @@ const files_tests = async () => {
 
   const { downloadURL: cachedURL } = await sdk.api.files.file_download_URL({ secureName: file.secureName })
   assert(downloadURL === cachedURL, 'cache download url failed', 'download url cache')
+
+  const { downloadURL: urlForEnduser } = await enduserSDK.api.files.file_download_URL({ secureName: file.secureName })
+  assert(downloadURL === urlForEnduser, 'failed to get download url for enduser', 'download url for enduser')
+
+  await sdk.api.endusers.deleteOne(enduser.id)
 }
 
 const enduser_session_tests = async () => {
@@ -1187,11 +1196,19 @@ const enduser_session_tests = async () => {
 
 const users_tests = async () => {
   log_header("Users Tests")
+  const randomFieldValue = crypto.randomBytes(32).toString('hex').toUpperCase() // uppercase so name parsing doesn't cause case change
+  const randomFieldNumber = Math.random()
+
   /* Update user tests */
   await async_test(
     `update user (non-admin, other user)`,
-    () => sdkNonAdmin.api.users.updateOne(sdk.userInfo.id, { fname: 'Failure' }),
+    () => sdkNonAdmin.api.users.updateOne(sdk.userInfo.id, { fname: randomFieldValue }),
     { shouldError: true, onError: e => e.message === "Only admin users can update others' profiles" }
+  )
+  await async_test(
+    `verify no update`,
+    () => sdk.api.users.getOne(sdk.userInfo.id),
+    { onResult: u => u.fname !== randomFieldValue }
   )
   await async_test(
     `update user (non-admin, self)`,
@@ -1221,8 +1238,6 @@ const users_tests = async () => {
     { onResult: u => u.id === sdkNonAdmin.userInfo.id && u.fname === "Non" }
   )
 
-  const randomFieldValue = crypto.randomBytes(32).toString('hex')
-  const randomFieldNumber = Math.random()
   await async_test(
     `update user (custom fields)`,
     () => sdk.api.users.updateOne(sdk.userInfo.id, { fields: { f1: randomFieldValue, f2: randomFieldNumber, f3: { object: randomFieldValue } } }), // change back

@@ -2,6 +2,7 @@ import React, { useCallback, useState, CSSProperties } from "react"
 
 import {
   DisplayPicture,
+  IN_REACT_WEB,
 } from "@tellescope/react-components"
 import {
   List,
@@ -75,47 +76,48 @@ export {
   user_display_name, // for convenience
 }
 
-const defaultMessagesStyle: CSSProperties = {
-  borderRadius: 5,
-}
+const MESSAGE_BORDER_RADIUS = 25
 
 const defaultSentContainerStyle: CSSProperties = {
-  justifyContent: 'flex-end',
   margin: 5,
-  marginLeft: 'auto',
 }
 const defaultReceivedContainerStyle: CSSProperties = {
-  justifyContent: 'flex-start',
   margin: 5,
-  marginRight: 'auto',
 }
 
-const baseMessageStyle = {
-  borderRadius: 25,
+const baseMessageStyle: CSSProperties = {
+  borderRadius: MESSAGE_BORDER_RADIUS,
+  maxWidth: '80%',
   paddingRight: 10,
   paddingLeft: 10,
-  margin: 5,
-  maxWidth: '80%',
+  paddingTop: 6,
+  paddingBottom: 6,
 }
 const defaultSentStyle: CSSProperties = {
   ...baseMessageStyle,
+  marginLeft: 'auto',
+  marginRight: 5,
   backgroundColor: PRIMARY_HEX,
 }
 const defaultReceivedStyle: CSSProperties = {
   ...baseMessageStyle,
+  marginRight: 'auto',
+  marginLeft: 5,
   backgroundColor: "#444444",
 }
+
 const baseTextStyle = {
   color: "#ffffff",
-  padding: 4,
 }
-const defaultTextSentStyle: CSSProperties = {
+const defaultSentTextStyle = {
   ...baseTextStyle,
-  textAlign: 'right',
+  marginRight: 5,
+  marginLeft: 5,
 }
-const defaultTextReceivedStyle: CSSProperties = {
+const defaultReceivedTextStyle = {
   ...baseTextStyle,
-  textAlign: 'left',
+  marginRight: 5,
+  marginLeft: 5,
 }
 
 export interface MessagesHeaderProps {
@@ -150,10 +152,10 @@ export const Message = ({
   iconSize=30,
   sentMessageContainerStyle=defaultSentContainerStyle,
   receivedMessageContainerStyle=defaultReceivedContainerStyle,
-  receivedMessageStyle=defaultReceivedStyle, 
-  receivedMessageTextStyle=defaultTextReceivedStyle, 
   sentMessageStyle=defaultSentStyle,
-  sentMessageTextStyle=defaultTextSentStyle,
+  receivedMessageStyle=defaultReceivedStyle, 
+  sentMessageTextStyle=defaultSentTextStyle,
+  receivedMessageTextStyle=defaultReceivedTextStyle,
 }: MessageProps) => {
   const session = useResolvedSession()
   const chatUserId = session.userInfo.id
@@ -164,18 +166,30 @@ export const Message = ({
   const displayPicture = (
     <DisplayPicture 
       user={displayInfoLookup[message.senderId ?? ''] ?? { id: message.senderId, avatar: '' }}
-      size={iconSize}
+      size={iconSize} style={{ position: 'relative' }}
     />
   )
 
+  const textBGStyle = message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle
+  const textStyle = message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle
+
+  const inBrowser = typeof window !== undefined
+
   return (
-    <Flex alignItems="center" style={message.senderId === chatUserId ? sentMessageContainerStyle : receivedMessageContainerStyle}>
+    <Flex style={{ margin: 5 }}> 
       {message.senderId !== chatUserId && displayPicture}
-      <Flex style={message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle}>
-        <Typography style={message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle}>
+      {IN_REACT_WEB ? (
+        <Typography component="div" style={{ ...textStyle, ...textBGStyle }}>
           {message.message}
-        </Typography>    
-      </Flex>
+        </Typography>   
+      )
+      : (
+        <Flex style={{ ...textBGStyle }}>
+          <Typography component="div" style={{ ...textStyle }}>
+            {message.message}
+          </Typography>   
+        </Flex>
+      )}
       {message.senderId === chatUserId && displayPicture}
     </Flex>
   )
@@ -194,7 +208,7 @@ export const Messages = ({
   chatUserId, 
   Header=MessagesHeader,
   headerProps,
-  style=defaultMessagesStyle,
+  style,
   ...messageStyles 
 }: Messages_T & Styled) => (
   <LoadingLinear data={messages} render={messages => (

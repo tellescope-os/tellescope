@@ -6,6 +6,8 @@ import {
   Styled,
 } from "./mui"
 
+export const IN_REACT_WEB = true
+
 interface ConditionalWrap_T <P extends {}>{
   condition: boolean,
   Wrapper: React.JSXElementConstructor<P>,
@@ -31,7 +33,7 @@ export interface Flex_T {
   alignContent?: CSSProperties['alignContent'] & ViewStyle['alignContent'],
   justifyContent?: CSSProperties['justifyContent'] & ViewStyle['justifyContent'],
   alignSelf?: CSSProperties['alignSelf'] & ViewStyle['alignSelf'],
-  component?: "div",
+  component?: "div" | 'span',
 }
 
 interface Flex_Web extends Flex_T, Styled, ClickableWeb {
@@ -80,21 +82,28 @@ export const Flex = (props: Flex_Web) => {
   const children = props.children ?? null
   const wrap = props.wrap  ?? 'wrap'
 
+  const style = {
+    alignItems: props.alignItems, 
+    alignContent: props.alignContent ?? 'stretch', // web default 
+    justifyContent: props.justifyContent, 
+    alignSelf: props.alignSelf, 
+    flex, 
+    flexDirection,
+    flexWrap: wrap,
+    display: 'flex', 
+    flexShrink,
+    ...props.style, 
+  }
+
+  if (props.component === 'span') return (
+    <span style={style} onClick={props.onClick ?? props.onPress}>
+      {children}
+    </span>
+
+  )
+
   return (
-    <div style={{
-        alignItems: props.alignItems, 
-        alignContent: props.alignContent ?? 'stretch', // web default 
-        justifyContent: props.justifyContent, 
-        alignSelf: props.alignSelf, 
-        flex, 
-        flexDirection,
-        flexWrap: wrap,
-        display: 'flex', 
-        flexShrink,
-        ...props.style, 
-      }} 
-      onClick={props.onClick ?? props.onPress}
-    >
+    <div style={style} onClick={props.onClick ?? props.onPress}>
       {children}
     </div>
   )
@@ -188,3 +197,5 @@ export const List = <T extends Item, P={}>({ items, emptyComponent, render, rend
     </Flex>
   )
 }
+
+// export const NativeWrapper = ({ children } : { children: React.ReactNode } & Styled) => <>{children}</>

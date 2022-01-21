@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TouchableHighlight, KeyboardAvoidingView, SafeAreaView, Platform, ViewStyle } from 'react-native';
+import { TouchableHighlight, KeyboardAvoidingView, Platform, ViewStyle, View } from 'react-native';
 import { 
   Avatar as MuiAvatar,
   ActivityIndicator as MuiCircularProgress,

@@ -10,6 +10,7 @@ import {
 
 import {
   LinearProgress,
+  Typography,
 } from "./mui"
 
 export { LoadedData, LoadedDataSuccess, APIError, LoadingStatus }
@@ -20,9 +21,11 @@ interface LoadingElement <T>{
   onError?: (error: APIError) => React.ReactElement,
 }
 
-export const LoadingLinear = <T,>({ data, render, onError }: LoadingElement<T>) => {
+export const renderDefaultError = (error: APIError) => <Typography>{error}</Typography>
+
+export const LoadingLinear = <T,>({ data, render, onError=renderDefaultError }: LoadingElement<T>) => {
   if (data.status === LoadingStatus.Loaded) return render(data.value)
-  if (data.status === LoadingStatus.Error) return (onError?.(data.value) ?? null)
+  if (data.status === LoadingStatus.Error) return onError(data.value)
 
   return <LinearProgress/>
 }

@@ -106,8 +106,7 @@ export class Session {
   errorHandler = async (_err: any) => {
     const err = parseError(_err)
     if (err === 'Unauthenticated') {
-      this.authToken = ''
-      this.clearCache()
+      this.clearState()
       await this.handleUnauthenticated?.()
     }
 

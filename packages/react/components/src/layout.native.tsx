@@ -14,12 +14,14 @@ import {
 import {
   ClickableNative,
   NativeStyled,
+  Styled,
 } from "./mui"
 import {
   convert_CSS_to_RNStyles
 } from "./mui.native"
 
 
+export const IN_REACT_WEB = false
 
 interface Flex_Native extends Flex_T, NativeStyled, ClickableNative {}
 
@@ -73,3 +75,10 @@ export const List = <T extends Item>({ items, emptyComponent, render, onClick, o
 }
 
 export const withHover: Hoverable = ({ }, r) => r({})
+
+// adding styles in a native-only wrapper
+// export const NativeWrapper = ({ children, style }: { children: React.ReactNode } & Styled) => (
+//   <View style={convert_CSS_to_RNStyles(style)}>
+//     {children}
+//   </View>
+// )
