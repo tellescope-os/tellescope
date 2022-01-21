@@ -21,7 +21,7 @@ interface LoadingElement <T>{
   onError?: (error: APIError) => React.ReactElement,
 }
 
-export const renderDefaultError = (error: APIError) => <Typography>{error}</Typography>
+export const renderDefaultError = (error: APIError) => <Typography>{error?.message ?? 'An error occurred'}</Typography>
 
 export const LoadingLinear = <T,>({ data, render, onError=renderDefaultError }: LoadingElement<T>) => {
   if (data.status === LoadingStatus.Loaded) return render(data.value)

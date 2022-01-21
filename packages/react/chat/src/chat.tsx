@@ -173,8 +173,6 @@ export const Message = ({
   const textBGStyle = message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle
   const textStyle = message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle
 
-  const inBrowser = typeof window !== undefined
-
   return (
     <Flex style={{ margin: 5 }}> 
       {message.senderId !== chatUserId && displayPicture}
