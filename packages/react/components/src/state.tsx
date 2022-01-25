@@ -21,7 +21,7 @@ import { isModelName } from "@tellescope/types-models"
 
 import {
   useResolvedSession
-} from "./authentication"
+} from "./index"
 import { 
   LoadFunction,
   Session, 

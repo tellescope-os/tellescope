@@ -5,7 +5,7 @@ import { configureStore, EnhancedStore, Action } from '@reduxjs/toolkit'
 
 import {
   useSession,
-} from "./authentication"
+} from "./index"
 
 import {
   sharedConfig,

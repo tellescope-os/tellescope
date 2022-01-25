@@ -12,10 +12,6 @@ import {
 } from '@tellescope/types-client'
 
 import {
-  useEnduserSession,
-} from "./authentication"
-
-import {
   createSliceForList,
   sharedConfig,
   useListStateHook,
@@ -26,7 +22,8 @@ import {
   TellescopeStoreContext,
   ChatRoomDisplayInfo,
   useChatRoomDisplayInfo as useChatRoomDisplayInfoShared,
-} from "./state"
+  useEnduserSession,
+} from "./index"
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
 const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')

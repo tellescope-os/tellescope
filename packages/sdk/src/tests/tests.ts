@@ -847,6 +847,7 @@ const sms_tests = async (queries=sdk.api.sms_messages) => {
 }
 
 const chat_room_tests = async () => {
+  log_header("Chat Room Tests")
   const sdk2 = new Session({ host })
   await sdk2.authenticate(email2, password2) 
 
@@ -903,8 +904,8 @@ const chat_room_tests = async () => {
     `user_display_info for room (for enduser)`, 
     () => enduserSDK.api.chat_rooms.display_info({ id: room.id }), 
     { onResult: r => r.id === room.id && verifyRoomDisplayInfo(r.display_info) }
-    )
-    await sdk.api.chat_rooms.deleteOne(room.id)
+  )
+  await sdk.api.chat_rooms.deleteOne(room.id)
 
   
   const emptyRoom = await sdk.api.chat_rooms.createOne({ })
