@@ -211,19 +211,24 @@ export const FormikSubmitButton = ({ formik, disabledIfUnchanged=true, onClick, 
   />
 )
 
-interface SubmitButtonProps extends SubmitButtonOptions {
+interface LoadingButtonProps extends SubmitButtonOptions {
   disabled?: boolean,
   submitting?: boolean,
   onClick?: () => void,
 }
-export const SubmitButton = ({ disabled, submitting, onClick, submitText="Submit", submittingText="Submitting", style={ marginTop: 5, width: '100%' } }: SubmitButtonProps & Styled) => (
-  <Button color="primary" variant="contained" type="submit" onClick={SUPPORTS_FORMS ? undefined : onClick}
+export const LoadingButton = ({ disabled, submitting, onClick, submitText="Submit", submittingText="Submitting", type, style={ marginTop: 5, width: '100%' } }: LoadingButtonProps & Styled & { type?: 'submit'}) => (
+  <Button color="primary" variant="contained" type={type} onClick={onClick}
     style={style}
     disabled={submitting || disabled}
   >
     <Typography component="span">{submitting ? submittingText : submitText}</Typography>
     {submitting && <CircularProgress size={11} style={{ marginLeft: 5, marginBottom: 1 }}/>}
   </Button>
+)
+
+// onClick conditionally disabled, should be child of Form in browser to ensure handleSubmit is used correctly
+export const SubmitButton = ({ onClick, ...props }: LoadingButtonProps & Styled) => (
+  <LoadingButton { ...props } type="submit" onClick={SUPPORTS_FORMS ? undefined : onClick}/>
 )
 
 interface FormBuilder_T <T> extends SubmitButtonOptions, Styled {

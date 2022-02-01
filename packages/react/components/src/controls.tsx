@@ -74,6 +74,7 @@ export const LabeledIconButton = ({
 
   return (
     <Tooltip label={label} placement={placement} arrow={showArrow} open={open} 
+      
       enterDelay={enterDelay} enterNextDelay={enterNextDelay}>
       {Button}
     </Tooltip>

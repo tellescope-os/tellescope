@@ -22,7 +22,6 @@ import {
   ChatRoom,
   JourneyState,
   UserSession,
-  AttendeeInfo,
   MeetingStatus,
   WebhookSubscriptionsType,
   Attendee,
@@ -285,6 +284,7 @@ export type CustomActions = {
   },
   meetings: {
     start_meeting: CustomAction<{ }, { id: string, meeting: object, host: Attendee }>, 
+    send_invite: CustomAction<{ meetingId: string, enduserId: string }, { }>, 
     end_meeting: CustomAction<{ id: string }, { }>, 
     add_attendees_to_meeting: CustomAction<{ id: string, attendees: UserIdentity[] }, { }>, 
     my_meetings: CustomAction<{}, { id: string, updatedAt: string, status: MeetingStatus }[]>
@@ -1293,6 +1293,17 @@ export const schema: SchemaV1 = build_schema({
           meeting: { validator: objectAnyFieldsValidator, required: true },
           host: { validator: attendeeValidator, required: true },
         },
+      },
+      send_invite: { 
+        op: "custom", access: 'update', method: "post",
+        name: "Send Meeting Invite",
+        path: '/send-meeting-invite',
+        description: "Sends a meeting invite via email to the given enduser",
+        parameters: { 
+          meetingId: { validator: mongoIdStringValidator, required: true },
+          enduserId: { validator: mongoIdStringValidator, required: true },
+        },
+        returns: { },
       },
       end_meeting: { 
         op: "custom", access: 'update', method: "post",

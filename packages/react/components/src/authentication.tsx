@@ -77,7 +77,7 @@ export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptio
   const updateLocalSessionInfo: EnduserSessionContext_T['updateLocalSessionInfo'] = (u, a) => {
     setEnduserSession(s => new EnduserSession({ 
       host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken, // preserve other important info
-      businessId: s.businessId,
+      businessId: u.businessId ?? s.businessId,
       enduser: { ...s.userInfo, ...u } 
     }))
   }

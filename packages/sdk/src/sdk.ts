@@ -114,6 +114,8 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     add_attendees_to_meeting: (args: { id: string, attendees: UserIdentity[] }) => Promise<void>, 
     my_meetings: () => Promise<Meeting[]>,
     attendee_info: (args: { id: string }) => Promise<{ attendee: Attendee, others: UserIdentity[] }>,
+    send_invite: (args: extractFields<CustomActions['meetings']['send_invite']['parameters']>) => 
+                    Promise<extractFields<CustomActions['meetings']['send_invite']['returns']>>,
   },
   chat_rooms: {
     join_room: (args: { id: string }) => Promise<{ room: ChatRoom }>,
@@ -152,6 +154,7 @@ export class Session extends SessionManager {
     queries.meetings.add_attendees_to_meeting = a => this._POST('/v1/add-attendees-to-meeting', a)
     queries.meetings.attendee_info = a => this._GET('/v1/attendee-info', a)
     queries.meetings.my_meetings = () => this._GET('/v1/my-meetings')
+    queries.meetings.send_invite = a => this._POST(`/v1${schema.meetings.customActions.send_invite.path}`, a),
 
     queries.webhooks.configure = a => this._POST('/v1/configure-webhooks', a)
     queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)

@@ -29,11 +29,15 @@ export interface VideoViewProps {
   style?: CSSProperties,
 }
 
+export interface JoinVideoCallProps {
+  onCallEnd?: () => void;
+}
 export interface JoinVideoCallReturnType {
   meeting: CallContext['meeting'], 
   videoIsEnabled: CallContext['videoIsEnabled'], 
   toggleVideo: CallContext['toggleVideo'], 
-  joinMeeting: (meetingInfo: { Meeting: MeetingInfo }, attendeeInfo: { Attendee: AttendeeInfo }) => Promise<void>,
+  leaveMeeting: () => void,
+  joinMeeting: (meetingInfo: { Meeting: MeetingInfo } | string, attendeeInfo: { Attendee: AttendeeInfo }) => Promise<void>,
 }
 
 export interface StartVideoCallReturnType {
@@ -42,7 +46,7 @@ export interface StartVideoCallReturnType {
   meeting: CallContext['meeting'],
   videoIsEnabled: CallContext['videoIsEnabled'], 
   toggleVideo: CallContext['toggleVideo'], 
-  createAndStartMeeting: (initialAttendees?: UserIdentity[]) => Promise<void>, 
+  createAndStartMeeting: (initialAttendees?: UserIdentity[]) => Promise<string>, 
   addAttendees: (attendees: UserIdentity[]) => Promise<void>, 
   endMeeting: () => Promise<void>,
 }

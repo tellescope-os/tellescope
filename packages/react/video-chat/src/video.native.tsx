@@ -15,7 +15,7 @@ import {
 import {
   UserIdentity,
 } from '@tellescope/types-utilities'
-import { useSession } from "@tellescope/react-components/lib/esm/authentication"
+import { useResolvedSession, useSession } from "@tellescope/react-components/lib/esm/authentication"
 import { Flex } from "@tellescope/react-components/lib/esm/layout"
 import { 
   Button, 
@@ -190,8 +190,9 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
   const [ending, setEnding] = useState(false)
 
   const createAndStartMeeting = async (initialAttendees?: UserIdentity[]) => {
+    setStarting(true)
     try {
-      const { meeting, host } = await session.api.meetings.start_meeting()
+      const { id, meeting, host } = await session.api.meetings.start_meeting()
 
       if (initialAttendees) {
         session.api.meetings.add_attendees_to_meeting({ id: meeting.Meeting.ExternalMeetingId, attendees: initialAttendees }) 
@@ -201,11 +202,13 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
 
       setMeeting(meeting.Meeting)
       setIsHost(true)
+
+      return id
     } catch(err) {
       console.error(err)
-    }
-    finally {
-
+      throw err
+    } finally {
+      setStarting(false)
     }
   }
 
@@ -239,13 +242,24 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
 }
 
 export const useJoinVideoCall = (): JoinVideoCallReturnType => {
+  const session = useResolvedSession()
   const { meeting, setMeeting, videoIsEnabled, toggleVideo } = React.useContext(CurrentCallContext)
 
-  const joinMeeting = async (meetingInfo: { Meeting: MeetingInfo }, attendeeInfo: { Attendee: AttendeeInfo }) => {
+  const joinMeeting = async (meetingInfo: string | { Meeting: MeetingInfo }, attendeeInfo: { Attendee: AttendeeInfo }) => {
+    if (typeof meetingInfo == 'string') {
+      const meetings = await session.api.meetings.my_meetings()
+      const meeting = meetings.find(m => m.id === meetingInfo)
+      meetingInfo = meeting?.meetingInfo as { Meeting: MeetingInfo }
+      attendeeInfo = meeting?.attendees.find?.(a => a.id === session.userInfo.id)?.info as { Attendee: AttendeeInfo }
+    }
+    if (!meetingInfo || typeof meetingInfo === 'string' || !attendeeInfo) return
+
     NativeFunction.startMeeting(meetingInfo.Meeting, attendeeInfo.Attendee)
   }
 
-  return { meeting, videoIsEnabled, toggleVideo, joinMeeting }
+  const leaveMeeting = () => setMeeting(undefined)
+
+  return { meeting, videoIsEnabled, toggleVideo, joinMeeting, leaveMeeting }
 }
 export const VideoTileGrid = () => {
   const { 
@@ -360,3 +374,7 @@ const styles = StyleSheet.create({
     height: 50
   }
 });
+
+export const LocalPreview = () => {
+  throw new Error("Unimplemented")
+}

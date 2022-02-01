@@ -1,6 +1,7 @@
-import React, { useCallback, useState, CSSProperties, Children } from "react"
+import React, { useCallback, useState, CSSProperties, Children, useEffect } from "react"
 
 import {
+  useResolvedSession,
   useSession,
 } from "@tellescope/react-components/lib/esm/authentication"
 
@@ -30,8 +31,9 @@ import {
   useMeetingManager,
   useRosterState,
   useRemoteVideoTileState,
-  VideoTile,
   useToggleLocalMute,
+  useMeetingStatus,
+  MeetingStatus,
   // useRemoteVideoTileState,
   // useContentShareControls, // screen sharing
 } from 'amazon-chime-sdk-component-library-react';
@@ -42,7 +44,12 @@ import {
   AttendeeDisplayInfo,
   VideoProps,
   VideoViewProps,
+  JoinVideoCallReturnType,
+  StartVideoCallReturnType,
+  JoinVideoCallProps,
 } from "./video_shared"
+import { ConsoleLogger, DefaultDeviceController, Logger, LogLevel } from "amazon-chime-sdk-js";
+import { Styled } from "@tellescope/react-components";
 
 const WithContext = ({ children } : { children: React.ReactNode }) => {
   const [meeting, setMeeting] = useState(undefined as MeetingInfo | undefined)
@@ -87,7 +94,7 @@ export const WithVideo = ({ children }: VideoProps) => (
   </ThemeProvider>
 )
 
-export const useStartVideoCall = () => {
+export const useStartVideoCall = (): StartVideoCallReturnType  => {
   const [starting, setStarting] = useState(false)
   const [ending, setEnding] = useState(false)
   const { meeting, setMeeting, toggleVideo, videoIsEnabled, setIsHost } = React.useContext(CurrentCallContext)
@@ -96,10 +103,9 @@ export const useStartVideoCall = () => {
   const meetingManager = useMeetingManager();
 
   const createAndStartMeeting = async (initialAttendees?: UserIdentity[]) => {
-    setStarting(false)
-
+    setStarting(true)
     try {
-      const { meeting, host } = await session.api.meetings.start_meeting()
+      const { id, meeting, host } = await session.api.meetings.start_meeting()
 
       await meetingManager.join({ meetingInfo: meeting, attendeeInfo: host.info }); // Use the join API to create a meeting session
       await meetingManager.start(); // At this point you can let users setup their devices, or start the session immediately
@@ -110,8 +116,10 @@ export const useStartVideoCall = () => {
 
       setMeeting(meeting.Meeting)
       setIsHost(true)
+      return id
     } catch(err) {
       console.error(err)
+      throw err
     }
     finally {
       setStarting(false)
@@ -137,21 +145,55 @@ export const useStartVideoCall = () => {
 
   return { starting, ending, meeting, videoIsEnabled, toggleVideo, createAndStartMeeting, addAttendees, endMeeting }
 }
-export type StartVideoCallReturnType = ReturnType<typeof useStartVideoCall>
 
-export const useJoinVideoCall = () => {
+export const useJoinVideoCall = (props?: JoinVideoCallProps): JoinVideoCallReturnType  => {
+  const { onCallEnd } = props ?? {}
+  const session = useResolvedSession()
   const meetingManager = useMeetingManager();
   const { meeting, setMeeting, toggleVideo, videoIsEnabled } = React.useContext(CurrentCallContext)
+  const status = useMeetingStatus()
 
-  const joinMeeting = async (meetingInfo: { Meeting: MeetingInfo }, attendeeInfo: { Attendee: AttendeeInfo }) => {
+  // meetingInfo may be meetingId as string
+  const joinMeeting = async (meetingInfo: string | { Meeting: MeetingInfo }, attendeeInfo: { Attendee: AttendeeInfo }) => {
+    if (typeof meetingInfo == 'string') {
+      const meetings = await session.api.meetings.my_meetings()
+      const meeting = meetings.find(m => m.id === meetingInfo)
+      meetingInfo = meeting?.meetingInfo as { Meeting: MeetingInfo }
+      attendeeInfo = meeting?.attendees.find?.(a => a.id === session.userInfo.id)?.info as { Attendee: AttendeeInfo }
+    }
+    if (!meetingInfo || typeof meetingInfo === 'string' || !attendeeInfo) return
+
     await meetingManager.join({ meetingInfo, attendeeInfo }); // Use the join API to create a meeting session
     await meetingManager.start(); // At this point you can let users setup their devices, or start the session immediately
     setMeeting(meetingInfo.Meeting)
   }
 
-  return { meeting, videoIsEnabled: videoIsEnabled, toggleVideo, joinMeeting }
+  const leaveMeeting = () => {
+    if (meetingManager.audioVideo) {
+      meetingManager.audioVideo.chooseVideoInputDevice(null);
+
+      // Stop local video tile (stops sharing the video tile in the meeting)
+      meetingManager.audioVideo.stopLocalVideoTile();
+
+      // Stop a video preview that was previously started (before session starts)
+      // meetingManager.audioVideo.stopVideoPreviewForVideoInput(previewVideoElement);
+
+      // Stop the meeting session (audio and video)
+      meetingManager.audioVideo && meetingManager.audioVideo.stop() 
+
+    }
+  }
+
+  useEffect(() => {
+    if (!meeting) return
+    if (status === MeetingStatus.Ended) {
+      leaveMeeting()
+      onCallEnd?.()
+    }
+  }, [meeting, status, leaveMeeting])
+
+  return { meeting, videoIsEnabled: videoIsEnabled, toggleVideo, joinMeeting, leaveMeeting }
 }
-export type JoinVideoCallReturnType = ReturnType<typeof useJoinVideoCall>
 
 export const SelfView = ({ style }: VideoViewProps) => <div style={style}><LocalVideo/></div>
 
@@ -165,4 +207,65 @@ export const useRemoteViews = (props={} as VideoViewProps) => {
 }
 
 
+class SwappableLogger implements Logger {
+  constructor(public inner: Logger) {}
+  debug(debugFunction: string | (() => string)): void {
+    this.inner.debug(debugFunction);
+  }
+
+  info(msg: string): void {
+    this.inner.info(msg);
+  }
+
+  error(msg: string): void {
+    this.inner.error(msg);
+  }
+
+  warn(msg: string): void {
+    this.inner.warn(msg);
+  }
+
+  setLogLevel(level: LogLevel): void {
+    this.inner.setLogLevel(level);
+  }
+
+  getLogLevel(): LogLevel {
+    return this.inner.getLogLevel();
+  }
+}
+
+const PREVIEW_ELEMENT_ID = 'video-preview'
+const defaultPreviewStyle = {
+  width: 400,
+  minHeight: 200,
+  height: 'auto',
+  maxHeight: 600,
+  backgroundColor: '#f0f0f0'
+}
+export const LocalPreview = ({ style=defaultPreviewStyle }: Styled) => {
+  useEffect(() => {
+    const videoElement = document.getElementById(PREVIEW_ELEMENT_ID) as HTMLVideoElement;
+    if (!videoElement) return
+
+    const deviceController = new DefaultDeviceController(new SwappableLogger(new ConsoleLogger('SDK', LogLevel.WARN)), { enableWebAudio: true });
+
+    //List the video device list
+    deviceController.listVideoInputDevices()
+    .then(deviceList => {
+      //Choose video device
+      deviceController.chooseVideoInputDevice(deviceList[0].deviceId)
+      .then(() => {
+        //Start video preview
+        deviceController.startVideoPreviewForVideoInput(videoElement); 
+      }).catch(console.error)
+    }).catch(console.error)
+
+    // disconnect camera 
+    return () => {
+      deviceController.destroy()
+    }
+  }, [])
+
+  return <video id={PREVIEW_ELEMENT_ID} style={style}/>
+}
 export { VideoTileGrid }

@@ -16,6 +16,7 @@ import { LabeledIconButton } from "@tellescope/react-components/lib/esm/controls
 import { Flex } from "@tellescope/react-components/lib/esm/layout"
 import { CurrentCallContext } from "./video_shared"
 import { useStartVideoCall } from "./video"
+import { useJoinVideoCall } from "."
 
 const DEFAULT_BUTTON_SIZE = 30
 interface ButtonProps {
@@ -42,20 +43,34 @@ export const MicrophoneToggle = ({ size=DEFAULT_BUTTON_SIZE }: ButtonProps) => {
 }
 
 // ends meeting if host, otherwise leaves meeting
-export const EndMeeting = ({ size=DEFAULT_BUTTON_SIZE }: ButtonProps) => {
+export const EndMeeting = ({ size=DEFAULT_BUTTON_SIZE, onLeave }: ButtonProps & LeaveMeetingProps) => {
   const { endMeeting } = useStartVideoCall()
 
   return (
-    <LabeledIconButton size={size} Icon={CallEndIcon} onClick={endMeeting} label="End Meeting"/>
+    <LabeledIconButton size={size} Icon={CallEndIcon} label="End Meeting"
+      onClick={() => {
+        endMeeting()
+        onLeave?.()
+      }}
+    />
   )
 }
 
 interface LeaveMeetingProps {
   onLeave?: () => void,
 }
-export const LeaveMeeting = ({ onLeave, size=DEFAULT_BUTTON_SIZE } : LeaveMeetingProps & ButtonProps) => (
-  <LabeledIconButton size={size} Icon={CallEndIcon} onClick={onLeave} label="Leave Meeting"/>
-)
+export const LeaveMeeting = ({ onLeave, size=DEFAULT_BUTTON_SIZE } : LeaveMeetingProps & ButtonProps) => {
+  const { leaveMeeting } = useJoinVideoCall()
+
+  return (
+    <LabeledIconButton size={size} Icon={CallEndIcon} label="Leave Meeting" 
+      onClick={() => { 
+        onLeave?.()
+        leaveMeeting()
+      }}
+    />
+  )
+}
 
 interface ControlbarProps {
   spacing?: number,
@@ -76,7 +91,7 @@ export const ControlBar = ({ onLeave, style, spacing=15, size } : ControlbarProp
           <MicrophoneToggle size={size}/>
         </Flex>
         <Flex style={itemStyle}>
-          {isHost ? <EndMeeting size={size}/> : <LeaveMeeting size={size} onLeave={onLeave}/>}
+          {isHost ? <EndMeeting size={size} onLeave={onLeave}/> : <LeaveMeeting size={size} onLeave={onLeave}/>}
         </Flex>
       </Paper>
     </Flex>

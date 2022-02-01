@@ -244,10 +244,10 @@ export const Tooltip = ({ label, placement, arrow=true, open, children, enterDel
       }}
       {...props}
     >
-      {/* Wrap with div for hover to work properly */}
-      <div>
+      {/* Wrap with span for hover to work properly, avoid forcing breaks with div */}
+      <span>
         {children}
-      </div>
+      </span>
     </MuiTooltip>
   )
 }
