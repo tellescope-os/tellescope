@@ -19,7 +19,7 @@ import {
 } from "./layout"
 import { Session, EnduserSession } from '@tellescope/sdk';
 
-interface LabeledIconButton_T {
+export interface LabeledIconButtonProps {
   Icon: React.ElementType, 
   label: string, 
   id?: string, 
@@ -55,7 +55,7 @@ export const LabeledIconButton = ({
   offsetY=0,
   enterDelay=0,
   enterNextDelay=enterDelay,
-} : LabeledIconButton_T) => 
+} : LabeledIconButtonProps) => 
 {
   const Button = (
     <IconButton color={color !== 'white' ? color : undefined} aria-label={label ?? ariaLabel} 
@@ -110,7 +110,7 @@ export const useAsyncAction = <T,>({ action, staysMounted=true, onSuccess, onErr
 
   return { performingAction, handlePerformAction }
 }
-export const AsyncIconButton = <T,>({ Icon, ...props } : LabeledIconButton_T & AsyncAction<T>) => {
+export const AsyncIconButton = <T,>({ Icon, ...props } : LabeledIconButtonProps & AsyncAction<T>) => {
   const { performingAction, handlePerformAction } = useAsyncAction(props)
 
   return <LabeledIconButton {...props} disabled={props.disabled ?? performingAction} onClick={handlePerformAction}

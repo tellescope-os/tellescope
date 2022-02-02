@@ -23,7 +23,7 @@ import {
   File,
   Meeting,
 } from "@tellescope/types-client"
-import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileBlob, FileBuffer, FileDetails, ReactNativeFile, SessionType } from "@tellescope/types-utilities"
+import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileDetails, ReactNativeFile, SessionType } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"
 
 import { Session as SessionManager, SessionOptions } from "./session"
@@ -106,7 +106,8 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   },
   files: {
     prepare_file_upload: (args: FileDetails) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
-    file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
+    file_download_URL: (args: extractFields<CustomActions['files']['file_download_URL']['parameters']>) => 
+                          Promise<extractFields<CustomActions['files']['file_download_URL']['returns']>>,
   },
   meetings: {
     start_meeting: () => Promise<{ id: string, meeting: { Meeting: MeetingInfo }, host: Attendee }>, 
@@ -217,9 +218,9 @@ export class Session extends SessionManager {
 
   prepare_and_upload_file = async (details: FileDetails, file: Blob | Buffer | ReactNativeFile) => {
     const { name, size, type } = details
-    const { presignedUpload, file: { secureName } } = await this.api.files.prepare_file_upload({ name, size, type })
+    const { presignedUpload, file: createdFile } = await this.api.files.prepare_file_upload({ name, size, type })
     await this.UPLOAD(presignedUpload, file)
-    return { secureName }
+    return createdFile
   }
 
   reset_db = () => this.POST('/reset-demo')

@@ -34,3 +34,6 @@ export const PLACEHOLDER_ID = "60398bb15da8abef87ef41f5"
 
 export const USER_SESSION_TYPE = 'user'
 export const ENDUSER_SESSION_TYPE = 'enduser'
+
+
+export const SECONDS_IN_ONE_YEAR = 31560000

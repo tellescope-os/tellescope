@@ -8,6 +8,10 @@ import {
   ReactNativeFile,
 } from "@tellescope/types-utilities"
 
+import {
+  File as FileClientType,
+} from "@tellescope/types-client"
+
 import { 
   EnduserSession, 
   Session, 
@@ -31,6 +35,7 @@ import {
   EnduserSessionContext,
   SessionContext,
 } from "./authentication"
+import { LoadingButton } from "."
 
 export {
   FileBlob,
@@ -40,12 +45,17 @@ interface DropzoneContentProps extends Styled {
   isDragActive: boolean,
   file?: FileDetails,
 }
-export const DefaultDropzoneContent = ({ isDragActive, file } : DropzoneContentProps) => (
-  <Typography style={{ cursor: 'pointer' }}>
-  {   isDragActive ? "Drop to select file"
-    : file         ? `${file.name} selected!`
-                    : "Select a File"}
-  </Typography> 
+export const DefaultDropzoneContent = ({ isDragActive, file, style } : DropzoneContentProps & Styled) => (
+  <Flex flex={1} style={{ 
+    ...style,  
+    ...isDragActive ? { border: '1px dashed gray' } : {}
+  }}>
+    <Typography style={{ cursor: 'pointer' }}>
+    {   isDragActive ? "Drop to select file"
+      : file         ? `${file.name} selected!`
+                      : "Select a File"}
+    </Typography> 
+  </Flex>
 )
 
 export interface FileSelector extends Styled {
@@ -70,10 +80,21 @@ export const FileDropzone = ({ file, style, dropzoneStyle, onChange, DropzoneCom
   )
 }
 
+export const useFileDropzone = ({ DropzoneComponent=DefaultDropzoneContent, style={} as React.CSSProperties } ) => {
+  const [file, setFile] = useState(undefined as FileBlob | undefined)
 
-type FileUploadHandler = (details: FileDetails, file: Blob | Buffer | ReactNativeFile, options?: {}) => Promise<{ secureName: string }>
-interface UseFileUploaderOptions {}
+  return {
+    file, setFile,
+    dropzone: <FileDropzone file={file} onChange={setFile} DropzoneComponent={DropzoneComponent} dropzoneStyle={style}/>
+  }
+}
+
+type FileUploadHandler = (details: FileDetails, file: Blob | Buffer | ReactNativeFile, options?: {}) => Promise<FileClientType>
+interface UseFileUploaderOptions {
+  enduserId?: string
+}
 export const useFileUpload = (o={} as UseFileUploaderOptions) => {
+  const { enduserId } = o
   const session = useResolvedSession()
 
   const [uploading, setUploading] = useState(false)
@@ -81,8 +102,8 @@ export const useFileUpload = (o={} as UseFileUploaderOptions) => {
   const handleUpload: FileUploadHandler = useCallback(async (details, file) => {
     setUploading(true)
     try {
-      const { secureName } = await session.prepare_and_upload_file(details, file) 
-      return { secureName }
+      const createdFile = await session.prepare_and_upload_file({ ...details, enduserId }, file) 
+      return createdFile
     } catch(err) {
       throw err
     } finally {
@@ -96,6 +117,18 @@ export const useFileUpload = (o={} as UseFileUploaderOptions) => {
   }
 }
 
+export const UploadButton = ({ file, details, handleUpload, uploading } : { file : FileBlob | undefined, handleUpload: FileUploadHandler, uploading: boolean, details: FileDetails }) => (
+  <LoadingButton disabled={!file || uploading} submitText="Upload" submittingText="Uploading"
+    onClick={() => {
+      if (!file) return
+      handleUpload(
+        { name: details.name, size: details.size, type: details.type }, // allows passing a File as details without issue
+        file
+      )
+    }}
+  />
+)
+
 export const useDisplayPictureUploadForSelf = (o={} as UseFileUploaderOptions) => {
   const session = useResolvedSession()
   const { updateUserInfo } = useContext(SessionContext)
@@ -107,7 +140,7 @@ export const useDisplayPictureUploadForSelf = (o={} as UseFileUploaderOptions) =
   const handleUpload: FileUploadHandler = useCallback(async (details, file, options) => {
     setUpdating(true)
 
-    const { secureName } = await hookHandleUpload(details, file, options)
+    const { secureName, ...fileInfo } = await hookHandleUpload(details, file, options)
     try {
       if (session instanceof Session) {
         await updateUserInfo({ avatar: secureName })
@@ -120,7 +153,7 @@ export const useDisplayPictureUploadForSelf = (o={} as UseFileUploaderOptions) =
       setUpdating(false)
     }
 
-    return { secureName }
+    return { secureName, ...fileInfo }
   }, [session])
 
   return {
@@ -129,25 +162,36 @@ export const useDisplayPictureUploadForSelf = (o={} as UseFileUploaderOptions) =
   }
 }
 
-export interface FileUploaderProps extends SubmitButtonOptions, UseFileUploaderOptions {}
+export interface FileUploaderProps extends SubmitButtonOptions, UseFileUploaderOptions {
+  onUpload?: (file: FileClientType) => void,
+}
 export const FileUploader = ({
   submitText="Upload",
-  submittingText="Upload",
+  submittingText="Uploading",
+  onUpload,
+  style,
+  enduserId,
+  dropzoneStyle,
   ...uploadOptions
-}: FileUploaderProps) => {
+}: FileUploaderProps & Styled & { dropzoneStyle?: React.CSSProperties }) => {
   const { handleUpload, uploading } = useFileUpload(uploadOptions)
   const [file, setFile] = useState<FileBlob | undefined>(undefined)
 
   return (
-    <Flex column>
-    <Form onSubmit={() => file && handleUpload(file, file)}>
-      <FileDropzone file={file} onChange={setFile}/>
+    <Flex column style={style}>
+      <FileDropzone file={file} onChange={setFile} dropzoneStyle={dropzoneStyle}/>
 
-      <SubmitButton 
+      <LoadingButton 
+        onClick={async () => {
+          if (!file) return
+          const uploadedFile = await handleUpload({ 
+            name: file.name, type: file.type, size: file.size, enduserId 
+          }, file)
+          onUpload?.(uploadedFile)
+        }}
         submitText={submitText} submittingText={submittingText} 
         disabled={file === undefined} submitting={uploading} 
       />
-    </Form>
     </Flex>
   )
 }

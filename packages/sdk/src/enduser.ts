@@ -49,7 +49,8 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
   },
   files: {
     prepare_file_upload: (args: FileDetails) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
-    file_download_URL: (args: { secureName: string }) => Promise<{ downloadURL: string }>,
+    file_download_URL: (args: extractFields<CustomActions['files']['file_download_URL']['parameters']>) => 
+                          Promise<extractFields<CustomActions['files']['file_download_URL']['returns']>>,
   },
   meetings: {
     attendee_info: (args: { id: string }) => Promise<{ attendee: Attendee, others: UserIdentity[] }>,
@@ -125,9 +126,9 @@ export class EnduserSession extends Session {
 
   prepare_and_upload_file = async (details: FileDetails, file: Blob | Buffer | ReactNativeFile) => {
     const { name, size, type } = details
-    const { presignedUpload, file: { secureName } } = await this.api.files.prepare_file_upload({ name, size, type })
+    const { presignedUpload, file: createdFile } = await this.api.files.prepare_file_upload({ name, size, type })
     await this.UPLOAD(presignedUpload, file)
-    return { secureName }
+    return createdFile
   }
 
   handle_new_session = async ({ authToken, enduser }: { authToken: string, enduser: Enduser }) => {

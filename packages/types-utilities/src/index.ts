@@ -52,6 +52,7 @@ export interface FileDetails {
   name: string;
   size: number;
   type: string;
+  enduserId?: string;
 }
 export interface FileBuffer extends Buffer, FileDetails {} 
 export interface ReactNativeFile {

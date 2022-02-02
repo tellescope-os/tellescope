@@ -258,7 +258,7 @@ export type CustomActions = {
     create: CustomAction<{}, { id: string, key: string}>,
   },
   files: {
-    prepare_file_upload: CustomAction<{ name: string, size: number, type: string }, { presignedUpload: object, file: File }>,
+    prepare_file_upload: CustomAction<{ name: string, size: number, type: string, enduserId?: string }, { presignedUpload: object, file: File }>,
     file_download_URL: CustomAction<{ secureName: string }, { downloadURL: string }>,
   },
   journeys: {
@@ -271,7 +271,7 @@ export type CustomActions = {
       { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
     >,
     refresh_session: CustomAction<{}, { enduser: Enduser, authToken: string }>,
-    generate_auth_token: CustomAction<{ id?: string, phone?: string, email?: string, externalId?: string }, { authToken: string, enduser: Enduser }>,
+    generate_auth_token: CustomAction<{ id?: string, phone?: string, email?: string, externalId?: string, expirationInSeconds?: number }, { authToken: string, enduser: Enduser }>,
     logout: CustomAction<{ }, { }>,
   },
   users: {
@@ -479,6 +479,7 @@ export const schema: SchemaV1 = build_schema({
           externalId: { validator: stringValidator250 },
           email: { validator: emailValidator }, 
           phone: { validator: phoneValidator },
+          durationInSeconds: { validator: nonNegNumberValidator },
         },
         returns: { 
           authToken: { validator: stringValidator100, required: true },
@@ -1200,6 +1201,7 @@ export const schema: SchemaV1 = build_schema({
            validator: fileTypeValidator,
             required: true
           },
+          enduserId: { validator: mongoIdStringValidator },
         },
         returns: { 
           presignedUpload: {
@@ -1214,12 +1216,12 @@ export const schema: SchemaV1 = build_schema({
         op: "custom", access: 'read', method: "get",
         name: 'Generate File Download',
         path: '/file-download-URL',
-        description: "Generates a temporary download link for a file.",
+        description: "Generates a temporary download link for a file (which expires in no more than 7 days).",
         parameters: { 
-          secureName: { validator: stringValidator250 },
+          secureName: { validator: stringValidator250, required: true },
         },
         returns: { 
-          downloadURL: { validator: stringValidator250 },
+          downloadURL: { validator: stringValidator250, required: true },
         },
       },
     },
