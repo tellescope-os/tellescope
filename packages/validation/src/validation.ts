@@ -450,16 +450,17 @@ export const phoneValidator: EscapeBuilder<string> = (options={}) => build_valid
   phone => {
     if (typeof phone !== "string") throw new Error(`Expecting phone to be string but got ${phone}`)
 
-    if (!isMobilePhone(phone)) {
-      throw `Invalid phone number`
-    }
-    let escaped = escape_phone_number(phone)
-
+    let escaped = escape_phone_number(phone) 
     if (escaped.length < 10) throw new Error(`Phone number must be at least 10 digits`)
 
     escaped = escaped.startsWith('+') ? escaped
             : escaped.length === 10   ? '+1' + escaped // assume US country code for now
-                                      : "+" + escaped 
+                                      : "+"  + escaped // assume country code provided, but missing leading +
+
+    if (!isMobilePhone(escaped, 'any', { strictMode: true })) {
+      throw `Invalid phone number`
+    }
+
     return escaped
   }, 
   { ...options, maxLength: 25, listOf: false }

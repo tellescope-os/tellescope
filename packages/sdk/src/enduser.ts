@@ -147,9 +147,9 @@ export class EnduserSession extends Session {
     return { authToken, enduser }
   }
 
-  authenticate = async (email: string, password: string, o?: { expirationInSeconds?: number }) => this.handle_new_session(
+  authenticate = async (email: string, password: string, o?: { durationInSeconds?: number }) => this.handle_new_session(
     await this.POST<
-      { email: string, password: string, businessId: string, expirationInSeconds?: number }, 
+      { email: string, password: string, businessId: string, durationInSeconds?: number }, 
       { authToken: string, enduser: Enduser }
     >('/v1/login-enduser', { email, password, businessId: this.businessId, ...o })
   )

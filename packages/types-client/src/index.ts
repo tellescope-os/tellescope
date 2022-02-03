@@ -1,5 +1,7 @@
 import * as models from "@tellescope/types-models"
 
+export interface WithId { id: string | number }
+
 type ToClientModel<T> = T & { id: string, createdAt: Date }
 type ToClientModels<T> = {
   [K in keyof T]: ToClientModel<T[K]>

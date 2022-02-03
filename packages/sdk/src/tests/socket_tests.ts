@@ -208,7 +208,7 @@ const deauthentication_tests = async (byTimeout=false) => {
   
   const enduser = await user1.api.endusers.createOne({ email: "socketenduser@tellescope.com" })
   await user1.api.endusers.set_password({ id: enduser.id, password: 'enduserPassword!' })
-  await enduserSDK.authenticate(enduser.email as string, 'enduserPassword!', { expirationInSeconds: byTimeout ? TEST_SESSION_DURATION : undefined })
+  await enduserSDK.authenticate(enduser.email as string, 'enduserPassword!', { durationInSeconds: byTimeout ? TEST_SESSION_DURATION : undefined })
   await wait(undefined, 25)
   
   const room  = await user1.api.chat_rooms.createOne({ 
