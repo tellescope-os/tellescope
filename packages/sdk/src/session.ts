@@ -67,7 +67,10 @@ export class Session {
     this.handleUnauthenticated = o.handleUnauthenticated
 
     this.cacheKey = o.cacheKey || DEFAULT_AUTHTOKEN_KEY
+
+    // keep ?? over || to allow '' argument to avoid access_cache
     this.authToken = o.authToken ?? access_cache(o.cacheKey) ?? '';
+
     this.userInfo = JSON.parse(access_cache(o.cacheKey + 'userInfo') || '{}');
     if (this.authToken) { 
       set_cache(this.cacheKey, this.authToken)

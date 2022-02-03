@@ -271,8 +271,9 @@ export type CustomActions = {
       { isAuthenticated: true, enduser: Enduser } | { isAuthenticated: false, enduser: null }
     >,
     refresh_session: CustomAction<{}, { enduser: Enduser, authToken: string }>,
-    generate_auth_token: CustomAction<{ id?: string, phone?: string, email?: string, externalId?: string, expirationInSeconds?: number }, { authToken: string, enduser: Enduser }>,
+    generate_auth_token: CustomAction<{ id?: string, phone?: string, email?: string, externalId?: string, durationInSeconds?: number }, { authToken: string, enduser: Enduser }>,
     logout: CustomAction<{ }, { }>,
+    current_session_info: CustomAction<{ }, { enduser: Enduser }> 
   },
   users: {
     display_info: CustomAction<{ }, { fname: string, lname: string, id: string }[]>,
@@ -298,7 +299,7 @@ export type CustomActions = {
 
 export type PublicActions = {
   endusers: {
-    login: CustomAction<{ id?: string, email?: string, phone?: string, password: string, expirationInSeconds: number }, 
+    login: CustomAction<{ id?: string, email?: string, phone?: string, password: string, durationInSeconds: number }, 
     { authToken: string }
   >,
   },
@@ -344,7 +345,7 @@ export const schema: SchemaV1 = build_schema({
       ],
     },
     defaultActions: DEFAULT_OPERATIONS,
-    enduserActions: { logout: {}, refresh_session: {}, update: {} },
+    enduserActions: { logout: {}, refresh_session: {}, update: {}, current_session_info: {} },
     fields: {
       ...BuiltInFields,   
       externalId: {
@@ -494,6 +495,17 @@ export const schema: SchemaV1 = build_schema({
         parameters: {},
         returns: {},
       },
+      current_session_info: {
+        op: "custom", access: 'read', method: "get",
+        name: 'Get session info',
+        path: '/enduser-session-info',
+        description: "When called by an authenticated enduser, returns their session details",
+        parameters: { },
+        enduserOnly: true,
+        returns: { 
+          enduser: { validator: 'enduser', required: true }, 
+        } as any // todo: add enduser eventually, when validator defined
+      },
     },
     publicActions: {
       login: {
@@ -507,7 +519,7 @@ export const schema: SchemaV1 = build_schema({
           phone: { validator: phoneValidator },
           email: { validator: emailValidator },
           password: { validator: stringValidator100, required: true }, // required until optional challenge token available
-          expirationInSeconds: { validator: nonNegNumberValidator },
+          durationInSeconds: { validator: nonNegNumberValidator },
         },
         returns: { authToken: { validator: stringValidator5000 } },
       },

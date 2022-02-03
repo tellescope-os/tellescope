@@ -43,6 +43,7 @@ export const defaultQueries = <N extends keyof ClientModelForName>(
 type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
   endusers: {
     logout: () => Promise<void>;
+    current_session_info: () => Promise<extractFields<CustomActions['endusers']['current_session_info']['returns']>>,
   },
   users: {
     display_info: () => Promise<UserDisplayInfo[]>
@@ -85,9 +86,10 @@ export class EnduserSession extends Session {
     this.businessId = o?.businessId
 
     this.api = loadDefaultQueries(this) as EnduserQueries 
-    this.api.chat_rooms.display_info = a => this._GET(`/v1${schema.chat_rooms.customActions.display_info.path}`, a),
+    this.api.chat_rooms.display_info = a => this._GET(`/v1${schema.chat_rooms.customActions.display_info.path}`, a)
 
-    this.api.endusers.logout = () => this._POST('/v1/logout-enduser'),
+    this.api.endusers.logout = () => this._POST('/v1/logout-enduser')
+    this.api.endusers.current_session_info = () => this._GET(`/v1${schema.endusers.customActions.current_session_info.path}`)
 
     this.api.users = { 
       display_info: () => this._GET<{}, UserDisplayInfo[] >(`/v1/user-display-info`),
