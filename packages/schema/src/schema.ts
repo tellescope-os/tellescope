@@ -2,7 +2,6 @@ import {
   ServerModelForName,
   DatabaseModel,
   DatabaseRecord,
-  Enduser,
   ObjectId,
   ModelName,
 } from "@tellescope/types-server"
@@ -31,6 +30,7 @@ import {
 
 import {
   UserDisplayInfo,
+  Enduser,
 } from "@tellescope/types-client"
 
 import {

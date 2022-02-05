@@ -99,7 +99,8 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   endusers: {
     set_password: (args: { id: string, password: string }) => Promise<void>,
     is_authenticated: (args: { id?: string, authToken: string }) => Promise<{ isAuthenticated: boolean, enduser: Enduser }>
-    generate_auth_token: (args: { id?: string, phone?: string, email?: string, externalId?: string }) => Promise<{ authToken: string, enduser: Enduser }>
+    generate_auth_token: (args: extractFields<CustomActions['endusers']['generate_auth_token']['parameters']>) => 
+                            Promise<extractFields<CustomActions['endusers']['generate_auth_token']['returns']>>,
   },
   users: {
     display_names: () => Promise<{ fname: string, lname: string, id: string }[]>,

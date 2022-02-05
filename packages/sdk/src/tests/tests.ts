@@ -315,6 +315,8 @@ const generateEnduserAuthTests = async () => {
     'id omitted results in failed authentication',
     'id optional for is_authenticated'
   )
+  let withDurationResult = await sdk.api.endusers.generate_auth_token({ id: e.id, durationInSeconds: 1000 })
+  assert(!!withDurationResult, 'no result for id with duration', 'id with duration')
 
   const { authToken: authTokenUID, enduser: enduser2 } = await sdk.api.endusers.generate_auth_token({ externalId })
   assert(!!authTokenUID && !!enduser2, 'invalid returned values eid', 'Generate authToken and get enduser eid')
@@ -322,6 +324,8 @@ const generateEnduserAuthTests = async () => {
     await sdk.api.endusers.is_authenticated({ id: enduser2.id, authToken: authTokenUID })).isAuthenticated, 
     'invalid authToken generated for enduser', 'Generate authToken for enduser is valid'
   )
+  withDurationResult = await sdk.api.endusers.generate_auth_token({ externalId, durationInSeconds: 1000  })
+  assert(!!withDurationResult, 'no result for externalId with duration', 'externalId with duration')
 
   await async_test(
     `auth by externalId`, () => sdk.api.endusers.generate_auth_token({ externalId: e.externalId }), passOnVoid,
