@@ -202,7 +202,7 @@ const enduser_tests = async () => {
 }
 
 const TEST_SESSION_DURATION = 2 // seconds
-const SESSION_TIMEOUT_DELAY = 2000 // ms
+const SESSION_TIMEOUT_DELAY = 3000 // ms
 const deauthentication_tests = async (byTimeout=false) => {
   log_header(`Unauthenticated Tests ${byTimeout ? '- With Timeout, requires Worker' : '- With Manual Logout' }`)
   

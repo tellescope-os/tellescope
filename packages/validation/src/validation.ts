@@ -27,6 +27,7 @@ import {
   AttendeeInfo,
   MeetingInfo,
   CUDSubscription,
+  FormField,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -48,6 +49,8 @@ import isBoolean from "validator/lib/isBoolean" // better for tree-shaking in mo
 // } from "@tellescope/constants"
 
 import {
+  filter_object,
+  is_defined,
   is_object,
   is_whitespace,
   object_is_empty,
@@ -110,7 +113,7 @@ export const build_validator: BuildValidator_T = (escapeFunction, options={} as 
   return (fieldValue: JSONType) => {
     if (isOptional && fieldValue === undefined) return undefined
     if (nullOk && fieldValue === null) return null
-    if (emptyStringOk && fieldValue === '') return ''
+    if ((emptyStringOk || isOptional) && fieldValue === '') return ''
     if (!emptyStringOk && fieldValue === '') throw `Expecting non-empty string but got ${fieldValue}`
     if (isObject && typeof fieldValue !== 'object') {
       try {
@@ -132,7 +135,7 @@ export const build_validator: BuildValidator_T = (escapeFunction, options={} as 
 
     if (listOf && (fieldValue as JSONType[])?.length === 0) {
       if (emptyListOk) return []
-      else throw new Error("Expecting a list of values but got none")
+      else throw new Error("Expecting a list of values but list is empty")
     }
 
     if (toLower && typeof fieldValue === 'string') {
@@ -704,6 +707,128 @@ export const rejectionWithMessage: EscapeBuilder<undefined> = o => build_validat
 
 export const numberToDateValidator = indexableNumberValidator(numberValidator(), dateValidator())
 export const idStringToDateValidator = indexableValidator(mongoIdStringValidator(), dateValidator())
+
+// todo: move preference to FIELD_TYPES with drop-down option in user-facing forms
+const FIELD_TYPES = ['string', 'number', 'email', 'phone', 'multiple_choice', 'file', 'signature']
+const VALIDATE_OPTIONS_FOR_FIELD_TYPES = {
+  'multiple_choice': {
+    choices: listOfStringsValidator({ maxLength: 100, errorMessage: "Multiple choice options must be under 100 characters, and you must have at least one option." }),
+    radio: booleanValidator({ errorMessage: "radio must be a boolean" }),
+    other: booleanValidator({ isOptional: true, errorMessage: "other must be a boolean" }),
+    REQUIRED: ['choices', 'radio'],
+  }
+}
+export const RESERVED_INTAKE_FIELDS = ['_id', 'id', 'externalId', 'phoneConsent', 'emailConsent', 'tags', 'journeys', 'updatedAt', 'preference', 'assignedTo', 'lastCommunication']
+
+export const ENDUSER_FIELD_TYPES = {
+  'email': 'email',
+  'phone': 'phone',
+  'fname': 'string',
+  'lname': 'string',
+} 
+export const INTERNAL_NAME_TO_DISPLAY_FIELD = { 
+  "string": 'Text',
+  "number": 'Number',
+  "email": "Email",
+  "phone": "Phone Number",
+  multiple_choice: "Multiple Choice",
+  "signature": "Signature",
+}
+
+const isFormField = (f: JSONType, fieldOptions={ forUpdate: false }) => {
+  if (!is_object(f)) throw new Error("Expecting an object")
+  const field = f as Indexable
+
+  const { forUpdate } = fieldOptions
+  if (forUpdate) {
+    const { isOptional, type, title, description, intakeField, options } = field 
+    if (
+      object_is_empty(filter_object({
+        isOptional, type, title, description, intakeField, options
+      }, is_defined))
+    )
+    { 
+      throw `No update provided` 
+    }
+  } 
+
+  if (forUpdate === false || field.isOptional !== undefined)
+    field.isOptional = !!field.isOptional // coerce to bool, defaulting to false (required)
+
+
+  if (!forUpdate && !field.type) throw `field.type is required` // fieldName otherwise given as 'field' in validation for every subfield
+  if (field.type) exactMatchValidator(FIELD_TYPES)(field.type)
+
+  if (!forUpdate && !field.title) throw `field.title is required` // fieldName otherwise given as 'field' in validation for every subfield
+  if (field.title) {
+    field.title = stringValidator({ 
+      maxLength: 100, 
+      errorMessage: "field title is required and must not exceed 100 characters" 
+    })(field.title)
+  }
+
+  if (!forUpdate || field.description !== undefined){ // don't overwrite description on update with ''
+    field.description = stringValidator({ 
+      isOptional: true,
+      maxLength: 500, 
+      errorMessage: "field description must be under 500 characters" 
+    })(field.description) || ''
+  }
+
+  field.options = field.options || {} // ensure at least an empty object is provided
+  if (VALIDATE_OPTIONS_FOR_FIELD_TYPES[field.type as keyof typeof VALIDATE_OPTIONS_FOR_FIELD_TYPES] !== undefined) {
+    if (typeof field.options !== 'object') throw new Error(`Expected options to be an object but got ${typeof field.options}`)
+
+    const validators = VALIDATE_OPTIONS_FOR_FIELD_TYPES[field.type as keyof typeof VALIDATE_OPTIONS_FOR_FIELD_TYPES]
+    const requiredOptions = validators.REQUIRED
+    if (requiredOptions.length > Object.keys(field.options).length) {
+      for (const k of requiredOptions) {
+        if (field.options[k] === undefined) {
+          throw new Error(`Missing required field ${k}`)
+        }
+      }
+    }
+
+    for (const k in field.options) {
+      if (validators[k as keyof typeof validators] === undefined) {
+        throw new Error(`Got unexpected option ${k} for field of type ${INTERNAL_NAME_TO_DISPLAY_FIELD[field.type as keyof typeof INTERNAL_NAME_TO_DISPLAY_FIELD] || 'Text'}`)
+      }
+      field.options[k] = (validators[k as keyof typeof validators] as EscapeFunction)(field.options[k])
+    }
+  }
+
+  if (field.intakeField !== undefined) { // allow null to unset intake
+    if (RESERVED_INTAKE_FIELDS.includes(field.intakeField)) {
+      throw new Error(`${field.intakeField} is reserved for internal use only and cannot be used as an intake field`)
+    }
+
+    const intakeType = ENDUSER_FIELD_TYPES[field.intakeField as keyof typeof ENDUSER_FIELD_TYPES]
+    if (intakeType && intakeType !== field.type) {
+      throw new Error(
+        `Intake field ${field.intakeField} requires a form field type of ${INTERNAL_NAME_TO_DISPLAY_FIELD[intakeType as keyof typeof INTERNAL_NAME_TO_DISPLAY_FIELD] || 'Text'}`
+      )
+    }
+  }
+
+  return field
+}
+
+export const formResponsesValidator = (options={}) => build_validator(
+  responses => responses, // naively allow all types, to be validated by endpoint, 
+  { ...options, isOptional: true, listOf: true } // isOptional allows for optional fields, but should validate required vs missing in endpoint
+)
+
+export const intakePhoneValidator = exactMatchValidator<'optional' | 'required'>(['optional', 'required'])
+
+export const formFieldValidator: EscapeBuilder<FormField> = (options={}, fieldOptions={ forUpdate: false }) => build_validator(
+  v => isFormField(v, fieldOptions), 
+  { ...options, isObject: true, listOf: false }
+)
+export const listOfFormFieldsValidator: EscapeBuilder<FormField[]> = (options={}, fieldOptions={ forUpdate: false }) => build_validator(
+  v => isFormField(v, fieldOptions), 
+  { ...options, isObject: true, listOf: true, emptyListOk: true }
+)
+
 
 // to ensure all topics in type have coverage at compile-time
 const _CHAT_ROOM_TOPICS: { [K in ChatRoomTopic]: any } = {

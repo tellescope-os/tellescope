@@ -80,6 +80,9 @@ import {
   WebhookSubscriptionValidator,
   attendeeValidator,
   meetingDisplayInfoValidator,
+  listOfFormFieldsValidator,
+  intakePhoneValidator,
+  formResponsesValidator,
 } from "@tellescope/validation"
 
 import {
@@ -1409,6 +1412,76 @@ export const schema: SchemaV1 = build_schema({
       fields: {
         validator: fieldsValidator,
       }
+    }
+  },
+  forms: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: {},
+    enduserActions: {},
+    fields: {
+      ...BuiltInFields, 
+      title: {
+        validator: stringValidator250,
+        required: true,
+        examples: ["Text"],
+      },
+      fields: { 
+        validator: listOfFormFieldsValidator, 
+        required: true,
+        initializer: () => [],
+      },
+      customGreeting: { validator: stringValidator5000 },
+      customSignature: { validator: stringValidator5000 },
+      customSubject: { validator: stringValidator5000 },
+      allowPublicURL: { validator: booleanValidator },
+      intakePhone: { validator: intakePhoneValidator },
+      thanksMessage: { validator: stringValidator5000 },
+    }
+  },
+  form_responses: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: {},
+    enduserActions: {},
+    fields: {
+      ...BuiltInFields, 
+      formId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        dependencies: [
+          {
+            dependsOn: ['forms'],
+            dependencyField: '_id',
+            relationship: 'foreignKey',
+            onDependencyDelete: 'setNull',
+          },
+        ],
+        examples: [PLACEHOLDER_ID],
+      }, 
+      enduserId: {
+        validator: mongoIdStringValidator,
+        dependencies: [{
+          dependsOn: ['endusers'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      submittedBy: { validator: stringValidator250 },
+      accessCode: { validator: stringValidator250 },
+      userEmail: { validator: emailValidator },
+      submittedAt: { validator: dateValidator },
+      formTitle: { validator: stringValidator250 },  
+      responses: { validator: formResponsesValidator },
     }
   },
   webhooks: {

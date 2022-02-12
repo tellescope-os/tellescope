@@ -6,6 +6,19 @@ export const first_letter_capitalized = (s='') => s.charAt(0).toUpperCase() + s.
 export const first_letter_lowercase = (s='') => s.charAt(0).toUpperCase() + s.slice(1)
 
 export const object_is_empty = (o : object) => Object.keys(o).length === 0 && o.constructor === Object
+
+export const is_truthy = (f?: any) => !!f
+export const is_defined = (f?: any) => f !== undefined
+export const filter_object = (o={} as Indexable, validator=is_defined) => {
+  const newObject = {} as Indexable
+  for (const f in o) {
+    const value = o[f]
+    if (validator(value))
+      newObject[f] = value  
+  } 
+  
+  return newObject
+}
 export const is_object = (obj: any): obj is Indexable => typeof obj === "object" && obj !== null
 
 // fields that are defined and match by equality

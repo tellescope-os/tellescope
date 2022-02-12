@@ -57,11 +57,16 @@ export const LabeledIconButton = ({
   enterNextDelay=enterDelay,
 } : LabeledIconButtonProps) => 
 {
+  const positionStyle: React.CSSProperties = {
+    position: "relative", top: offsetY, left: offsetX,
+  }
+
   const Button = (
     <IconButton color={color !== 'white' ? color : undefined} aria-label={label ?? ariaLabel} 
       style={{ 
-        padding, position: "relative", top: offsetY, left: offsetX,
-        ...(color === 'white' ? { color: disabled ? '#bdbdbd' : 'white' } : {})
+        padding, 
+        ...disabled ? positionStyle : {},
+        ...(color === 'white' ? { color: disabled ? '#bdbdbd' : 'white' } : {}),
       }}
       onClick={onClick} id={id} disabled={disabled}  
     >
@@ -74,8 +79,9 @@ export const LabeledIconButton = ({
 
   return (
     <Tooltip label={label} placement={placement} arrow={showArrow} open={open} 
-      
-      enterDelay={enterDelay} enterNextDelay={enterNextDelay}>
+      enterDelay={enterDelay} enterNextDelay={enterNextDelay}
+      style={positionStyle}
+    >
       {Button}
     </Tooltip>
   ) 

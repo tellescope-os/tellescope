@@ -1273,6 +1273,8 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   tickets: () => {},
   meetings: () => {},
   notes: () => {},
+  forms: () => {},
+  form_responses: () => {},
   webhooks: () => {},
 };
 

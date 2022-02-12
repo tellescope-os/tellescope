@@ -10,6 +10,7 @@ import {
   LoadedData,
   UNLOADED,
   SessionType,
+  CustomUpdateOptions,
 } from "@tellescope/types-utilities"
 
 import {
@@ -190,7 +191,7 @@ export interface ListUpdateMethods <T, ADD> {
   createElement: (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
   findById: (id: string) => T | undefined,
-  updateElement: (id: string, e: Partial<T>) => Promise<T>,
+  updateElement: (id: string, e: Partial<T>, o?: CustomUpdateOptions) => Promise<T>,
   updateLocalElement: (id: string, e: Partial<T>) => void,
   updateLocalElements: (updates: { [id: string]: Partial<T> }) => void,
   removeElement: (id: string) => Promise<void>,
@@ -206,7 +207,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     loadQuery: LoadFunction<T>, 
     addOne?: (value: ADD) => Promise<T>,
     addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
-    updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
+    updateOne?: (id: string, updates: Partial<T>, o?: CustomUpdateOptions) => Promise<T>,
     deleteOne?: (id: string) => Promise<void>,
   },
   options?: {
@@ -264,22 +265,23 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     options?.onUpdate?.([{ ...updated, id }])
     return updated
   }, [dispatch, options, slice])
-  const updateElement = useCallback(async (id: string, e: Partial<T>) => {
+  const updateElement = useCallback(async (id: string, e: Partial<T>, o?: CustomUpdateOptions) => {
     if (!updateOne) throw new Error(`Update element by API is not supported`)
-    return replaceLocalElement(id, await updateOne(id, e)) // API returns updated model, avoids needing to merge object fields client-side, so just replace
+    return replaceLocalElement(id, await updateOne(id, e, o)) // API returns updated model, avoids needing to merge object fields client-side, so just replace
   }, [replaceLocalElement, updateOne])
 
   const removeLocalElement = useCallback(id => {
-    dispatch(slice.actions.remove(id))
+    dispatch(slice.actions.remove({ value: { id } }))
     options?.onDelete?.([id])
   }, [dispatch, options, slice])
   const removeLocalElements = useCallback(ids => {
-    dispatch(slice.actions.removeSome(ids))
+    dispatch(slice.actions.removeSome({ value: { ids } }))
     options?.onDelete?.(ids)
   }, [dispatch, options, slice])
   const removeElement = useCallback(async (id: string) => {
     if (!deleteOne) throw new Error(`Add element by API is not supported`)
-    removeLocalElement(await deleteOne(id))
+    await deleteOne(id)
+    removeLocalElement(id)
   }, [removeLocalElement, deleteOne])
 
   const findById = useCallback((id: string) => {

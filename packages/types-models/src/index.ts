@@ -367,6 +367,51 @@ export interface Note extends Note_readonly, Note_required, Note_updatesDisabled
   fields?: Indexable<string | CustomField>,
 }
 
+export type FormFieldType = 'string' | 'number' | 'email' | 'phoneNumber' | "multiple_choice" | "file" | "signature"
+export interface MultipleChoiceOptions {
+  choices: string[];
+  radio?: boolean; // absent indicates not radio
+  other?: boolean; // include an 'other' option
+}
+
+export type FormFieldOptions = MultipleChoiceOptions
+export interface FormField {
+  isOptional  : boolean,
+  title       : string,
+  type        : FormFieldType,
+  description : string,
+  options    ?: FormFieldOptions | {},
+  intakeField?: string | null,
+}
+export interface Form_readonly extends ClientRecord {}
+export interface Form_required {
+  title: string,
+  fields: FormField[], 
+}
+export interface Form_updatesDisabled {}
+export interface Form extends Form_readonly, Form_required, Form_updatesDisabled {
+  customSubject?: string,
+  customGreeting?: string,
+  customSignature?: string,
+  allowPublicURL?: boolean,
+  intakePhone?: 'required' | 'optional',
+  thanksMessage?: string,
+}
+
+export interface FormResponse_readonly extends ClientRecord {}
+export interface FormResponse_required {
+  formId: string,
+  enduserId: string,
+  formTitle: string,
+  responses: any[],
+  submittedBy?: string,
+  submittedAt?: Date,
+  accessCode?: string,
+  userEmail?: string,
+}
+export interface FormResponse_updatesDisabled {}
+export interface FormResponse extends FormResponse_readonly, FormResponse_required, FormResponse_updatesDisabled {}
+
 export const WEBHOOK_MODELS = {
   'chats': '',
   'meetings': '',
@@ -418,6 +463,8 @@ export type ModelForName_required = {
   tickets: Ticket_required;
   meetings: Meeting_required;
   notes: Note_required;
+  forms: Form_required,
+  form_responses: FormResponse_required,
   webhooks: WebHook_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
@@ -438,6 +485,8 @@ export interface ModelForName_readonly {
   tickets: Ticket_readonly;
   meetings: Meeting_readonly;
   notes: Note_readonly;
+  forms: Form_readonly;
+  form_responses: FormResponse_readonly;
   webhooks: WebHook_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
@@ -458,6 +507,8 @@ export interface ModelForName_updatesDisabled {
   tickets: Ticket_updatesDisabled;
   meetings: Meeting_updatesDisabled;
   notes: Note_updatesDisabled;
+  forms: Form_updatesDisabled;
+  form_responses: FormResponse_updatesDisabled;
   webhooks: WebHook_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
@@ -478,6 +529,8 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   tickets: Ticket;
   meetings: Meeting;
   notes: Note;
+  forms: Form;
+  form_responses: FormResponse;
   webhooks: WebHook;
 }
 export type ModelName = keyof ModelForName
@@ -508,6 +561,8 @@ export const modelNameChecker: { [K in ModelName] : true } = {
   tickets: true,
   meetings: true, 
   notes: true, 
+  forms: true,
+  form_responses: true,
   webhooks: true, 
 }
 

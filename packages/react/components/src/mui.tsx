@@ -223,7 +223,7 @@ export const LinearProgress = ({ ...props}: LinearProgressProps) => {
 export type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right'
 
 // with overridden default styles to better fit UI elements
-export interface TooltipProps {
+export interface TooltipProps extends Styled {
   label: React.ReactChild;
   placement?: TooltipPlacement;
   arrow?: boolean;
@@ -232,7 +232,7 @@ export interface TooltipProps {
   enterDelay?: number;
   enterNextDelay?: number,
 }
-export const Tooltip = ({ label, placement, arrow=true, open, children, enterDelay, enterNextDelay=enterDelay, ...props } : TooltipProps) => {
+export const Tooltip = ({ label, placement, arrow=true, open, style, children, enterDelay, enterNextDelay=enterDelay, ...props } : TooltipProps) => {
   return (
     <MuiTooltip title={label} placement={placement} arrow={arrow} open={open}
       enterDelay={enterDelay} enterNextDelay={enterNextDelay}
@@ -245,7 +245,7 @@ export const Tooltip = ({ label, placement, arrow=true, open, children, enterDel
       {...props}
     >
       {/* Wrap with span for hover to work properly, avoid forcing breaks with div */}
-      <span>
+      <span style={style}>
         {children}
       </span>
     </MuiTooltip>

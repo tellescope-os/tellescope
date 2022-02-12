@@ -89,6 +89,8 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   tickets: defaultQueries(s, 'tickets'),
   meetings: defaultQueries(s, 'meetings'),
   notes: defaultQueries(s, 'notes'),
+  forms: defaultQueries(s, 'forms'),
+  form_responses: defaultQueries(s, 'form_responses'),
   webhooks: defaultQueries(s, 'webhooks')
 })
 

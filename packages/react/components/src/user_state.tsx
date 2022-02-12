@@ -11,6 +11,7 @@ import {
   sharedConfig,
   createSliceForList,
   useListStateHook,
+  // useMappedListStateHook,
   HookOptions,
   WithFetchContext,
 
@@ -19,14 +20,18 @@ import {
   ChatRoomDisplayInfo,
   useChatRoomDisplayInfo as useChatRoomDisplayInfoShared,
   TellescopeStoreContext,
+  // createSliceForMappedList,
 } from "./state"
 
 import {
   ChatMessage,
   ChatRoom,
   Enduser,
+  Form,
+  FormResponse,
   Meeting,
   Task,
+  Template,
   Ticket,
   File,
   Note,
@@ -38,6 +43,9 @@ const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')
 const meetingsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
 const filesSlice = createSliceForList<File, 'files'>('files')
 const notesSlice = createSliceForList<Note, 'notes'>('notes')
+const templatesSlice = createSliceForList<Template, 'templates'>('templates')
+const formsSlice = createSliceForList<Form, 'forms'>('forms')
+const formResponsesSlice = createSliceForList<FormResponse, 'form_response'>('form_response')
 
 export const userConfig = {
   reducer: { 
@@ -47,6 +55,9 @@ export const userConfig = {
     meetings: meetingsSlice.reducer,
     files: filesSlice.reducer,
     notes: notesSlice.reducer,
+    templates: templatesSlice.reducer,
+    forms: formsSlice.reducer,
+    form_responses: formResponsesSlice.reducer,
     ...sharedConfig.reducer,
   }
 }
@@ -154,6 +165,51 @@ export const useNotes = (options={} as HookOptions<File>) => {
     }, 
     {...options}
   )
+}
+export const useTemplates = (options={} as HookOptions<Template>) => {
+  const session = useSession()
+  return useListStateHook(
+    'templates', useTypedSelector(s => s.templates), session, templatesSlice, 
+    { 
+      loadQuery: session.api.templates.getSome,
+      addOne: session.api.templates.createOne,
+      addSome: session.api.templates.createSome,
+      deleteOne: session.api.templates.deleteOne,
+      updateOne: session.api.templates.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useForms = (options={} as HookOptions<Template>) => {
+  const session = useSession()
+  return useListStateHook(
+    'forms', useTypedSelector(s => s.forms), session, formsSlice, 
+    { 
+      loadQuery: session.api.forms.getSome,
+      addOne: session.api.forms.createOne,
+      addSome: session.api.forms.createSome,
+      deleteOne: session.api.forms.deleteOne,
+      updateOne: session.api.forms.updateOne,
+    }, 
+    {...options}
+  )
+}
+
+export const useFormResponses = (options={} as HookOptions<FormResponse>) => {
+  const session = useSession()
+  return useListStateHook(
+    'forms_responses', useTypedSelector(s => s.form_responses), session, formResponsesSlice, 
+    { 
+      loadQuery: session.api.form_responses.getSome,
+      addOne: session.api.form_responses.createOne,
+      addSome: session.api.form_responses.createSome,
+      deleteOne: session.api.form_responses.deleteOne,
+      updateOne: session.api.form_responses.updateOne,
+    }, 
+    {
+      ...options,
+    }
+  ) 
 }
 
 export const useChatRooms = (o={} as HookOptions<ChatRoom>) => useChatRoomsShared('user', o)

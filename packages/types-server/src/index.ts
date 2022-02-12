@@ -29,6 +29,8 @@ export type Ticket = ServerModelForName['tickets']
 export type User = ServerModelForName['users']
 export type Meeting = ServerModelForName['meetings']
 export type Note = ServerModelForName['notes']
+export type Form = ServerModelForName['forms']
+export type FormResponse = ServerModelForName['form_responses']
 export type WebHook = ServerModelForName['webhooks']
 
 export type Organization = ToServerModel<BaseOrganization>

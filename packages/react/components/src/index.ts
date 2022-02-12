@@ -25,6 +25,9 @@ export {
   useNotes as useNotesForUser,
   useTasks as useTasksForUser, 
   useTickets as useTicketsForUser,
+  useTemplates as useTemplatesForUser,
+  useForms as useFormsForUser,
+  useFormResponses as useFormResponsesForUser, 
 } from "./user_state"
 export {
   EnduserProvider, 
