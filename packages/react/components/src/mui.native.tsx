@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TouchableHighlight, KeyboardAvoidingView, Platform, ViewStyle, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ViewStyle, View, TouchableOpacity } from 'react-native';
 import { 
   Avatar as MuiAvatar,
   ActivityIndicator as MuiCircularProgress,
@@ -84,8 +84,8 @@ export const Card = ({ style, flex, children, ...props } : CardProps) => (
     {children}
   </MuiCard>
 )
-export const Paper = ({ style, flex, children, ...props } : PaperProps) => (
-  <MuiPaper style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style)}} {...props}>
+export const Paper = ({ style, flex, children, elevation, ...props } : PaperProps) => (
+  <MuiPaper style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style), elevation }} {...props}>
     {children}
   </MuiPaper>
 )
@@ -170,9 +170,9 @@ export const Button = ({ type, variant, children, color, style, onClick, onPress
 )
 
 export const IconButton = ({ children, color, style, onClick, onPress, disabled, ...props }: IconButtonProps & ClickableNative) => (
-  <TouchableHighlight onPress={onPress ?? onClick} disabled={disabled}>
+  <TouchableOpacity onPress={onPress ?? onClick} disabled={disabled}>
     {children}
-  </TouchableHighlight>
+  </TouchableOpacity>
 )
  
 export const Typography = ({ children, onClick, onPress, color, style, ...props }: TypographyProps & ClickableNative) => {

@@ -31,6 +31,7 @@ export type Meeting = ServerModelForName['meetings']
 export type Note = ServerModelForName['notes']
 export type Form = ServerModelForName['forms']
 export type FormResponse = ServerModelForName['form_responses']
+export type CalendarEvent = ServerModelForName['calendar_events']
 export type WebHook = ServerModelForName['webhooks']
 
 export type Organization = ToServerModel<BaseOrganization>

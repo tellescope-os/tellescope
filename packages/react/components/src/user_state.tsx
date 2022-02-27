@@ -17,6 +17,7 @@ import {
 
   useChats as useChatsShared,
   useChatRooms as useChatRoomsShared,
+  useCalendarEvents as useCalendarEventsShared,
   ChatRoomDisplayInfo,
   useChatRoomDisplayInfo as useChatRoomDisplayInfoShared,
   TellescopeStoreContext,
@@ -35,6 +36,7 @@ import {
   Ticket,
   File,
   Note,
+  CalendarEvent,
 } from "@tellescope/types-client"
 
 const endusersSlice = createSliceForList<Enduser, 'endusers'>('endusers')
@@ -217,3 +219,4 @@ export const useChats = (roomId: string, o={} as HookOptions<ChatMessage>) => us
 export const useChatRoomDisplayInfo = (roomId: string, o={} as HookOptions<ChatRoomDisplayInfo>) =>
                useChatRoomDisplayInfoShared(roomId, 'user', o)
 
+export const useCalendarEvents = (o={} as HookOptions<CalendarEvent>) => useCalendarEventsShared('user', o)

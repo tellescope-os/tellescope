@@ -302,7 +302,9 @@ export interface MessageTemplate_required {
 }
 export interface MessageTemplate_updatesDisabled {}
 export interface MessageTemplate extends MessageTemplate_readonly, MessageTemplate_required, MessageTemplate_updatesDisabled {
+  html: string;
   type?: MessageTemplateType;
+  editorState?: string
 }
 
 export interface File_readonly extends ClientRecord {
@@ -434,6 +436,18 @@ export interface WebHook extends WebHook_readonly, WebHook_required, WebHook_upd
   subscriptions: WebhookSubscriptionsType
 }
 
+export interface CalendarEvent_readonly extends ClientRecord {}
+export interface CalendarEvent_required {
+  title: string,
+  startTimeInMS: number,
+  durationInMinutes: number,
+}
+export interface CalendarEvent_updatesDisabled {}
+export interface CalendarEvent extends CalendarEvent_readonly, CalendarEvent_required, CalendarEvent_updatesDisabled {
+  attendees: UserIdentity[],
+  description?: string,
+}
+
 export type WebhookRecord = {
   id: string,
   [index: string]: any,
@@ -465,6 +479,7 @@ export type ModelForName_required = {
   notes: Note_required;
   forms: Form_required,
   form_responses: FormResponse_required,
+  calendar_events: CalendarEvent_required,
   webhooks: WebHook_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
@@ -487,6 +502,7 @@ export interface ModelForName_readonly {
   notes: Note_readonly;
   forms: Form_readonly;
   form_responses: FormResponse_readonly;
+  calendar_events: CalendarEvent_readonly,
   webhooks: WebHook_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
@@ -509,6 +525,7 @@ export interface ModelForName_updatesDisabled {
   notes: Note_updatesDisabled;
   forms: Form_updatesDisabled;
   form_responses: FormResponse_updatesDisabled;
+  calendar_events: CalendarEvent_updatesDisabled,
   webhooks: WebHook_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
@@ -531,6 +548,7 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   notes: Note;
   forms: Form;
   form_responses: FormResponse;
+  calendar_events: CalendarEvent,
   webhooks: WebHook;
 }
 export type ModelName = keyof ModelForName
@@ -563,6 +581,7 @@ export const modelNameChecker: { [K in ModelName] : true } = {
   notes: true, 
   forms: true,
   form_responses: true,
+  calendar_events: true,
   webhooks: true, 
 }
 

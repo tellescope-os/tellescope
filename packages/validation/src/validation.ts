@@ -308,6 +308,9 @@ export const stringValidator250: EscapeBuilder<string> = (o={}) => build_validat
 export const stringValidator5000: EscapeBuilder<string> = (o={}) => build_validator(
   escapeString(o), { ...o, maxLength: 5000, listOf: false  } 
 )
+export const stringValidator25000: EscapeBuilder<string> = (o={}) => build_validator(
+  escapeString(o), { ...o, maxLength: 25000, listOf: false  } 
+)
 export const SMSMessageValidator: EscapeBuilder<string> = (o={}) => build_validator(
   escapeString(o), { ...o, maxLength: 630, listOf: false  } 
 )
@@ -398,8 +401,8 @@ export const numberValidatorBuilder: ComplexEscapeBuilder<{ lower: number, upper
   )
 }
 
-export const nonNegNumberValidator = numberValidatorBuilder({ lower: 0, upper: 100000000 })
-export const numberValidator = numberValidatorBuilder({ lower: -100000000, upper: 100000000 })
+export const nonNegNumberValidator = numberValidatorBuilder({ lower: 0, upper: 10000000000000 }) // max is 2286 in UTC MS
+export const numberValidator = numberValidatorBuilder({ lower: -100000000, upper: 10000000000000 }) // max is 2286 in UTC MS
 export const fileSizeValidator = numberValidatorBuilder({ lower: 0, upper: MAX_FILE_SIZE })
 
 export const dateValidator: EscapeBuilder<Date> = (options={}) => build_validator(

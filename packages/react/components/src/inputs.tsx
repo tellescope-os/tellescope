@@ -172,6 +172,7 @@ export const FileUploader = ({
   style,
   enduserId,
   dropzoneStyle,
+  variant,
   ...uploadOptions
 }: FileUploaderProps & Styled & { dropzoneStyle?: React.CSSProperties }) => {
   const { handleUpload, uploading } = useFileUpload(uploadOptions)
@@ -181,7 +182,7 @@ export const FileUploader = ({
     <Flex column style={style}>
       <FileDropzone file={file} onChange={setFile} dropzoneStyle={dropzoneStyle}/>
 
-      <LoadingButton 
+      <LoadingButton variant={variant}
         onClick={async () => {
           if (!file) return
           const uploadedFile = await handleUpload({ 

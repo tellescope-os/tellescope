@@ -17,6 +17,7 @@ import {
   ChatRoom,
   ChatMessage,
   UserDisplayInfo,
+  CalendarEvent,
 } from "@tellescope/types-client"
 import { isModelName } from "@tellescope/types-models"
 
@@ -163,6 +164,7 @@ export const createSliceForMappedList = <T extends { id: string }, N extends str
 export type ChatRoomDisplayInfo = { id: string } & { [index: string]: UserDisplayInfo }
 
 const chatRoomsSlice = createSliceForList<ChatRoom, 'chat_rooms'>('chat_rooms')
+const calendarEventsSlice = createSliceForList<CalendarEvent, 'calendar_events'>('calendar_events')
 const chatsSlice = createSliceForMappedList<ChatMessage, 'chats'>('chats')
 const chatRoomDisplayInfoslice = createSliceForMappedList<ChatRoomDisplayInfo, 'chat-room-display-info'>('chat-room-display-info')
 
@@ -171,6 +173,7 @@ export const sharedConfig = {
     chat_rooms: chatRoomsSlice.reducer,
     chats: chatsSlice.reducer,
     chatRoomDisplayInfo: chatRoomDisplayInfoslice.reducer,
+    calendar_events: calendarEventsSlice.reducer,
   },
 }
 
@@ -567,6 +570,24 @@ export const useChatRoomDisplayInfo = (roomId: string, type: SessionType, option
   ) 
 
   return toReturn
+}
+
+export const useCalendarEvents = (type: SessionType, options={} as HookOptions<CalendarEvent>) => {
+  const session = useResolvedSession(type)
+
+  return useListStateHook('calendar_events', useTypedSelector(s => s.calendar_events), session, calendarEventsSlice,
+    { 
+      loadQuery: session.api.calendar_events.getSome,
+      addOne: session.api.calendar_events.createOne,
+      addSome: session.api.calendar_events.createSome,
+      deleteOne: session.api.calendar_events.deleteOne,
+      updateOne: session.api.calendar_events.updateOne,
+    },
+    { 
+      socketConnection: 'self',
+      ...options,
+    },
+  )
 }
 
 export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRoom>) => {

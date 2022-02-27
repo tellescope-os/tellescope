@@ -55,7 +55,8 @@ export const LabeledIconButton = ({
   offsetY=0,
   enterDelay=0,
   enterNextDelay=enterDelay,
-} : LabeledIconButtonProps) => 
+  style,
+} : LabeledIconButtonProps & Styled) => 
 {
   const positionStyle: React.CSSProperties = {
     position: "relative", top: offsetY, left: offsetX,
@@ -67,6 +68,7 @@ export const LabeledIconButton = ({
         padding, 
         ...disabled ? positionStyle : {},
         ...(color === 'white' ? { color: disabled ? '#bdbdbd' : 'white' } : {}),
+        ...style,
       }}
       onClick={onClick} id={id} disabled={disabled}  
     >

@@ -5,6 +5,7 @@ import * as Yup from 'yup';
 
 import {
   Button,
+  ButtonProps,
   CircularProgress,
   Styled,
   TextField,
@@ -197,6 +198,7 @@ export const passwordInput = <T, ID extends keyof T>(
 export interface SubmitButtonOptions {
   submitText?: string,
   submittingText?: string,
+  variant?: ButtonProps['variant'],
 }
 
 interface FormikSubmitButtonProps extends SubmitButtonOptions, Styled {
@@ -204,10 +206,11 @@ interface FormikSubmitButtonProps extends SubmitButtonOptions, Styled {
   onClick?: () => void, // to handle submit in environment where html form type handleSubmit is not supported
   disabledIfUnchanged?: boolean,
 }
-export const FormikSubmitButton = ({ formik, disabledIfUnchanged=true, onClick, submitText, submittingText, style }: FormikSubmitButtonProps) => (
+export const FormikSubmitButton = ({ formik, disabledIfUnchanged=true, onClick, submitText, submittingText, style, ...props }: FormikSubmitButtonProps) => (
   <SubmitButton onClick={onClick} submitText={submitText} submittingText={submittingText}
     disabled={!formik.isValid || (disabledIfUnchanged && !formik.dirty)} style={style}
     submitting={formik.isSubmitting}
+    {...props}
   />
 )
 
@@ -216,8 +219,8 @@ interface LoadingButtonProps extends SubmitButtonOptions {
   submitting?: boolean,
   onClick?: () => void,
 }
-export const LoadingButton = ({ disabled, submitting, onClick, submitText="Submit", submittingText="Submitting", type, style={ marginTop: 5, width: '100%' } }: LoadingButtonProps & Styled & { type?: 'submit'}) => (
-  <Button color="primary" variant="contained" type={type} onClick={onClick}
+export const LoadingButton = ({ disabled, variant="contained", submitting, onClick, submitText="Submit", submittingText="Submitting", type, style={ marginTop: 5, width: '100%' } }: LoadingButtonProps & Styled & { type?: 'submit'}) => (
+  <Button color="primary" variant={variant} type={type} onClick={onClick}
     style={style}
     disabled={submitting || disabled}
   >

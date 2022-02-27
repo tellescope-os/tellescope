@@ -73,8 +73,6 @@ import {
   listOfAttendeesValidator,
   meetingInfoValidator,
   listOfUserIndentitiesValidator,
-  attendeeInfoValidator,
-  listOfObjectAnyFieldsValidator,
   meetingsListValidator,
   urlValidator,
   WebhookSubscriptionValidator,
@@ -83,6 +81,7 @@ import {
   listOfFormFieldsValidator,
   intakePhoneValidator,
   formResponsesValidator,
+  stringValidator25000,
 } from "@tellescope/validation"
 
 import {
@@ -980,6 +979,8 @@ export const schema: SchemaV1 = build_schema({
   },
   chats: {
     info: {
+      name: 'ChatMessages',
+      description: "Messages between users in a given Chat Room",
       sideEffects: {
         create: [sideEffects.updateChatroomCache]
       }
@@ -1162,6 +1163,14 @@ export const schema: SchemaV1 = build_schema({
       message: {
         validator: stringValidator5000,
         required: true,
+        examples: ["This is the template message......"],
+      },
+      html: {
+        validator: stringValidator5000,
+        examples: ["This is the template message......"],
+      },
+      editorState: {
+        validator: stringValidator25000,
         examples: ["This is the template message......"],
       },
       type: {
@@ -1432,8 +1441,9 @@ export const schema: SchemaV1 = build_schema({
       },
       fields: { 
         validator: listOfFormFieldsValidator, 
-        required: true,
+        required: true, // ensures still defined after updates
         initializer: () => [],
+        examples: [[]],
       },
       customGreeting: { validator: stringValidator5000 },
       customSignature: { validator: stringValidator5000 },
@@ -1552,6 +1562,42 @@ export const schema: SchemaV1 = build_schema({
       subscriptions: {
         validator: WebhookSubscriptionValidator,
       },
+    }
+  },
+  calendar_events: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+      access: [
+        { type: 'filter', field: 'attendees.id' }, 
+      ]
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: {},
+    enduserActions: { read: {}, readMany: {} },
+    fields: {
+      ...BuiltInFields, 
+      title: {
+        validator: stringValidator250,
+        required: true,
+        examples: ["Text"],
+      }, 
+      startTimeInMS: { 
+        validator: nonNegNumberValidator,
+        examples: [100],
+        required: true,
+      }, 
+      durationInMinutes: { 
+        validator: nonNegNumberValidator,
+        examples: [100],
+        required: true,
+      },
+      description: { validator: stringValidator5000 },
+      attendees: { 
+        validator: listOfUserIndentitiesValidator,
+        initializer: () => [],
+      }
     }
   },
 })

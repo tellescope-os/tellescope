@@ -9,6 +9,7 @@ import {
   Ticket,
   Meeting,
   UserDisplayInfo,
+  CalendarEvent,
 } from '@tellescope/types-client'
 
 import {
@@ -18,6 +19,7 @@ import {
   HookOptions,
   useChats as useChatsShared,
   useChatRooms as useChatRoomsShared,
+  useCalendarEvents as useCalendarEventsShared,
   WithFetchContext,
   TellescopeStoreContext,
   ChatRoomDisplayInfo,
@@ -98,3 +100,5 @@ export const useChatRooms = (o={} as HookOptions<ChatRoom>) => useChatRoomsShare
 export const useChats = (roomId: string, o={} as HookOptions<ChatMessage>) => useChatsShared(roomId, 'enduser', o)
 export const useChatRoomDisplayInfo = (roomId: string, o={} as HookOptions<ChatRoomDisplayInfo>) =>
                useChatRoomDisplayInfoShared(roomId, 'enduser', o)
+
+export const useCalendarEvents = (o={} as HookOptions<CalendarEvent>) => useCalendarEventsShared('enduser', o)

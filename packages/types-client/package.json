@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/types-client",
-  "version": "0.0.43",
+  "version": "0.0.45",
   "description": "Types for Tellescope models used in the client-side",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "devDependencies": {
-    "@tellescope/types-models": "^0.0.43",
+    "@tellescope/types-models": "^0.0.45",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "eslint": "^7.32.0",

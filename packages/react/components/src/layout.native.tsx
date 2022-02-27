@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ViewStyle, TouchableHighlight, FlatList, SafeAreaView } from "react-native"
+import { View, ViewStyle, TouchableHighlight, FlatList, SafeAreaView, TouchableOpacity } from "react-native"
 
 import {
   Flex_T,
@@ -48,7 +48,7 @@ export const Flex = (props: Flex_Native) => {
     ...convert_CSS_to_RNStyles(props.style), 
   }
   if (handler) return (
-    <TouchableHighlight onPress={handler} style={style}><>{children}</></TouchableHighlight>
+    <TouchableOpacity onPress={handler} style={style}><>{children}</></TouchableOpacity>
   )
 
   return (<View style={style}>{children}</View>)

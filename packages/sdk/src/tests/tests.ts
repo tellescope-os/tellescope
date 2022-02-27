@@ -1257,6 +1257,53 @@ const users_tests = async () => {
   )
 }
 
+const calendar_events_tests = async () => {
+  const { id } = await sdk.api.endusers.createOne({ email })
+  const { authToken, enduser } = await sdk.api.endusers.generate_auth_token({ id })
+  const enduserSDK = new EnduserSession({ host, authToken, enduser, businessId: sdk.userInfo.businessId })
+
+  const event = await sdk.api.calendar_events.createOne({ 
+    title: "Event", durationInMinutes: 30, startTimeInMS: Date.now()
+  })
+  const eventWithEnduser = await sdk.api.calendar_events.createOne({ 
+    title: "Event with Enduser", durationInMinutes: 30, startTimeInMS: Date.now(), attendees: [{ id, type: 'enduser' }]
+  })
+
+  await async_test(
+    `user can access own event`,
+    () => sdk.api.calendar_events.getOne(event.id),
+    { onResult: e => e && e.id === event.id }
+  ) 
+  await async_test(
+    `user can access own events`,
+    () => sdk.api.calendar_events.getSome(),
+    { onResult: es => es && es.length === 2 }
+  ) 
+  await async_test(
+    `user can access own event with enduser attendee`,
+    () => sdk.api.calendar_events.getOne(eventWithEnduser.id),
+    { onResult: e => e && e.id === eventWithEnduser.id }
+  ) 
+
+  await async_test(
+    `enduser can't access uninvited event`,
+    () => enduserSDK.api.calendar_events.getOne(event.id),
+    { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
+  ) 
+  await async_test(
+    `enduser can access event as attendee`,
+    () => enduserSDK.api.calendar_events.getOne(eventWithEnduser.id),
+    { onResult: e => e && e.id === eventWithEnduser.id }
+  ) 
+  await async_test(
+    `enduser can access own events`,
+    () => enduserSDK.api.calendar_events.getSome(),
+    { onResult: es => es && es.length === 1 }
+  ) 
+
+  await sdk.api.endusers.deleteOne(enduser.id)
+}
+
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -1275,6 +1322,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   notes: () => {},
   forms: () => {},
   form_responses: () => {},
+  calendar_events: calendar_events_tests,
   webhooks: () => {},
 };
 

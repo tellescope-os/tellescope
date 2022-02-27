@@ -117,3 +117,90 @@ export const truncate_string = (s='', options={} as { showEllipsis?: boolean, le
 export const map_object = <T extends object, R>(object: T, handler: (key: keyof T, value: T[typeof key]) => R): R[] => (
   Object.keys(object).map((key) => handler(key as keyof typeof object, object[key as keyof typeof object]))
 )
+
+const [ LINK_START, LINK_END, TEXT_START, TEXT_END ] = [0, 1, 2, 3]
+export const parse_link_template = (text: string, startFrom?: number) => {
+  let start = 0
+  let state = LINK_START
+  let linkChars = []
+  const linkTextChars = []
+  
+  for (let i = startFrom || 0; i < text.length; i++) {
+    const char = text[i]
+    if (state === LINK_START) {
+      if (char === '{') {
+        start = i;
+        state = LINK_END
+      }
+    } 
+    else if (state === LINK_END) {
+      if (char === '}') {
+        state = TEXT_START
+      } else {
+        linkChars.push(char)
+      }
+    } 
+    else if (state === TEXT_START) {
+      if (char === '[') {
+        state = TEXT_END
+      }
+      else if (!is_whitespace(char)) { // only allow whitespace between {link} and [linkText]
+        start = 0; linkChars = []; state = LINK_START; // start seeking new link
+      }
+    }
+    else {
+      if (char === ']') {
+        return {
+          url: linkChars.join(''),
+          displayName: linkTextChars.join('')
+        }
+      } else {
+        linkTextChars.push(char)
+      }
+    } 
+  }
+
+  return null
+}
+
+const findTemplateElement = (text: string) => {
+  const startIndex = text.indexOf('{{')
+  if (startIndex === -1) return undefined
+
+  const endIndex = text.indexOf('}}')
+  if (endIndex === -1) return undefined
+
+  // omits start '{{' with +2, endIndex is not inclusive, so it omits last '}}' 
+  return text.substring(startIndex + 2, endIndex) 
+}
+
+export const getTemplatedData = (text: string) => {
+  const value = findTemplateElement(text)
+
+  const badValue = (reason='') => { throw Error(`Unrecognized template field: ${value}${reason && ` (${reason})`}`) }
+
+  if (value === undefined) return badValue()
+  if (value.startsWith('forms')) {
+    const [_, formId, field] = value.split('.')
+    
+    if (field.startsWith('link')) { return { id: formId, displayName: field.substring(5) } }
+    return badValue()
+  }
+  if (value.startsWith('files')) {
+    const [_, fileId, field] = value.split('.')
+
+    if (field.startsWith('link')) { return { id: fileId, displayName: field.substring(5) } }
+    throw Error(`Unrecognized template field: ${value}`)
+  } 
+  
+  return badValue()
+}
+
+type ToTemplateString <T> = (data: T) => string
+export const build_link_string: ToTemplateString<{ url: string, displayName: string }> = d => `{${d.url}}[${d.displayName}]`
+export const build_form_link_string: ToTemplateString<{ id: string, displayName: string }> = d => `{{forms.${d.id}.link:${d.displayName}}}`
+export const build_file_link_string: ToTemplateString<{ id: string, displayName: string }> = d => `{{files.${d.id}.link:${d.displayName}}}`
+
+export const to_absolute_url = (link : string) => link.startsWith('http') ? link : '//' + link // ensure absolute url 
+
+export const throwFunction = (s: string) => { throw s }

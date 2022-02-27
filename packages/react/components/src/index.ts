@@ -28,6 +28,7 @@ export {
   useTemplates as useTemplatesForUser,
   useForms as useFormsForUser,
   useFormResponses as useFormResponsesForUser, 
+  useCalendarEvents as useCalendarEventsForUser,
 } from "./user_state"
 export {
   EnduserProvider, 
@@ -38,5 +39,6 @@ export {
   useMeetings as useMeetingsForEnduser, 
   useTickets as useTicketsForEnduser,
   useUserDisplayInfo as useUserDisplayInfoForEnduser,
-  useUserDisplayNames as useUserDisplayNamesForEnduser
+  useUserDisplayNames as useUserDisplayNamesForEnduser,
+  useCalendarEvents as useCalendarEventsForEnduser,
 } from "./enduser_state"
