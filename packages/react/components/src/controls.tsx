@@ -12,6 +12,7 @@ import {
   TooltipPlacement,
 
   DownloadIcon,
+  Modal,
 } from "./mui"
 
 import {
@@ -166,3 +167,30 @@ export const DownloadFileIconButton = ({ session, secureName, onDownload, onErro
     />
   )
 }
+
+
+
+interface UseModalIconButtonProps extends LabeledIconButtonProps {}
+export const useModalIconButton = (props: UseModalIconButtonProps) => {
+  const [open, setOpen] = React.useState(false)
+  
+  return {
+    open,
+    setOpen,
+    ...props,
+  }
+}
+
+export const IconModal = ({ open, setOpen, children, disabled, onClick, style, ...props }: ReturnType<typeof useModalIconButton> & Styled & { children: React.ReactNode }) => (
+  <>
+  <Modal open={open} setOpen={setOpen} style={style}>
+    {children} 
+  </Modal>
+  <LabeledIconButton disabled={disabled || open} {...props}
+    onClick={e => {
+      setOpen(o => !o)
+      onClick?.(e)
+    }}
+  />
+  </>
+)

@@ -947,5 +947,6 @@ export const userDisplayInfoValidator = objectValidator<UserDisplayInfo>({
   lname: nameValidator(),
   lastActive: dateValidator(),
   lastLogout: dateValidator(),
+  email: emailValidator(),
 })
 export const meetingDisplayInfoValidator = indexableValidator(mongoIdStringRequired, userDisplayInfoValidator())

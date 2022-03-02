@@ -921,6 +921,9 @@ export const schema: SchemaV1 = build_schema({
       topicId: { // this depends on a topic, dynamically based on the topic. How to best handle cleanup?
         validator: mongoIdStringValidator,
       },
+      description: {
+        validator: stringValidator250,
+      },
       userIds: {
         validator: listOfMongoIdStringValidator,
         examples: [[PLACEHOLDER_ID]], 
@@ -1594,6 +1597,15 @@ export const schema: SchemaV1 = build_schema({
         required: true,
       },
       description: { validator: stringValidator5000 },
+      chatRoomId: { 
+        validator: mongoIdStringValidator,
+        dependencies: [{
+          dependsOn: ['chat_rooms'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'setNull',
+        }]
+      },
       attendees: { 
         validator: listOfUserIndentitiesValidator,
         initializer: () => [],

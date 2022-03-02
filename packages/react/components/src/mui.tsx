@@ -13,6 +13,7 @@ import MuiCircularProgress from "@mui/material/CircularProgress"
 import MuiLinearProgress from "@mui/material/LinearProgress"
 import MuiIconButton from "@mui/material/IconButton"
 import MuiTooltip from "@mui/material/Tooltip"
+import MuiModal from "@mui/material/Modal"
 
 import { AutoComplete } from "./forms"
 import { DEFAULT_ICON_SIZE  } from "./constants"
@@ -27,6 +28,7 @@ import MicrophoneIconMui from '@mui/icons-material/Mic';
 import MicrophoneOffIconMui from '@mui/icons-material/MicOff';
 import CallEndIconMui from '@mui/icons-material/CallEnd';
 import AccountIconMui from '@mui/icons-material/Person';
+import { Flex } from "./layout"
 
 const Icon = ({ Component, size=DEFAULT_ICON_SIZE, style, ...props } : IconBuilderProps) => (
   <Component style={{ fontSize: size, ...style }}/>
@@ -259,4 +261,17 @@ export interface AvatarProps extends Styled {
 }
 export const Avatar = ({ size, style, ...props }: AvatarProps) => (
   <MuiAvatar style={size ? { height: size, width: size, ...style } : style} {...props}/>
+)
+
+interface ModalProps extends Styled {
+  children: React.ReactNode,
+  open: boolean,
+  setOpen: (b: boolean) => void,
+}
+export const Modal = ({ children, open, setOpen, style }: ModalProps) => (
+  <MuiModal open={open} onClose={() => setOpen(false)}>
+    <Flex flex={1} style={style}>
+      {children}
+    </Flex>
+  </MuiModal>
 )

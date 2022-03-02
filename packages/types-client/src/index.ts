@@ -31,6 +31,7 @@ export type User = ClientModelForName['users']
 export interface UserDisplayInfo extends models.UserActivityInfo { 
   id: string,
   createdAt: Date,
+  email?: string,
   avatar?: string,
   fname?: string, 
   lname?: string,

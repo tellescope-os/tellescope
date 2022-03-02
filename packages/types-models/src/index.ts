@@ -265,6 +265,7 @@ export interface ChatRoom_readonly extends ClientRecord {
 export interface ChatRoom_required {}
 export interface ChatRoom_updatesDisabled {}
 export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom_updatesDisabled {
+  description?: string;
   type?: ChatRoomType; 
   userIds?: string[];
   title?: string
@@ -445,6 +446,7 @@ export interface CalendarEvent_required {
 export interface CalendarEvent_updatesDisabled {}
 export interface CalendarEvent extends CalendarEvent_readonly, CalendarEvent_required, CalendarEvent_updatesDisabled {
   attendees: UserIdentity[],
+  chatRoomId?: string,
   description?: string,
 }
 

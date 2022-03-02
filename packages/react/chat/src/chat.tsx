@@ -243,13 +243,15 @@ const defaultMessagePreviewStyle: CSSProperties = {
 }
 
 export interface ConversationPreviewProps {
-  onClick?: (room: ChatRoom) => void;
   room: ChatRoom;
+  displayInfo: { [index: string]: UserDisplayInfo };
+  onClick?: (room: ChatRoom) => void;
   selected?: boolean;
-  resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
   style?: CSSProperties;
   selectedStyle?: CSSProperties;
 }
+
+type PreviewComponentType = React.JSXElementConstructor<ConversationPreviewProps> 
 
 interface SidebarInfo {
   selectedRoom?: string;
@@ -258,16 +260,16 @@ interface SidebarInfo {
   selectedItemStyle?: CSSProperties;
   itemStyle?: CSSProperties;
   nameStyle?: CSSProperties;
-  PreviewComponent?: React.JSXElementConstructor<ConversationPreviewProps>
+  PreviewComponent?: PreviewComponentType,
   previewStyle?: CSSProperties;
 }
 
-const ConversationPreview = ({ onClick, selected, room, resolveSenderName, style, selectedStyle }: ConversationPreviewProps) => (
+const ConversationPreview = ({ onClick, selected, room, style, selectedStyle }: ConversationPreviewProps) => (
   <Flex flex={1} column onClick={() => !selected && onClick?.(room)} 
     style={selected ? (selectedStyle ?? defaultSidebarItemStyleSelected) : (style ?? defaultSidebarItemStyle) }
   >
     <Typography style={defaultMessageNameStyle}>
-      <Resolver item={room} resolver={resolveSenderName ?? (() => room.id)}/>
+
     </Typography>
 
     <Typography style={defaultMessagePreviewStyle}>
@@ -276,56 +278,39 @@ const ConversationPreview = ({ onClick, selected, room, resolveSenderName, style
   </Flex>
 )
 
+const PreviewWithData = ({ PreviewComponent=ConversationPreview, ...props }: Omit<ConversationPreviewProps, 'displayInfo'> & Pick<SidebarInfo, 'PreviewComponent'>) => {
+  const session = useResolvedSession()
+  const [displayInfo] = useChatRoomDisplayInfo(props.room.id, session.type)
+
+  return (
+    <PreviewComponent displayInfo={value_is_loaded(displayInfo) ? displayInfo.value : {} } 
+      {...props} 
+    />
+  )
+}
+
 interface ConversationsProps extends SidebarInfo {
-  resolveSenderName: (r: ChatRoom) => string;
   rooms: LoadedData<ChatRoom[]>;
 }
-export const Conversations = ({ rooms, selectedRoom, onRoomSelect, resolveSenderName, PreviewComponent=ConversationPreview, style, selectedItemStyle, itemStyle } : ConversationsProps) => ( 
-  <LoadingLinear data={rooms} render={rooms =>
-    <List style={style ?? defaultSidebarStyle} items={rooms} onClick={r => onRoomSelect(r.id)} render={(room, { onClick, index }) => 
-      <PreviewComponent key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
-        resolveSenderName={resolveSenderName ?? (() => room.id)}
-        selectedStyle={selectedItemStyle} style={itemStyle}
-      />
-    }/>    
-  }/>
-)
+export const Conversations = ({ rooms, selectedRoom, onRoomSelect, PreviewComponent=ConversationPreview, style, selectedItemStyle, itemStyle } : ConversationsProps) => {
 
-
-export const EndusersConversations = ({ enduserId, ...p } : SidebarInfo & { enduserId: string }) => {
-  const [rooms] = useChatRooms('enduser')
-  const [displayNames] = useUserDisplayInfo()
-
-  const resolveChatName = useCallback((r: ChatRoom) => {
-    if (r.title) return r.title
-
-    if (displayNames.status === LoadingStatus.Loaded) {
-      const user = displayNames.value.find(u => u.id === r.userIds?.[0])
-      if (user) return user_display_name(user)
-    }
-    return ''
-  }, [displayNames])
-
-  return <Conversations {...p} rooms={rooms} resolveSenderName={resolveChatName}/>
+  return ( 
+    <LoadingLinear data={rooms} render={rooms =>
+      <List style={style ?? defaultSidebarStyle} items={rooms} onClick={r => onRoomSelect(r.id)} render={(room, { onClick, index }) => 
+        <PreviewWithData key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
+          selectedStyle={selectedItemStyle} style={itemStyle} PreviewComponent={PreviewComponent}
+        />
+      }/>    
+    }/>
+  )
 }
 
-export const UsersConversations = ({ userId, ...p } : SidebarInfo & { userId: string }) => {
-  const [rooms] = useChatRooms('user')
-  const [endusers] = useEndusers()
 
-  const resolveChatName = useCallback((r: ChatRoom) => {
-    if (r.title) return r.title
-    
-    if (endusers.status === LoadingStatus.Loaded) {
-      const enduser = endusers.value.find(e => e.id ===  r.enduserIds?.[0])   
-      if (enduser) return user_display_name(enduser)
-    }
+// deprecated while Conversations relies on useResolvedSession
+export const EndusersConversations = ({ enduserId, ...p } : SidebarInfo & { enduserId: string }) => <Conversations {...p} rooms={useChatRooms('enduser')[0]} />
 
-    return ''
-  }, [endusers])
-
-  return <Conversations {...p} rooms={rooms} resolveSenderName={resolveChatName}/>
-}
+// deprecated while Conversations relies on useResolvedSession
+export const UsersConversations = ({ userId, ...p } : SidebarInfo & { userId: string }) => <Conversations {...p} rooms={useChatRooms('user')[0]}/>
 
 interface SendMessage_T {
   type: SessionType,
