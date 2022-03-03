@@ -1,45 +1,26 @@
-import React, { useCallback, useState, CSSProperties } from "react"
+import React, { useState, CSSProperties } from "react"
 
 import {
+  AsyncIconButton,
   DisplayPicture,
   IN_REACT_WEB,
-} from "@tellescope/react-components"
-import {
   List,
   Flex,
-} from "@tellescope/react-components/lib/esm/layout"
-import {
-  AsyncIconButton,
-} from "@tellescope/react-components/lib/esm/controls"
-import {
   Badge,
   SendIcon,
   Styled,
   Typography,
   TextField,
-} from "@tellescope/react-components/lib/esm/mui"
-import {
   LoadingLinear,
-  Resolver,
   value_is_loaded,
-} from "@tellescope/react-components/lib/esm/loading"
-import {
   useSession,
   useEnduserSession,
   useResolvedSession,
-} from "@tellescope/react-components/lib/esm/authentication"
-import {
   useChatRooms,
   useChats,
   useChatRoomDisplayInfo,
   ChatRoomDisplayInfo,
-} from "@tellescope/react-components/lib/esm/state"
-import {
-  useEndusers,
-} from "@tellescope/react-components/lib/esm/user_state"
-import {
-  useUserDisplayInfo,
-} from "@tellescope/react-components/lib/esm/enduser_state"
+} from "@tellescope/react-components"
 
 import {
   ChatRoom,
@@ -52,9 +33,7 @@ import {
 } from "@tellescope/types-models"
 
 import {
-  Indexable,
   LoadedData, 
-  LoadingStatus,
   SessionType,
 } from "@tellescope/types-utilities"
 
@@ -251,7 +230,21 @@ export interface ConversationPreviewProps {
   selectedStyle?: CSSProperties;
 }
 
-type PreviewComponentType = React.JSXElementConstructor<ConversationPreviewProps> 
+export const resolve_chat_room_name = (room: ChatRoom, displayInfo: { [index: string]: UserDisplayInfo }, userType: SessionType, currentUserId: string) => {
+  if (room.recentSender !== currentUserId) {
+    return user_display_name(displayInfo[room.recentSender ?? ''])
+  }
+  if (userType === 'user') {
+    return user_display_name(displayInfo[room?.enduserIds?.[0] ?? room.creator ?? ''])
+  }
+  if (userType === 'enduser') {
+    console.log(room.recentSender, room.creator, displayInfo[room.creator])
+    return user_display_name(displayInfo[room?.userIds?.[0] ?? room.creator ?? ''])
+  }
+  return ''
+}
+
+export type PreviewComponentType = React.JSXElementConstructor<ConversationPreviewProps> 
 
 interface SidebarInfo {
   selectedRoom?: string;
@@ -264,19 +257,23 @@ interface SidebarInfo {
   previewStyle?: CSSProperties;
 }
 
-const ConversationPreview = ({ onClick, selected, room, style, selectedStyle }: ConversationPreviewProps) => (
-  <Flex flex={1} column onClick={() => !selected && onClick?.(room)} 
-    style={selected ? (selectedStyle ?? defaultSidebarItemStyleSelected) : (style ?? defaultSidebarItemStyle) }
-  >
-    <Typography style={defaultMessageNameStyle}>
+const ConversationPreview = ({ onClick, selected, room, style, displayInfo, selectedStyle }: ConversationPreviewProps) => {
+  const session = useResolvedSession()
 
-    </Typography>
+  return (
+    <Flex flex={1} column onClick={() => !selected && onClick?.(room)} 
+      style={selected ? (selectedStyle ?? defaultSidebarItemStyleSelected) : (style ?? defaultSidebarItemStyle) }
+    >
+      <Typography style={defaultMessageNameStyle}>
+        {resolve_chat_room_name(room, displayInfo, session.type, session.userInfo.id)}
+      </Typography>
 
-    <Typography style={defaultMessagePreviewStyle}>
-      {room.recentMessage ?? room.title}
-    </Typography>
-  </Flex>
-)
+      <Typography style={defaultMessagePreviewStyle}>
+        {room.recentMessage ?? room.title}
+      </Typography>
+    </Flex>
+  )
+}
 
 const PreviewWithData = ({ PreviewComponent=ConversationPreview, ...props }: Omit<ConversationPreviewProps, 'displayInfo'> & Pick<SidebarInfo, 'PreviewComponent'>) => {
   const session = useResolvedSession()
@@ -406,22 +403,6 @@ export const EnduserChatSplit = ({ style=defaultSplitChatStyle } : Styled) => {
   return (
     <SplitChat session={session} type="enduser" style={style}/>
   )
-}
-
-export const useUserDisplayNamesForEnduser = (userIds: string[]): Indexable<UserDisplayInfo | undefined> => {
-  const [userInfo, { findById: findUser }] = useUserDisplayInfo()
-
-
-  if (!userIds || userIds?.length === 0) return {}
-
-  const idToInfo = {} as Indexable
-  if (userInfo.status !== LoadingStatus.Loaded) return idToInfo
-
-  for (const id of userIds) {
-    idToInfo[id] = findUser(id)
-  }
-
-  return idToInfo
 }
 
 const defaultColorForStatus: { [K in UserActivityStatus]: CSSProperties['color'] } = {
