@@ -257,6 +257,35 @@ const deauthentication_tests = async (byTimeout=false) => {
   ])
 }
 
+const calendar_events = async () => {
+  log_header(`Meetings Tests`)
+
+  const enduser = await user1.api.endusers.createOne({ email: "socketenduser@tellescope.com" })
+  await user1.api.endusers.set_password({ id: enduser.id, password: 'enduserPassword!' })
+  await enduserSDK.authenticate(enduser.email as string, 'enduserPassword!')
+  await wait(undefined, 25)
+
+  const userEvents = [] as ChatMessage[]
+  const enduserEvents = [] as ChatMessage[]
+  user1.handle_events({ 'created-calendar_events': rs => userEvents.push(...rs) }) 
+  enduserSDK.handle_events({ 'created-calendar_events': rs => enduserEvents.push(...rs) }) 
+
+  const event = await user1.api.calendar_events.createOne({ 
+    durationInMinutes: 30, 
+    startTimeInMS: Date.now(),
+    title: 'Test Socket Event',
+    attendees: [{ type: 'enduser', id: enduser.id }],
+  })
+  await wait(undefined, 25)
+
+  assert(userEvents.length === 0, 'creator got calendar event', 'calendar event not gone to creator')
+
+  assert(enduserEvents.length === 1 && enduserEvents[0].id === event.id, 'enduser did not get calendar event', 'calendar event on create for attending enduser')
+
+  // cleanup
+  await user1.api.endusers.deleteOne(enduser.id)
+}
+
 (async () => {
   log_header("Sockets")
 
@@ -277,6 +306,7 @@ const deauthentication_tests = async (byTimeout=false) => {
       process.exit()
     }
 
+    await calendar_events()
     await enduser_tests()
     await basic_tests()
     await access_tests()

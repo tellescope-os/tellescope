@@ -370,11 +370,15 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
       [`deleted-${modelName}`]: removeLocalElements,
     })
 
-    if (socketConnection !== 'model') return 
-    session.subscribe({ [modelName]: modelName }) // subscribe to model-wide updates
+    if (socketConnection === 'model')  {
+      session.subscribe({ [modelName]: modelName }) // subscribe to model-wide updates
+    }
 
     return () => { 
-      session.unsubscribe([modelName])
+      if (socketConnection === 'model')  {
+        session.unsubscribe([modelName])
+      }
+
       setFetched(modelName + 'socket', false)
       session.removeAllSocketListeners(`created-${modelName}`)
       session.removeAllSocketListeners(`updated-${modelName}`)

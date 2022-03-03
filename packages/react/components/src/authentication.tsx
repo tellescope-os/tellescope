@@ -41,6 +41,8 @@ export const WithSession = (p : { children: React.ReactNode, sessionOptions?: Us
   const [session, setSession] = useState(() => new Session(p.sessionOptions))
 
   const updateLocalSessionInfo: SessionContext_T['updateLocalSessionInfo'] = (u, a) => setSession(s => new Session({ 
+    ...s,
+    handleUnauthenticated: s.handleUnauthenticated,
     host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken,  // preserve other important info
     userInfo: { ...s.userInfo, ...u }
   }))
@@ -76,6 +78,8 @@ export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptio
 
   const updateLocalSessionInfo: EnduserSessionContext_T['updateLocalSessionInfo'] = (u, a) => {
     setEnduserSession(s => new EnduserSession({ 
+      ...s,
+      handleUnauthenticated: s.handleUnauthenticated,
       host: s.host, apiKey: s.apiKey, authToken: a ?? s.authToken, // preserve other important info
       businessId: u.businessId ?? s.businessId,
       enduser: { ...s.userInfo, ...u } 
