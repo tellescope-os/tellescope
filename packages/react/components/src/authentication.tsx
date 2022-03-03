@@ -131,6 +131,7 @@ interface LoginData {
 }
 export const LoginForm = ({ onSubmit, style, fillEmail, fillPassword } : AccountFill & { onSubmit: (d: LoginData) => Promise<void> } & Styled) => (
   <FormBuilder<{ email: string, password: string }>
+    disabledIfUnchanged={false}
     style={style}
     fields={{
       email: emailInput({ id: 'email', initialValue: fillEmail }),

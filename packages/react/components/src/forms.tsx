@@ -241,8 +241,9 @@ interface FormBuilder_T <T> extends SubmitButtonOptions, Styled {
   onSubmit: (v: T) => Promise<void>;
   onSuccess?: () => void;
   onError?: (e: any) => void;
+  disabledIfUnchanged?: boolean;
 }
-export const FormBuilder = <T,>({ fields, onSubmit, onSuccess, onError, style, ...options } : FormBuilder_T<T>) => {
+export const FormBuilder = <T,>({ fields, onSubmit, onSuccess, onError, style, disabledIfUnchanged, ...options } : FormBuilder_T<T>) => {
   const [error, setError] = React.useState('')
 
   const validationSchema = {} as { [K in keyof T]: YupValidator } 
@@ -307,7 +308,7 @@ export const FormBuilder = <T,>({ fields, onSubmit, onSuccess, onError, style, .
 
           <Flex column>
             <Flex>
-              <FormikSubmitButton formik={formik} onClick={formik.handleSubmit} {...options}/>
+              <FormikSubmitButton formik={formik} disabledIfUnchanged={disabledIfUnchanged} onClick={formik.handleSubmit} {...options}/>
             </Flex>
             <Flex>
             {error ? <Typography color="error">{error}</Typography> : null}
