@@ -120,16 +120,21 @@ export const useEnduserSession = (o={} as SessionHookOptions): EnduserSession =>
   return enduserSession ?? null
 }
 
+interface AccountFill {
+  fillEmail?: string;
+  fillPassword?: string,
+}
+
 interface LoginData {
   email: string;
   password: string,
 }
-export const LoginForm = ({ onSubmit, style }: { onSubmit: (d: LoginData) => Promise<void> } & Styled) => (
+export const LoginForm = ({ onSubmit, style, fillEmail, fillPassword } : AccountFill & { onSubmit: (d: LoginData) => Promise<void> } & Styled) => (
   <FormBuilder<{ email: string, password: string }>
     style={style}
     fields={{
-      email: emailInput({ id: 'email' }),
-      password: passwordInput({ id: 'password' }),
+      email: emailInput({ id: 'email', initialValue: fillEmail }),
+      password: passwordInput({ id: 'password', initialValue: fillPassword }),
     }}
     submitText="Login"
     submittingText="Logging in"
@@ -141,12 +146,12 @@ interface LoginHandler <S extends { authToken: string }> {
   onLogin?: (sessionInfo: S) => void;
 }
 
-export const UserLogin = ({ onLogin, style }: LoginHandler<UserSessionModel & { authToken: string }> & Styled) => {
+export const UserLogin = ({ onLogin, ...props }: AccountFill & LoginHandler<UserSessionModel & { authToken: string }> & Styled) => {
   const { session, updateLocalSessionInfo } = useContext(SessionContext)
   if (!(session && updateLocalSessionInfo)) throw new Error("UserLogin used outside of WithSession")
 
   return (
-    <LoginForm style={style} onSubmit={async ({ email, password }) => {
+    <LoginForm {...props} onSubmit={async ({ email, password }) => {
       const { authToken, ...userInfo } = await session.authenticate(email, password)
       updateLocalSessionInfo?.(userInfo, authToken)
       onLogin?.({ authToken, ...userInfo })
@@ -154,12 +159,12 @@ export const UserLogin = ({ onLogin, style }: LoginHandler<UserSessionModel & { 
   )
 }
 
-export const EnduserLogin = ({ onLogin }: LoginHandler<Enduser & { authToken: string }>) => {
+export const EnduserLogin = ({ onLogin, ...props }: AccountFill & Styled & LoginHandler<Enduser & { authToken: string }>) => {
   const { enduserSession, updateLocalSessionInfo } = useContext(EnduserSessionContext)
   if (!(enduserSession && updateLocalSessionInfo)) throw new Error("EnduserLogin used outside of WithEnduserSession")
 
   return (
-    <LoginForm onSubmit={async ({ email, password }) => {
+    <LoginForm {...props} onSubmit={async ({ email, password }) => {
       const { authToken, enduser } = await enduserSession.authenticate(email, password)
       updateLocalSessionInfo?.(enduser, authToken)
       onLogin?.({ authToken, ...enduser })

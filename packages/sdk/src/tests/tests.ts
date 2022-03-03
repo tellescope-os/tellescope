@@ -9,7 +9,6 @@ import {
   UserDisplayInfo,
 } from "@tellescope/types-client"
 import { 
-  Model as ClientModel,
   ModelName,
 } from "@tellescope/types-models"
 

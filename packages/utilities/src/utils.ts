@@ -60,7 +60,7 @@ export const objects_equivalent = (o1?: Indexable, o2?: Indexable) => {
   return true
 }
 
-export const user_display_name = (user?: { fname?: string, lname?: string, email?: string, phone?: string, id: string }) => {
+export const user_display_name = (user?: { fname?: string, lname?: string, email?: string, phone?: string, id?: string }) => {
   if (!user) return ''
   const { fname, lname, email, phone, id } = user
 
@@ -68,8 +68,9 @@ export const user_display_name = (user?: { fname?: string, lname?: string, email
   if (fname) return fname
   if (email) return email
   if (phone) return phone
+  if (id) return `User ${id}`
 
-  return `User ${id}`
+  return ''
 }
 
 export interface ActivityOptions {
