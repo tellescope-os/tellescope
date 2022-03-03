@@ -6,6 +6,7 @@ import { configureStore, Action, EnhancedStore } from '@reduxjs/toolkit'
 import {
   ChatRoom,
   ChatMessage,
+  EngagementEvent,
   Ticket,
   Meeting,
   UserDisplayInfo,
@@ -25,6 +26,7 @@ import {
   ChatRoomDisplayInfo,
   useChatRoomDisplayInfo as useChatRoomDisplayInfoShared,
   useEnduserSession,
+  useEngagementEvents as useEngagementEventsShared,
 } from "./index"
 
 const usersSlice = createSliceForList<UserDisplayInfo, 'users'>('users')
@@ -102,3 +104,4 @@ export const useChatRoomDisplayInfo = (roomId: string, o={} as HookOptions<ChatR
                useChatRoomDisplayInfoShared(roomId, 'enduser', o)
 
 export const useCalendarEvents = (o={} as HookOptions<CalendarEvent>) => useCalendarEventsShared('enduser', o)
+export const useEngagementEvents = (o={} as HookOptions<EngagementEvent>) => useEngagementEventsShared('enduser', o)

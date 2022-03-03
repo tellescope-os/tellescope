@@ -20,7 +20,7 @@ import { schema, CustomActions, extractFields } from '@tellescope/schema'
 
 export interface EnduserSessionOptions extends SessionOptions { enduser?: Enduser, businessId: string }
 
-type EnduserAccessibleModels = 'endusers' | "chat_rooms" | 'chats' | 'files' | 'tickets' | 'calendar_events'
+type EnduserAccessibleModels = 'endusers' | "chat_rooms" | 'chats' | 'files' | 'tickets' | 'calendar_events' | 'engagement_events'
 
 export const defaultQueries = <N extends keyof ClientModelForName>(
   s: EnduserSession, n: keyof ClientModelForName_required
@@ -69,6 +69,7 @@ const loadDefaultQueries = (s: EnduserSession): { [K in EnduserAccessibleModels]
   chats: defaultQueries(s, 'chats'),
   endusers: defaultQueries(s, 'endusers'),
   calendar_events: defaultQueries(s, 'calendar_events'),
+  engagement_events: defaultQueries(s, 'engagement_events'),
   files: defaultQueries(s, 'files'),
   tickets: defaultQueries(s, 'tickets'),
 })

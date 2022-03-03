@@ -355,6 +355,7 @@ export interface Meeting extends Meeting_readonly, Meeting_required, Meeting_upd
   attendees: Attendee[],
   meetingInfo: { Meeting: MeetingInfo },
   status: MeetingStatus,
+  endedAt?: Date,
 }
 
 export interface Note_readonly extends ClientRecord {}

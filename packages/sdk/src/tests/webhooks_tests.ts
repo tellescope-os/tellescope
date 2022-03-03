@@ -123,6 +123,14 @@ const meetings_tests = async (isSubscribed: boolean) => {
 
   // cleanup
   await sdk.api.meetings.end_meeting({ id: meeting.id }) // also cleans up messages
+
+  const meetings = await sdk.api.meetings.my_meetings()
+  const endedMeeting = meetings.find(m => m.id === meeting.id) 
+  assert(
+    !!endedMeeting && endedMeeting.status === 'ended' && !!endedMeeting.endedAt, 
+    'Meeting missing updated values on end', 
+    'Meeting ended correctly'
+  )
 }
 
 const tests: { [K in WebhookSupportedModel]: (isSubscribed: boolean) => Promise<void> } = {

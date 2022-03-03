@@ -20,6 +20,7 @@ import {
   useCalendarEvents as useCalendarEventsShared,
   ChatRoomDisplayInfo,
   useChatRoomDisplayInfo as useChatRoomDisplayInfoShared,
+  useEngagementEvents as useEngagementEventsShared,
   TellescopeStoreContext,
   // createSliceForMappedList,
 } from "./state"
@@ -37,6 +38,7 @@ import {
   File,
   Note,
   CalendarEvent,
+  EngagementEvent,
 } from "@tellescope/types-client"
 
 const endusersSlice = createSliceForList<Enduser, 'endusers'>('endusers')
@@ -220,3 +222,4 @@ export const useChatRoomDisplayInfo = (roomId: string, o={} as HookOptions<ChatR
                useChatRoomDisplayInfoShared(roomId, 'user', o)
 
 export const useCalendarEvents = (o={} as HookOptions<CalendarEvent>) => useCalendarEventsShared('user', o)
+export const useEngagementEvents = (o={} as HookOptions<EngagementEvent>) => useEngagementEventsShared('user', o)

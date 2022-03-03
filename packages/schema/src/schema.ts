@@ -591,6 +591,7 @@ export const schema: SchemaV1 = build_schema({
     },
     constraints: { unique: [], relationship: [] },
     defaultActions: DEFAULT_OPERATIONS,
+    enduserActions: { create: {}, createMany: {}, read: {}, readMany: {} }, // can only read their own
     customActions: {},
   },
   journeys: {
@@ -1391,7 +1392,8 @@ export const schema: SchemaV1 = build_schema({
       meetingInfo: {
         validator: meetingInfoValidator,
         readonly: true
-      }
+      },
+      endedAt: { validator: dateValidator },
     }
   },
   notes: {

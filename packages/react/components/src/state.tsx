@@ -16,6 +16,7 @@ import {
 import {
   ChatRoom,
   ChatMessage,
+  EngagementEvent, 
   UserDisplayInfo,
   CalendarEvent,
 } from "@tellescope/types-client"
@@ -34,17 +35,27 @@ export const TellescopeStoreContext = React.createContext<ReactReduxContextValue
 export const createTellescopeSelector = () => createSelectorHook(TellescopeStoreContext)
 
 interface FetchContextValue {
-  didFetch: (s: string) => boolean,
+  didFetch: (s: string, force?: boolean, refetchInMS?: number) => boolean,
   setFetched: (s: string, b: boolean) => void;
 }
 const FetchContext = createContext({} as FetchContextValue)
 export const WithFetchContext = ( { children } : { children: React.ReactNode }) => {
-  const lookupRef = React.useRef({} as Indexable<boolean>)  
+  const lookupRef = React.useRef({} as Indexable<{ lastFetch: number, status: boolean }>)  
 
   return (
     <FetchContext.Provider value={{
-      didFetch: s => lookupRef.current[s],
-      setFetched: (s, b) => lookupRef.current[s] = b
+      didFetch: (s, force, refetchInMS=5000) => {
+        const { status, lastFetch } = lookupRef.current[s] ?? {}
+        if (lastFetch + refetchInMS >= Date.now()) return true // prevent more frequent reloads
+        if (force) return false // trigger fetch when forced
+
+        return status // return true status
+      },
+      setFetched: (s, b) => {
+        lookupRef.current[s] = lookupRef.current[s] ?? {}
+        lookupRef.current[s].status = b
+        lookupRef.current[s].lastFetch = Date.now()
+      },
      }}>
       {children}
     </FetchContext.Provider>
@@ -167,6 +178,7 @@ const chatRoomsSlice = createSliceForList<ChatRoom, 'chat_rooms'>('chat_rooms')
 const calendarEventsSlice = createSliceForList<CalendarEvent, 'calendar_events'>('calendar_events')
 const chatsSlice = createSliceForMappedList<ChatMessage, 'chats'>('chats')
 const chatRoomDisplayInfoslice = createSliceForMappedList<ChatRoomDisplayInfo, 'chat-room-display-info'>('chat-room-display-info')
+const engagementEventsSlice = createSliceForList<EngagementEvent, 'engagement_events'>('engagement_events')
 
 export const sharedConfig = {
   reducer: { 
@@ -174,6 +186,7 @@ export const sharedConfig = {
     chats: chatsSlice.reducer,
     chatRoomDisplayInfo: chatRoomDisplayInfoslice.reducer,
     calendar_events: calendarEventsSlice.reducer,
+    engagement_events: engagementEventsSlice.reducer,
   },
 }
 
@@ -199,6 +212,7 @@ export interface ListUpdateMethods <T, ADD> {
   updateLocalElements: (updates: { [id: string]: Partial<T> }) => void,
   removeElement: (id: string) => Promise<void>,
   removeLocalElements: (ids: string[]) => void,
+  reload: () => void;
 }
 export type ListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [LoadedData<T[]>, ListUpdateMethods<T, ADD>]
 export const useListStateHook = <T extends { id: string | number }, ADD extends Partial<T>> (
@@ -215,14 +229,16 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   },
   options?: {
     socketConnection?: 'model' | 'keys' | 'self' | 'none'
-    loadFilter?: Partial<T>,
     onAdd?: (n: T[]) => void;
     onUpdate?: (n: ({ id: string } & Partial<T>)[]) => void;
     onDelete?: (id: string[]) => void;
-  }
+  } & HookOptions<T>
 ): ListStateReturnType<T, ADD> => 
 {
   const { loadQuery, addOne, addSome, updateOne, deleteOne } = apiCalls
+  if (options?.refetchInMS !== undefined && options.refetchInMS < 5000) {
+    throw new Error("refetchInMS must be greater than 5000")
+  }
 
   const socketConnection = options?.socketConnection ?? 'model'
   const loadFilter = options?.loadFilter
@@ -294,9 +310,10 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     return state.value.find(v => v.id === id)
   }, [state])
 
-  useEffect(() => {
+  const load = useCallback((force: boolean) => {
+    if (options?.dontFetch) return
     const fetchKey = loadFilter ? JSON.stringify(loadFilter) + modelName : modelName
-    if (didFetch(fetchKey)) return
+    if (didFetch(fetchKey, force, options?.refetchInMS)) return
     setFetched(fetchKey, true)
 
     toLoadedData(() => loadQuery({ filter: loadFilter })).then(
@@ -318,13 +335,22 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
       }
     )
 
-    return () => {
-      if (state.status !== LoadingStatus.Loaded || socketConnection !== 'keys') return
-      if (!isModelName(modelName)) return // a custom extension without our socket support
+    // unsubscribing from sockets doesn't matter too much, 
+    // and having load / reload depend on state can cause unexpected re-renders for client 
+    
+    // return () => {
+    //   if (state.status !== LoadingStatus.Loaded || socketConnection !== 'keys') return
+    //   if (!isModelName(modelName)) return // a custom extension without our socket support
 
-      session.unsubscribe(state.value.map(e => e.id.toString()))
-    }
-  }, [state, socketConnection, didFetch, modelName, isModelName, loadFilter, loadQuery])
+    //   session.unsubscribe(state.value.map(e => e.id.toString()))
+    // }
+  }, [socketConnection, didFetch, modelName, isModelName, loadFilter, loadQuery, options?.dontFetch])
+
+  const reload = useCallback(() => load(true), [load])
+
+  useEffect(() => {
+    load(false)
+  }, [load])
 
   useEffect(() => {
     if (!isModelName(modelName)) return // a custom extension without our socket support
@@ -358,7 +384,8 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
 
   return [state, {
     addLocalElement, addLocalElements,
-    createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements 
+    createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements,
+    reload,
   }]
 }
 
@@ -368,7 +395,7 @@ export interface MappedListUpdateMethods <T, ADD>{
   addLocalElements: (e: T[], o?: AddOptions) => void,
   createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
-  reload: () => Promise<void>;
+  reload: () => void;
 }
 export type MappedListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
   LoadedData<T[]>,
@@ -390,13 +417,15 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
   },
   options?: {
     socketConnection?: 'keys' | 'none',
-    loadFilter?: Partial<T>,
     onAdd?: (n: T[]) => void;
     onUpdate?: (n: Partial<T>[]) => void;
     onDelete?: (id: string[]) => void;
-  }
+  } & HookOptions<T>
 ): MappedListStateReturnType<T, ADD>=> {
   const { loadQuery, addOne, addSome, updateOne, deleteOne } = apiCalls
+  if (options?.refetchInMS !== undefined && options.refetchInMS < 5000) {
+    throw new Error("refetchInMS must be greater than 5000")
+  }
 
   const loadFilter = options?.loadFilter
   const socketConnection = options?.socketConnection ?? 'keys'
@@ -449,21 +478,22 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     return addLocalElementsForKey(key, (await addSome(es)).created, options)
   }, [filterKey, addLocalElementsForKey, addSome])
 
-  const load = useCallback(async (reload=false) => {
+  const load = useCallback(async (force: boolean) => {
+    if (options?.dontFetch) return
     if (!key) return
 
     // same key might be used across different models!
     const fetchKey = loadFilter ? JSON.stringify(loadFilter) + key + modelName : key + modelName 
-    if (didFetch(fetchKey) && reload === false) return
+    if (didFetch(fetchKey, force, options?.refetchInMS)) return
     setFetched(fetchKey, true)
 
     const filter: Partial<T> = { ...loadFilter, [filterKey]: key } as any // we know [filterKey] is a keyof T
     const data = await toLoadedData(() => loadQuery({ filter }))
     dispatch(slice.actions.setForKey({ value: { key, data } }))
-  }, [key, loadFilter, dispatch, didFetch, loadQuery])
+  }, [key, loadFilter, dispatch, didFetch, loadQuery, options?.dontFetch])
 
   useEffect(() => {
-    load()
+    load(false)
   }, [load])
 
   useEffect(() => {
@@ -484,13 +514,15 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     }
   }, [modelName, isModelName, session, key, didFetch, socketConnection, addLocalElementForKey])
 
+  const reload = useCallback(() => load(true), [load])
+
   return [state[key] ?? UNLOADED, {
     setLocalElementForKey,
     addLocalElement,
     addLocalElements,
     createElement,
     createElements,
-    reload: () => load(true)
+    reload,
   }]
 }
 
@@ -498,7 +530,7 @@ export interface MappedStateUpdateMethods <T, ADD>{
   setLocalElementForKey: (key: string, e: LoadedData<T[]>) => void,
   addLocalElement: (e: T, o?: AddOptions) => void,
   createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
-  reload: () => Promise<void>
+  reload: () => void;
 }
 export type MappedStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
   LoadedData<T>,
@@ -552,6 +584,8 @@ export const useMappedStateHook = <T extends { id: string | number }, ADD extend
 
 export type HookOptions<T> = {
   loadFilter?: Partial<T>,
+  refetchInMS?: number,
+  dontFetch?: boolean,
   addTo?: AddOptions['addTo'],
 }
 
@@ -567,6 +601,7 @@ export const useChatRoomDisplayInfo = (roomId: string, type: SessionType, option
         return [{ id, ...display_info }] as ChatRoomDisplayInfo[]
       }
     },
+    { ...options }
   ) 
 
   return toReturn
@@ -585,6 +620,23 @@ export const useCalendarEvents = (type: SessionType, options={} as HookOptions<C
     },
     { 
       socketConnection: 'self',
+      ...options,
+    },
+  )
+}
+
+export const useEngagementEvents = (type: SessionType, options={} as HookOptions<EngagementEvent>) => {
+  const session = useResolvedSession(type)
+
+  return useListStateHook('engagement_events', useTypedSelector(s => s.engagement_events), session, engagementEventsSlice,
+    { 
+      loadQuery: session.api.engagement_events.getSome,
+      addOne: session.api.engagement_events.createOne,
+      addSome: session.api.engagement_events.createSome,
+      deleteOne: session.api.engagement_events.deleteOne,
+      updateOne: session.api.engagement_events.updateOne,
+    },
+    { 
       ...options,
     },
   )

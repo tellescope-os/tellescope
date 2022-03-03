@@ -14,6 +14,7 @@ export type ClientModelForName = ToClientModels<models.ModelForName>
 
 export type CalendarEvent = ClientModelForName['calendar_events']
 export type Enduser = ClientModelForName['endusers']
+export type EngagementEvent = ClientModelForName['engagement_events']
 export type ChatRoom = ClientModelForName['chat_rooms']
 export type ChatMessage = ClientModelForName['chats']
 export type File = ClientModelForName['files']
