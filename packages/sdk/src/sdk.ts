@@ -2,6 +2,7 @@ import {
   CustomActions,
   schema,
   extractFields,
+  PublicActions,
 } from "@tellescope/schema"
 
 import {
@@ -107,6 +108,10 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   },
   users: {
     display_names: () => Promise<{ fname: string, lname: string, id: string }[]>,
+    request_password_reset: (args: extractFields<PublicActions['users']['request_password_reset']['parameters']>) => 
+                          Promise<extractFields<PublicActions['users']['request_password_reset']['returns']>>,
+    reset_password: (args: extractFields<PublicActions['users']['reset_password']['parameters']>) => 
+                          Promise<extractFields<PublicActions['users']['reset_password']['returns']>>,
   },
   files: {
     prepare_file_upload: (args: FileDetails) => Promise<{ presignedUpload: S3PresignedPost, file: File }>,
@@ -144,11 +149,17 @@ export class Session extends SessionManager {
 
     const queries = loadDefaultQueries(this) as Queries
 
+
     queries.journeys.update_state = ({id, name, updates}) => this._PATCH(`/v1/journey/${id}/state/${name}`, { updates })
     queries.endusers.set_password = ({id, password}) => this._POST(`/v1/set-enduser-password`, { id, password })
     queries.endusers.is_authenticated = ({id, authToken}) => this._GET(`/v1/enduser-is-authenticated`, { id, authToken })
     queries.endusers.generate_auth_token = args => this._GET(`/v1/generate-enduser-auth-token`, args)
+
     queries.users.display_names = () => this._GET<{}, { fname: string, lname: string, id: string }[]>(`/v1/user-display-names`),
+    
+    queries.users.request_password_reset = (args) => this._POST(`/v1${schema.users.publicActions.request_password_reset.path}`, args),
+    queries.users.reset_password = (args) => this._POST(`/v1${schema.users.publicActions.reset_password.path}`, args),
+
     queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args),
     queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a),
     queries.chat_rooms.join_room = a => this._POST('/v1/join-chat-room', a),

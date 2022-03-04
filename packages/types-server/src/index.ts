@@ -50,6 +50,14 @@ export interface InternalBusinessRecord {
   businessId: string,
 }
 
+export interface AccessToken extends InternalBusinessRecord {
+  type: 'passwordReset',
+  token: string,
+  userId: string,
+  expire24HoursAfter: Date,
+  // fields: object,
+}
+
 export interface DelayedEvent extends InternalBusinessRecord {
   type: 'sessionTimeout',
   triggerAt: number,

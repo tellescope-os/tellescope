@@ -3,7 +3,6 @@ import NodeFormData from "form-data"
 import { Socket, io } from 'socket.io-client'
 
 import { 
-  FileBlob,
   ReactNativeFile,
   S3PresignedPost,
 } from "@tellescope/types-utilities"
