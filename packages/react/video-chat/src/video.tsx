@@ -3,7 +3,8 @@ import React, { useCallback, useState, CSSProperties, Children, useEffect } from
 import {
   useResolvedSession,
   useSession,
-} from "@tellescope/react-components/lib/esm/authentication"
+  Styled,
+} from "@tellescope/react-components"
 
 import {
   UserIdentity,
@@ -49,7 +50,6 @@ import {
   JoinVideoCallProps,
 } from "./video_shared"
 import { ConsoleLogger, DefaultDeviceController, Logger, LogLevel } from "amazon-chime-sdk-js";
-import { Styled } from "@tellescope/react-components";
 
 const WithContext = ({ children } : { children: React.ReactNode }) => {
   const [meeting, setMeeting] = useState(undefined as MeetingInfo | undefined)

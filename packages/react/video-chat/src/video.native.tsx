@@ -15,8 +15,11 @@ import {
 import {
   UserIdentity,
 } from '@tellescope/types-utilities'
-import { useResolvedSession, useSession } from "@tellescope/react-components/lib/esm/authentication"
-import { Flex } from "@tellescope/react-components/lib/esm/layout"
+import { 
+  useResolvedSession, 
+  useSession,
+  Flex,
+} from "@tellescope/react-components"
 import { 
   Button, 
   Typography, 

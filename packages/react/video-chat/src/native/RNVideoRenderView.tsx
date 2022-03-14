@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MIT-0
  */
 
-import PropTypes from 'prop-types';
 import React from 'react';
 import { requireNativeComponent, findNodeHandle, ViewStyle } from 'react-native';
 import { NativeFunction } from './bridge';

@@ -7,13 +7,11 @@ import {
   MicrophoneIcon,
   MicrophoneOffIcon,
   CallEndIcon,
-
+  LabeledIconButton,
+  Flex,
   Paper,
-
   Styled,
-} from "@tellescope/react-components/lib/esm/mui"
-import { LabeledIconButton } from "@tellescope/react-components/lib/esm/controls"
-import { Flex } from "@tellescope/react-components/lib/esm/layout"
+} from "@tellescope/react-components"
 import { CurrentCallContext } from "./video_shared"
 import { useStartVideoCall } from "./video"
 import { useJoinVideoCall } from "."
