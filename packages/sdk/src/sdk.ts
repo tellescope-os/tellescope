@@ -93,12 +93,17 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   forms: defaultQueries(s, 'forms'),
   form_responses: defaultQueries(s, 'form_responses'),
   calendar_events: defaultQueries(s, 'calendar_events'),
+  event_automations: defaultQueries(s, 'event_automations'),
+  sequence_automations: defaultQueries(s, 'sequence_automations'),
+  automation_endusers: defaultQueries(s, 'automation_endusers'),
   webhooks: defaultQueries(s, 'webhooks')
 })
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   journeys: {
     update_state: (args: { id: string, name: string, updates: JourneyState }) => Promise<void>
+    delete_states: (args: extractFields<CustomActions['journeys']['delete_states']['parameters']>) => 
+                          Promise<extractFields<CustomActions['journeys']['delete_states']['returns']>>,
   },
   endusers: {
     set_password: (args: { id: string, password: string }) => Promise<void>,
@@ -135,6 +140,8 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   webhooks: {
     configure: (args: { url: string, secret: string, subscriptions?: WebhookSubscriptionsType }) => Promise<void>,
     update: (args: { url?: string, secret?: string, subscriptionUpdates?: WebhookSubscriptionsType }) => Promise<void>
+    send_automation_webhook: (args: extractFields<CustomActions['webhooks']['send_automation_webhook']['parameters']>) => 
+      Promise<extractFields<CustomActions['webhooks']['send_automation_webhook']['returns']>>,
   },
 }
 
@@ -151,6 +158,8 @@ export class Session extends SessionManager {
 
 
     queries.journeys.update_state = ({id, name, updates}) => this._PATCH(`/v1/journey/${id}/state/${name}`, { updates })
+    queries.journeys.delete_states = ({ id, states }) => this._DELETE(`/v1/journey/${id}/states`, { states })
+
     queries.endusers.set_password = ({id, password}) => this._POST(`/v1/set-enduser-password`, { id, password })
     queries.endusers.is_authenticated = ({id, authToken}) => this._GET(`/v1/enduser-is-authenticated`, { id, authToken })
     queries.endusers.generate_auth_token = args => this._GET(`/v1/generate-enduser-auth-token`, args)
@@ -174,6 +183,7 @@ export class Session extends SessionManager {
 
     queries.webhooks.configure = a => this._POST('/v1/configure-webhooks', a)
     queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)
+    queries.webhooks.send_automation_webhook = a => this._POST(`/v1${schema.webhooks.customActions.send_automation_webhook}`, a),
 
     this.api = queries
   }

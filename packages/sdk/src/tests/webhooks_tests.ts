@@ -18,6 +18,7 @@ import {
   WebhookRecord,
   WebhookCall,
   CUDSubscription,
+  AutomationAction,
 } from "@tellescope/types-models"
 
 import { Session } from "../sdk"
@@ -28,7 +29,7 @@ const [email2, password2] = [process.env.TEST_EMAIL_2, process.env.TEST_PASSWORD
 const [nonAdminEmail, nonAdminPassword] = [process.env.NON_ADMIN_EMAIL, process.env.NON_ADMIN_PASSWORD]
 if (!(email && password && email2 && password2 && nonAdminEmail && nonAdminPassword)) {
   console.error("Set TEST_EMAIL and TEST_PASSWORD")
-  process.exit()
+  process.exit(1)
 }
 
 
@@ -46,8 +47,12 @@ const webhookURL = `http://127.0.0.1:${PORT}${webhookEndpoint}`
 
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
-const verify_integrity = (records: WebhookRecord[], timestamp: string, integrity: string,) => (
-  sha256(records.map(r => r.id).join('') + timestamp + TEST_SECRET) === integrity
+const verify_integrity = (type: string, message: string, records: WebhookRecord[], timestamp: string, integrity: string,) => (
+  sha256(
+    type === "automation" 
+      ? message + timestamp + TEST_SECRET
+      : records.map(r => r.id).join('') + timestamp + TEST_SECRET
+  ) === integrity
 )
 
 const handledEvents: WebhookCall[] = []
@@ -55,9 +60,9 @@ app.post(webhookEndpoint, (req, res) => {
   const body = req.body as WebhookCall
   // console.log('got hook', body.records, body.timestamp, body.integrity)
 
-  if (!verify_integrity(body.records, body.timestamp, body.integrity)) {
+  if (!verify_integrity(body.type, body.message ?? '', body.records, body.timestamp, body.integrity)) {
     console.error("Integrity check failed for request", JSON.stringify(body, null, 2))
-    process.exit()
+    process.exit(1)
   }
 
   handledEvents.push(req.body)
@@ -133,6 +138,54 @@ const meetings_tests = async (isSubscribed: boolean) => {
   )
 }
 
+const test_automation_webhooks = async () => {
+  log_header("Automation Events")
+  const state1 = "State 1", state2 = "State 2";
+  const testMessage = 'Test webhook from automation'
+  const journey = await sdk.api.journeys.createOne({ 
+    title: "Automations Test", 
+    defaultState: state1,
+    states: [
+      { name: state1, priority: 'N/A' },
+      { name: state2, priority: 'N/A' },
+    ]
+  })
+
+  const testAction: AutomationAction = {
+    type: 'sendWebhook',
+    info: { message: testMessage }
+  }
+  const a1 = await sdk.api.event_automations.createOne({
+    journeyId: journey.id,
+    event: {
+      type: "enterState",
+      info: { state: state1, journeyId: journey.id }
+    },
+    action: testAction,
+  })
+
+  // trigger a1 on create
+  const enduser = await sdk.api.endusers.createOne({ 
+    email: "automations@tellescope.com", 
+    journeys: { [journey.id]: journey.defaultState } 
+  })
+
+  // wait long enough for automation to process and send webhook
+  await wait(undefined, 2000)
+  
+  await check_next_webhook(
+    ({ message }) => message === testMessage,
+    'Automation webhook error', 
+    'Automation webhook received', 
+    true
+  )
+
+
+  // cleanup
+  await sdk.api.journeys.deleteOne(journey.id) // automation events deleted as side effect
+  await sdk.api.endusers.deleteOne(enduser.id)
+}
+
 const tests: { [K in WebhookSupportedModel]: (isSubscribed: boolean) => Promise<void> } = {
   chats: chats_tests,
   meetings: meetings_tests,
@@ -187,6 +240,7 @@ const run_tests = async () => {
   )
 
   log_header("Webhooks Tests with Subscriptions")
+  await test_automation_webhooks()
   for (const t in tests) {
     await tests[t as keyof typeof tests](true)
   }

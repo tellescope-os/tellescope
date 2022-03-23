@@ -181,7 +181,17 @@ export const useModalIconButton = (props: UseModalIconButtonProps) => {
   }
 }
 
-export const IconModal = ({ open, setOpen, children, disabled, onClick, style, ...props }: ReturnType<typeof useModalIconButton> & Styled & { children: React.ReactNode }) => (
+export const defaultModalStyle: React.CSSProperties = {
+  backgroundColor: '#ffffff', 
+  marginTop: '10vh',
+  marginLeft: '10vw',
+  height: '80vh',
+  width: '80vw',
+  borderRadius: 10,
+  padding: 25,
+}
+
+export const IconModal = ({ open, setOpen, children, disabled, onClick, style=defaultModalStyle, ...props }: ReturnType<typeof useModalIconButton> & Styled & { children: React.ReactNode }) => (
   <>
   <Modal open={open} setOpen={setOpen} style={style}>
     {children} 

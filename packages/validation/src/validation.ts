@@ -18,7 +18,6 @@ import {
   JourneyState,
   JourneyStatePriority,
   EmailEncoding,
-  ChatRoomTopic,
   ChatRoomType,
   AccountType,
   MessageTemplateType,
@@ -28,6 +27,32 @@ import {
   MeetingInfo,
   CUDSubscription,
   FormField,
+  AutomationEventType,
+  AutomationActionType,
+  AutomationEvent,
+  AutomationAction,
+  EnterStateAutomationEvent,
+  LeaveStateAutomationEvent,
+  FormResponseAutomationEvent,
+  AutomationForForm,
+  AutomationForAutomation,
+  AutomationForMessage,
+  AutomationForFormRequest,
+  AutomationForNotification,
+  AutomationForJourneyAndState,
+  AutomationForWebhook,
+  SendEmailAutomationAction,
+  SendSMSAutomationAction,
+  SendFormAutomationAction,
+  // CreateTaskAutomationAction,
+  SendNotificationAutomationAction,
+  SendWebhookAutomationAction,
+  UpdateStateForJourneyAutomationAction,
+  RemoveFromSequenceAutomationAction,
+  AddToSequenceAutomationAction,
+  AutomationEnduserStatus,
+  AutomationForTemplate,
+  CreateTaskAutomationAction,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -217,6 +242,18 @@ export const binaryOrValidator = <A, B>(f1: EscapeFunction<A>, f2: EscapeFunctio
   }, 
   { ...o, listOf: false }
 )
+export const orValidator = <T>(escapeFunctions: { [K in keyof T]: EscapeFunction<T[K]> }): EscapeBuilder<T[keyof T]> => (o={}) => build_validator(
+  value => {
+    for (const field in escapeFunctions) {
+      const escape = escapeFunctions[field]
+      try {
+        return escape(value)
+      } catch(err) { continue }
+    }
+    throw 'Value does not match any of the expected options'
+  },
+  { ...o, listOf: false }
+)
 
 export const filterCommandsValidator: EscapeBuilder<FilterType> = (o={}) => build_validator(
   (value: any) => {
@@ -318,8 +355,12 @@ export const SMSMessageValidator: EscapeBuilder<string> = (o={}) => build_valida
 export const listValidator = <T>(b: EscapeFunction<T>): EscapeBuilder<T[]> => o => build_validator(
   b, { ...o, listOf: true }
 )
+export const listValidatorEmptyOk = <T>(b: EscapeFunction<T>): EscapeBuilder<T[]> => o => build_validator(
+  b, { ...o, listOf: true, emptyListOk: true }
+)
 
 export const listOfStringsValidator = listValidator(stringValidator()) 
+export const listOfStringsValidatorEmptyOk = listValidatorEmptyOk(stringValidator()) 
 export const listOfObjectAnyFieldsValidator = listValidator(objectAnyFieldsValidator())
 
 export const booleanValidator: EscapeBuilder<boolean> = (options={}) => build_validator(
@@ -833,13 +874,13 @@ export const listOfFormFieldsValidator: EscapeBuilder<FormField[]> = (options={}
 )
 
 
-// to ensure all topics in type have coverage at compile-time
-const _CHAT_ROOM_TOPICS: { [K in ChatRoomTopic]: any } = {
-  task: '',
-  enduser: '',
-}
-export const CHAT_ROOM_TOPICS = Object.keys(_CHAT_ROOM_TOPICS) as ChatRoomTopic[]
-export const chatRoomTopicValidator = exactMatchValidator<ChatRoomTopic>(CHAT_ROOM_TOPICS)
+// // to ensure all topics in type have coverage at compile-time
+// const _CHAT_ROOM_TOPICS: { [K in ChatRoomTopic]: any } = {
+//   task: '',
+//   enduser: '',
+// }
+// export const CHAT_ROOM_TOPICS = Object.keys(_CHAT_ROOM_TOPICS) as ChatRoomTopic[]
+// export const chatRoomTopicValidator = exactMatchValidator<ChatRoomTopic>(CHAT_ROOM_TOPICS)
 
 // to ensure all topics in type have coverage at compile-time
 const _CHAT_ROOM_TYPES: { [K in ChatRoomType]: any } = {
@@ -950,3 +991,88 @@ export const userDisplayInfoValidator = objectValidator<UserDisplayInfo>({
   email: emailValidator(),
 })
 export const meetingDisplayInfoValidator = indexableValidator(mongoIdStringRequired, userDisplayInfoValidator())
+
+const _AUTOMATION_ENDUSER_STATUS: { [K in AutomationEnduserStatus]: any } = {
+  active: '',
+  paused: '',
+  finished: '',
+}
+export const AUTOMATION_ENDUSER_STATUS = Object.keys(_AUTOMATION_ENDUSER_STATUS) as AutomationEnduserStatus[]
+export const automationEnduserStatusValidator = exactMatchValidator<AutomationEnduserStatus>(AUTOMATION_ENDUSER_STATUS)
+
+const _AUTOMATION_EVENTS: { [K in AutomationEventType]: any } = {
+  enterState: '',
+  formResponse: '',
+  leaveState: '',
+}
+export const AUTOMATION_EVENTS = Object.keys(_AUTOMATION_EVENTS) as AutomationEventType[]
+export const automationEventTypeValidator = exactMatchValidator<AutomationEventType>(AUTOMATION_EVENTS)
+
+const _AUTOMATION_ACTIONS: { [K in AutomationActionType]: any } = {
+  addToSequence: '',
+  removeFromSequence: '',
+  createTask: '',
+  sendEmail: '',
+  sendSMS: '',
+  sendForm: '',
+  sendNotification: '',
+  updateStateForJourney: '',
+  sendWebhook: '',
+}
+export const AUTOMATION_ACTIONS = Object.keys(_AUTOMATION_ACTIONS) as AutomationActionType[]
+export const automationActionTypeValidator = exactMatchValidator<AutomationActionType>(AUTOMATION_ACTIONS)
+
+export const automationEventValidator = orValidator<{ [K in AutomationEventType]: AutomationEvent & { type: K } } >({
+  enterState: objectValidator<EnterStateAutomationEvent>({
+    type: exactMatchValidator(['enterState'])(),
+    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired })(),
+  })(),
+  leaveState: objectValidator<LeaveStateAutomationEvent>({
+    type: exactMatchValidator(['leaveState'])(),
+    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired })(),
+  })(),
+  formResponse: objectValidator<FormResponseAutomationEvent>({
+    type: exactMatchValidator(['formResponse'])(),
+    info: objectValidator<AutomationForForm>({ formId: mongoIdStringValidator() })(),
+  })(),
+})
+
+export const automationActionValidator = orValidator<{ [K in AutomationActionType]: AutomationAction & { type: K } } >({
+  sendEmail: objectValidator<SendEmailAutomationAction>({
+    type: exactMatchValidator(['sendEmail'])(),
+    info: objectValidator<AutomationForMessage>({ senderId: mongoIdStringValidator(), templateId: mongoIdStringValidator() })(),
+  })(),
+  sendSMS: objectValidator<SendSMSAutomationAction>({
+    type: exactMatchValidator(['sendSMS'])(),
+    info: objectValidator<AutomationForMessage>({ senderId: mongoIdStringValidator(), templateId: mongoIdStringValidator() })(),
+  })(),
+  sendForm: objectValidator<SendFormAutomationAction>({
+    type: exactMatchValidator(['sendForm'])(),
+    info: objectValidator<AutomationForFormRequest>({ senderId: mongoIdStringValidator(), formId: mongoIdStringValidator() })(),
+  })(),
+  createTask: objectValidator<CreateTaskAutomationAction>({
+    type: exactMatchValidator(['createTask'])(),
+    info: objectValidator<AutomationForTemplate>({ templateId: mongoIdStringValidator() })(),
+  })(),
+  sendNotification: objectValidator<SendNotificationAutomationAction>({
+    type: exactMatchValidator(['sendNotification'])(),
+    info: objectValidator<AutomationForNotification>({ templateId: mongoIdStringRequired, destination: stringValidator5000() })(),
+  })(),
+  sendWebhook: objectValidator<SendWebhookAutomationAction>({
+    type: exactMatchValidator(['sendWebhook'])(),
+    info: objectValidator<AutomationForWebhook>({ message: stringValidator5000() })(),
+  })(),
+  updateStateForJourney: objectValidator<UpdateStateForJourneyAutomationAction>({
+    type: exactMatchValidator(['updateStateForJourney'])(),
+    info: objectValidator<AutomationForJourneyAndState>({ journeyId: mongoIdStringRequired, state: stringValidator100() })(),
+  })(),
+  addToSequence: objectValidator<AddToSequenceAutomationAction>({
+    type: exactMatchValidator(['addToSequence'])(),
+    info: objectValidator<AutomationForAutomation>({ automationId: mongoIdStringValidator() })(),
+  })(),
+  removeFromSequence: objectValidator<RemoveFromSequenceAutomationAction>({
+    type: exactMatchValidator(['removeFromSequence'])(),
+    info: objectValidator<AutomationForAutomation>({ automationId: mongoIdStringValidator() })(),
+  })(),
+})
+

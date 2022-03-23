@@ -119,7 +119,7 @@ export const Form = ({ onSubmit, children, style }: FormProps) =>  {
 export const SUPPORTS_FORMS = true
 
 
-export type Item = { id: string }
+export type Item = { id: string | number }
 export type ItemClickable<T> = { 
   onClick?: (item: T) => void;
   onPress?: (item: T) => void;

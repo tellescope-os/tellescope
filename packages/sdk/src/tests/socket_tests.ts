@@ -30,7 +30,7 @@ const user2 = new Session({ host })
 const enduserSDK = new EnduserSession({ host, businessId })
 if (!(email && password && email2 && password2)) {
   console.error("Set TEST_EMAIL and TEST_PASSWORD")
-  process.exit()
+  process.exit(1)
 }
 
 const basic_tests = async () => {
@@ -303,7 +303,7 @@ const calendar_events = async () => {
     }
     if (loopCount === 10) {
       console.log("Failed to authenticate")
-      process.exit()
+      process.exit(1)
     }
 
     await calendar_events()

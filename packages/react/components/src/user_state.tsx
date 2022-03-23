@@ -39,6 +39,10 @@ import {
   Note,
   CalendarEvent,
   EngagementEvent,
+  Journey,
+  EventAutomation,
+  SequenceAutomation,
+  User,
 } from "@tellescope/types-client"
 
 const endusersSlice = createSliceForList<Enduser, 'endusers'>('endusers')
@@ -50,6 +54,10 @@ const notesSlice = createSliceForList<Note, 'notes'>('notes')
 const templatesSlice = createSliceForList<Template, 'templates'>('templates')
 const formsSlice = createSliceForList<Form, 'forms'>('forms')
 const formResponsesSlice = createSliceForList<FormResponse, 'form_response'>('form_response')
+const journeysSlice = createSliceForList<Journey, 'journeys'>('journeys')
+const usersSlice = createSliceForList<User, 'users'>('users')
+const eventAutomationsSlice = createSliceForList<EventAutomation, 'event_automations'>('event_automations')
+const sequenceAutomationsSlice = createSliceForList<SequenceAutomation, 'sequence_automations'>('sequence_automations')
 
 export const userConfig = {
   reducer: { 
@@ -62,6 +70,10 @@ export const userConfig = {
     templates: templatesSlice.reducer,
     forms: formsSlice.reducer,
     form_responses: formResponsesSlice.reducer,
+    journeys: journeysSlice.reducer,
+    users: usersSlice.reducer,
+    event_automations: eventAutomationsSlice.reducer,
+    sequence_automations: sequenceAutomationsSlice.reducer,
     ...sharedConfig.reducer,
   }
 }
@@ -156,7 +168,63 @@ export const useFiles = (options={} as HookOptions<File>) => {
     {...options}
   )
 }
-export const useNotes = (options={} as HookOptions<File>) => {
+export const useJourneys = (options={} as HookOptions<Journey>) => {
+  const session = useSession()
+  return useListStateHook(
+    'journeys', useTypedSelector(s => s.journeys), session, journeysSlice, 
+    { 
+      loadQuery: session.api.journeys.getSome,
+      addOne: session.api.journeys.createOne,
+      addSome: session.api.journeys.createSome,
+      deleteOne: session.api.journeys.deleteOne,
+      updateOne: session.api.journeys.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useSequenceAutomations = (options={} as HookOptions<SequenceAutomation>) => {
+  const session = useSession()
+  return useListStateHook(
+    'sequence_automations', useTypedSelector(s => s.sequence_automations), session, sequenceAutomationsSlice, 
+    { 
+      loadQuery: session.api.sequence_automations.getSome,
+      addOne: session.api.sequence_automations.createOne,
+      addSome: session.api.sequence_automations.createSome,
+      deleteOne: session.api.sequence_automations.deleteOne,
+      updateOne: session.api.sequence_automations.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useUsers = (options={} as HookOptions<User>) => {
+  const session = useSession()
+  return useListStateHook(
+    'users', useTypedSelector(s => s.users), session, usersSlice, 
+    { 
+      loadQuery: session.api.users.getSome,
+      addOne: session.api.users.createOne,
+      addSome: session.api.users.createSome,
+      deleteOne: session.api.users.deleteOne,
+      updateOne: session.api.users.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useEventAutomations = (options={} as HookOptions<EventAutomation>) => {
+  const session = useSession()
+  return useListStateHook(
+    'event_automations', useTypedSelector(s => s.event_automations), session, eventAutomationsSlice, 
+    { 
+      loadQuery: session.api.event_automations.getSome,
+      addOne: session.api.event_automations.createOne,
+      addSome: session.api.event_automations.createSome,
+      deleteOne: session.api.event_automations.deleteOne,
+      updateOne: session.api.event_automations.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useNotes = (options={} as HookOptions<Note>) => {
   const session = useSession()
   return useListStateHook(
     'notes', useTypedSelector(s => s.notes), session, notesSlice, 
@@ -184,7 +252,7 @@ export const useTemplates = (options={} as HookOptions<Template>) => {
     {...options}
   )
 }
-export const useForms = (options={} as HookOptions<Template>) => {
+export const useForms = (options={} as HookOptions<Form>) => {
   const session = useSession()
   return useListStateHook(
     'forms', useTypedSelector(s => s.forms), session, formsSlice, 

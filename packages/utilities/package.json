@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/utilities",
-  "version": "0.0.53",
+  "version": "0.0.54",
   "description": "Shared JS code for common actions across API and browser",
   "main": "./lib/cjs/utils.js",
   "module": "./lib/esm/utils.js",
@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "dependencies": {
-    "@tellescope/types-models": "^0.0.53",
+    "@tellescope/types-models": "^0.0.54",
     "mongodb": "^4.1.2"
   },
   "devDependencies": {

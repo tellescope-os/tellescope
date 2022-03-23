@@ -151,6 +151,7 @@ export interface Enduser extends Enduser_readonly, Enduser_required, Enduser_upd
   preference? : Preference;
   assignedTo? : string;
   avatar?: string,
+  unread?: boolean,
 }
 
 export interface APIKey_readonly extends ClientRecord { 
@@ -256,7 +257,6 @@ export interface SMSMessage extends SMSMessage_readonly, SMSMessage_required, SM
 }
 
 export type ChatRoomType = 'internal' | 'external'
-export type ChatRoomTopic = 'enduser' | 'task'
 
 export interface ChatRoom_readonly extends ClientRecord {
   recentMessage?: string,
@@ -269,7 +269,7 @@ export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom
   type?: ChatRoomType; 
   userIds?: string[];
   title?: string
-  topic?: ChatRoomTopic;
+  topic?: string;
   topicId?: string;
   enduserIds?: string[];
   ticketId?: string; // for connecting with a related ticket
@@ -457,12 +457,108 @@ export type WebhookRecord = {
 }
 export interface WebhookCall {  
   model: WebhookSupportedModel,
+  message: string,
   type: CUD,
   records: WebhookRecord[],
   relatedRecords: { [index: string]: WebhookRecord },
   timestamp: string,
   integrity: string,
 }
+
+export type AutomationEventType = "enterState" | "leaveState" | "formResponse"
+interface AutomationEventBuilder <T extends AutomationEventType, V extends object> {
+  type: T,
+  info: V,
+}
+
+export interface AutomationForJourney { journeyId: string }
+export interface AutomationForJourneyState { state: string }
+export interface AutomationForJourneyAndState extends AutomationForJourney, AutomationForJourneyState {}
+export interface AutomationForAutomation { automationId: string }
+
+export interface AutomationForForm { formId: string }
+export interface AutomationForTemplate { templateId: string }
+export interface AutomationForSender { senderId: string }
+export interface AutomationForFormRequest extends AutomationForForm, AutomationForSender {}
+export interface AutomationForMessage extends AutomationForTemplate, AutomationForSender {}
+export interface AutomationForWebhook { message: string }
+export interface AutomationForNotification extends AutomationForTemplate { destination: string }
+
+export type EnterStateAutomationEvent = AutomationEventBuilder<'enterState', AutomationForJourneyAndState>
+export type LeaveStateAutomationEvent = AutomationEventBuilder<'leaveState', AutomationForJourneyAndState> 
+export type FormResponseAutomationEvent = AutomationEventBuilder<'formResponse', AutomationForForm> 
+export type AutomationEvent = EnterStateAutomationEvent
+  | LeaveStateAutomationEvent
+  | FormResponseAutomationEvent
+
+interface AutomationActionBuilder <T extends AutomationActionType, V extends object> {
+  type: T,
+  info: V,
+}
+export type SendNotificationAutomationAction = AutomationActionBuilder<'sendNotification', AutomationForNotification>
+export type SendEmailAutomationAction = AutomationActionBuilder<'sendEmail', AutomationForMessage>
+export type SendSMSAutomationAction = AutomationActionBuilder<'sendSMS', AutomationForMessage>
+export type SendFormAutomationAction = AutomationActionBuilder<'sendForm', AutomationForFormRequest>
+export type UpdateStateForJourneyAutomationAction = AutomationActionBuilder<'updateStateForJourney', AutomationForJourneyAndState>
+export type CreateTaskAutomationAction = AutomationActionBuilder<'createTask', AutomationForTemplate>
+export type AddToSequenceAutomationAction = AutomationActionBuilder<'addToSequence', AutomationForAutomation>
+export type RemoveFromSequenceAutomationAction = AutomationActionBuilder<'removeFromSequence', AutomationForAutomation>
+export type SendWebhookAutomationAction = AutomationActionBuilder<'sendWebhook', AutomationForWebhook>
+
+
+export type AutomationActionForType = {
+  "sendNotification" : SendNotificationAutomationAction,
+  "sendEmail" : SendEmailAutomationAction,
+  "sendSMS": SendSMSAutomationAction,
+  "sendForm": SendFormAutomationAction,
+  "updateStateForJourney": UpdateStateForJourneyAutomationAction,
+  "createTask": CreateTaskAutomationAction,
+  'addToSequence': AddToSequenceAutomationAction,
+  'removeFromSequence': RemoveFromSequenceAutomationAction,
+  'sendWebhook': SendWebhookAutomationAction
+}
+export type AutomationActionType = keyof AutomationActionForType
+export type AutomationAction = AutomationActionForType[AutomationActionType]
+
+export interface EventAutomation_readonly extends ClientRecord {}
+export interface EventAutomation_required {
+  journeyId: string,
+  event: AutomationEvent
+  action: AutomationAction,
+}
+export interface EventAutomation_updatesDisabled {}
+export interface EventAutomation extends EventAutomation_readonly, EventAutomation_required, EventAutomation_updatesDisabled {
+
+}
+
+
+export type AutomationEnduserStatus = 'active' | 'paused' | 'finished' 
+export interface AutomationEnduser_readonly extends ClientRecord {}
+export interface AutomationEnduser_required {
+  enduserId: string,
+  automationId: string,
+  event: AutomationEvent,
+  action: AutomationAction,
+  status: AutomationEnduserStatus,
+}
+export interface AutomationEnduser_updatesDisabled {
+  stepNumber: number,
+}
+export interface AutomationEnduser extends AutomationEnduser_readonly, AutomationEnduser_required, AutomationEnduser_updatesDisabled {
+
+}
+
+// type SequencedAutomationEvent = "noDelay" | "delay"
+
+export interface SequenceAutomation_readonly extends ClientRecord {}
+export interface SequenceAutomation_required {
+  title: string,
+}
+export interface SequenceAutomation_updatesDisabled {}
+export interface SequenceAutomation extends SequenceAutomation_readonly, SequenceAutomation_required, SequenceAutomation_updatesDisabled {
+
+}
+
 
 export type ModelForName_required = {
   endusers: Enduser_required;
@@ -483,6 +579,9 @@ export type ModelForName_required = {
   forms: Form_required,
   form_responses: FormResponse_required,
   calendar_events: CalendarEvent_required,
+  event_automations: EventAutomation_required,
+  automation_endusers: AutomationEnduser_required,
+  sequence_automations: SequenceAutomation_required,
   webhooks: WebHook_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
@@ -506,6 +605,9 @@ export interface ModelForName_readonly {
   forms: Form_readonly;
   form_responses: FormResponse_readonly;
   calendar_events: CalendarEvent_readonly,
+  event_automations: EventAutomation_readonly,
+  automation_endusers: AutomationEnduser_readonly,
+  sequence_automations: SequenceAutomation_readonly,
   webhooks: WebHook_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
@@ -529,6 +631,9 @@ export interface ModelForName_updatesDisabled {
   forms: Form_updatesDisabled;
   form_responses: FormResponse_updatesDisabled;
   calendar_events: CalendarEvent_updatesDisabled,
+  event_automations: EventAutomation_updatesDisabled,
+  automation_endusers: AutomationEnduser_updatesDisabled, 
+  sequence_automations: SequenceAutomation_updatesDisabled,
   webhooks: WebHook_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
@@ -552,6 +657,9 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   forms: Form;
   form_responses: FormResponse;
   calendar_events: CalendarEvent,
+  event_automations: EventAutomation,
+  automation_endusers: AutomationEnduser,
+  sequence_automations: SequenceAutomation,
   webhooks: WebHook;
 }
 export type ModelName = keyof ModelForName
@@ -585,6 +693,9 @@ export const modelNameChecker: { [K in ModelName] : true } = {
   forms: true,
   form_responses: true,
   calendar_events: true,
+  event_automations: true,
+  automation_endusers: true,
+  sequence_automations: true,
   webhooks: true, 
 }
 

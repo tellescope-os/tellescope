@@ -9,6 +9,7 @@ import {
   UserDisplayInfo,
 } from "@tellescope/types-client"
 import { 
+  AutomationAction,
   ModelName,
 } from "@tellescope/types-models"
 
@@ -45,6 +46,8 @@ import {
   url_safe_path,
 } from "@tellescope/utilities"
 
+
+const UniquenessViolationMessage = 'Uniqueness Violation'
 
 const host = process.env.TEST_URL || 'http://localhost:8080'
 const [email, password] = [process.env.TEST_EMAIL, process.env.TEST_PASSWORD]
@@ -91,6 +94,7 @@ const passOnVoid = { shouldError: false, onResult: voidResult }
 // const isNull = (d: any) => d === null
 
 const setup_tests = async () => {
+  log_header("Setup")
   await async_test('test_online', sdk.test_online, { expectedResult: 'API V1 Online' })
   await async_test('test_authenticated', sdk.test_authenticated, { expectedResult: 'Authenticated!' })
 
@@ -119,6 +123,7 @@ const setup_tests = async () => {
 }
 
 const multi_tenant_tests = async () => {
+  log_header("Multi Tenant")
   const e2 = await sdkOther.api.endusers.createOne({ email: "hi@tellescope.com" }).catch(console.error)
   const e1 = await sdk.api.endusers.createOne({ email: "hi@tellescope.com" }).catch(console.error)
   if (!e1) process.exit()
@@ -165,6 +170,7 @@ const multi_tenant_tests = async () => {
 }
 
 const threadKeyTests = async () => {
+  log_header("threadKey")
   const enduser = await sdk.api.endusers.createOne({ email: 'threadkeytests@tellescope.com' })
   const [e1, e2, e3] = await Promise.all([
     sdk.api.engagement_events.createOne({ enduserId: enduser.id, type: 'Type 1', significance: 5 }),
@@ -192,19 +198,12 @@ const threadKeyTests = async () => {
   assert(es.find(e => e.id === e5.id) !== undefined, 'threadKey got duplicates', 'threadKey no duplicates (key 2, new)')
   assert(es.find(e => e.id === e6.id) !== undefined, 'threadKey got duplicates', 'threadKey no duplicates (key 3, new)')
 
-  await Promise.all([ // cleanup
-    sdk.api.endusers.deleteOne(enduser.id),
-    sdk.api.engagement_events.deleteOne(e1.id),
-    sdk.api.engagement_events.deleteOne(e2.id),
-    sdk.api.engagement_events.deleteOne(e3.id),
-    sdk.api.engagement_events.deleteOne(e4.id),
-    sdk.api.engagement_events.deleteOne(e5.id),
-    sdk.api.engagement_events.deleteOne(e6.id),
-  ])
+  // cleanup
+  await sdk.api.endusers.deleteOne(enduser.id) // cleans up automatin events too
 }
 
 const badInputTests = async () => {
-  log_header("Bad Input Tests")
+  log_header("Bad Input")
   await async_test(
     `_-prefixed fields are not allowed`, 
     () => sdk.api.endusers.createOne({ email: 'failure@tellescope.com', fields: { "_notallowed": 'hello' } }), 
@@ -218,6 +217,7 @@ const badInputTests = async () => {
 }
 
 const filterTests = async () => {
+  log_header("Filter Tests")
   const enduser = await sdk.api.endusers.createOne({ email: 'filtertests@tellescope.com', fname: 'test', fields: { field1: 'value1', field2: 'value2' } })
   const otherEnduser = await sdk.api.endusers.createOne({ email: 'other@tellescope.com' })
   await async_test(
@@ -287,6 +287,7 @@ const filterTests = async () => {
 }
 
 const updatesTests = async () => {
+  log_header("Updates Tests")
   const enduser = await sdk.api.endusers.createOne({ email: 'test@tellescope.com', phone: '+15555555555' })
   await sdk.api.endusers.updateOne(enduser.id, { phone: '+15555555552' }) // update to new phone number 
   await sdk.api.endusers.updateOne(enduser.id, { phone: '+15555555552' }) // update to same phone number
@@ -301,7 +302,7 @@ const updatesTests = async () => {
 }
 
 const generateEnduserAuthTests = async () => {
-  log_header("Generated Enduser authToken Tests")
+  log_header("Generated Enduser authToken")
   const externalId = '1029f9v9sjd0as'
   const e = await sdk.api.endusers.createOne({ email: 'generated@tellescope.com', phone: '+15555555555', externalId })
 
@@ -628,6 +629,18 @@ const journey_tests = async (queries=sdk.api.journeys) => {
   const journey = await sdk.api.journeys.createOne({ title: 'Test Journey' })
   const journey2 = await sdk.api.journeys.createOne({ title: 'Test Journey 2' })
 
+  await sdk.api.journeys.updateOne(journey.id, { 
+    states: [
+      { name: 'Delete Me 1', priority: 'N/A' },
+      { name: 'Delete Me 2', priority: 'N/A' },
+    ] 
+  })
+  const updated = (await sdk.api.journeys.delete_states({ id: journey.id, states: ['Delete Me 1', 'Delete Me 2']})).updated
+  assert(!!updated.id && updated.states.length === 1 && updated.states[0].name === 'New', 'delete states fail on returned update', 'delete states returns updated value')
+
+  const fetchAfterDeletion = await sdk.api.journeys.getOne(journey.id)
+  assert(fetchAfterDeletion.states.length === 1 && fetchAfterDeletion.states[0].name === 'New', 'delete states fail', 'delete states worked')
+
   assert(journey.defaultState === 'New', 'defaultState not set on create', 'journey-create - defaultState initialized')
   assert(journey.states[0].name === 'New', 'defaultState not set on create', 'journey-create - states initialized')
 
@@ -750,7 +763,7 @@ const tasks_tests = async (queries=sdk.api.tasks) => {
   assert(!!t.enduserId, 'enduserId not assigned to task', 'enduserId exists for created task')
 
   await sdk.api.endusers.deleteOne(e.id)
-  await wait(undefined, 25) // allow dependency updates to fire in background
+  await wait(undefined, 100) // allow dependency updates to fire in background (there are a lot for endusers)
   await async_test(
     `get-task - enduserId unset on enduser deletion`, 
     () => queries.getOne(t.id), 
@@ -1029,6 +1042,7 @@ const chat_tests = async() => {
   const chat2Null = await sdk.api.chats.createOne({ roomId: roomNull.id, message: "Hello...", replyId: chatNull.id })
   
   await sdk.api.chats.deleteOne(chatNull.id)
+  await wait(undefined, 250)
   await async_test(
     `get-chat (setNull working)`,
     () => sdk.api.chats.getOne(chat2Null.id), 
@@ -1037,6 +1051,7 @@ const chat_tests = async() => {
 }
 
 const enduserAccessTests = async () => {
+  log_header("Enduser Access")
   const email = 'enduser@tellescope.com'
   const password = 'testpassword'
 
@@ -1134,7 +1149,7 @@ const enduserAccessTests = async () => {
   await async_test(
     `enduser cannot create ticket for another enduser`,
     () => enduserSDK.api.tickets.createOne({ enduserId: sdk.userInfo.id, title: "Error on Creation" }),
-    { shouldError: true, onError: e => e.message === "enduserId does not match creator id for enduser session" }
+    { shouldError: true, onError: e => !!e.message }
   )
   await async_test(
     `enduser-access default, no access constraints, matching enduserId`,
@@ -1185,6 +1200,7 @@ const files_tests = async () => {
 }
 
 const enduser_session_tests = async () => {
+  log_header("Enduser Session")
   const email = 'enduser@tellescope.com'
   const password = 'testpassword'
 
@@ -1303,6 +1319,112 @@ const calendar_events_tests = async () => {
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
+const automation_events_tests = async () => {
+  log_header("Automation Events")
+  const state1 = "State 1", state2 = "State 2";
+  const journey = await sdk.api.journeys.createOne({ 
+    title: "Automations Test", 
+    defaultState: state1,
+    states: [
+      { name: state1, priority: 'N/A' },
+      { name: state2, priority: 'N/A' },
+    ]
+  })
+
+  await async_test(
+    `enterState cannot match updateStateForJourney`,
+    () => sdk.api.event_automations.createOne({
+      journeyId: journey.id,
+      event: {
+        type: "enterState",
+        info: { state: state1, journeyId: journey.id }
+      },
+      action: {
+        type: 'updateStateForJourney',
+        info: { state: state1, journeyId: journey.id },
+      },
+    }),
+    { shouldError: true, onError: e => e.message === 'updateStateForJourney cannot have the same journey and state as the enterState event' }
+  ) 
+  await async_test(
+    `leaveState cannot match updateStateForJourney`,
+    () => sdk.api.event_automations.createOne({
+      journeyId: journey.id,
+      event: {
+        type: "leaveState",
+        info: { state: state1, journeyId: journey.id }
+      },
+      action: {
+        type: 'updateStateForJourney',
+        info: { state: state1, journeyId: journey.id },
+      },
+    }),
+    { shouldError: true, onError: e => e.message === 'updateStateForJourney cannot have the same journey and state as the leaveState event' }
+  ) 
+
+  const testAction: AutomationAction = {
+    type: 'sendWebhook',
+    info: { message: 'test' }
+  }
+  const a1 = await sdk.api.event_automations.createOne({
+    journeyId: journey.id,
+    event: {
+      type: "enterState",
+      info: { state: state1, journeyId: journey.id }
+    },
+    action: testAction,
+  })
+  const a2 = await sdk.api.event_automations.createOne({
+    journeyId: journey.id,
+    event: {
+      type: "leaveState",
+      info: { state: state1, journeyId: journey.id }
+    },
+    action: testAction,
+  })
+  const a3 = await sdk.api.event_automations.createOne({
+    journeyId: journey.id,
+    event: {
+      type: "enterState",
+      info: { state: state2, journeyId: journey.id }
+    },
+    action: testAction,
+  })
+
+  await async_test(
+    `Cannot insert duplicate event/action pair`,
+    () => sdk.api.event_automations.createOne({
+      journeyId: journey.id,
+      event: {
+        type: "enterState",
+        info: { state: state2, journeyId: journey.id }
+      },
+      action: testAction,
+    }),
+    { shouldError: true, onError: e => e.message === UniquenessViolationMessage }
+  ) 
+
+  // trigger a1 on create
+  const enduser = await sdk.api.endusers.createOne({ 
+    email: "automations@tellescope.com", 
+    journeys: { [journey.id]: journey.defaultState } 
+  })
+
+  // trigger a2 and a3 by leaving state 1 an going to state 2
+  await sdk.api.endusers.updateOne(enduser.id, { journeys: { [journey.id]: state2 } })
+
+  await async_test(
+    `Automation events triggered correctly`,
+    // () => sdk.api.automation_endusers.getSome(),
+    () => sdk.api.automation_endusers.getSome({ filter: { enduserId: enduser.id }}),
+    { onResult: es => es && es.length === 3 && es.filter(a => a.automationId === "ONE_TIME").length === 3 }
+  )  
+
+  // cleanup
+  await sdk.api.journeys.deleteOne(journey.id) // automation events deleted as side effect
+  await sdk.api.endusers.deleteOne(enduser.id)
+}
+
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -1322,7 +1444,10 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   forms: () => {},
   form_responses: () => {},
   calendar_events: calendar_events_tests,
-  webhooks: () => {},
+  webhooks: () => {}, // tested separately
+  event_automations: automation_events_tests,
+  sequence_automations: () => {},
+  automation_endusers: () => {},
 };
 
 (async () => {
@@ -1345,7 +1470,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   } catch(err) {
     console.error("Failed during custom test")
     console.error(err)
-    process.exit()
+    process.exit(1)
   }
 
 
@@ -1370,6 +1495,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
     } catch(err) {
       console.error("Error running test:")
       console.error(err)
+      process.exit(1)
     }
   }
 

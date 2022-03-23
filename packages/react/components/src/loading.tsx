@@ -33,18 +33,30 @@ export const LoadingLinear = <T,>({ data, render, onError=renderDefaultError }: 
 export const value_is_loaded = <T,>(data: LoadedData<T>): data is { status: LoadingStatus.Loaded, value: T } => (
   data.status === LoadingStatus.Loaded
 )
- 
-type LoadingElements = LoadedData<any>[]
-export const values_are_loaded = <T extends LoadingElements>(data: T): data is LoadedDataSuccess<any>[] & T => {
-  for (const entry of data) {
-    if (entry.status === LoadingStatus.Unloaded) return false 
-    if (entry.status === LoadingStatus.Fetching) return false 
-    if (entry.status === LoadingStatus.Error) {
-      throw { index: data.indexOf(entry), error: entry.value }
-    }
+
+interface LoadingDataProps <T> {
+  data: { [K in keyof T]: LoadedData<T[K]> },
+  render: (data: T) => React.ReactElement,
+  onError?: (error: APIError) => React.ReactElement,
+}
+export const LoadingData = <T,>({ data, render, onError=renderDefaultError } : LoadingDataProps<T>) => {
+  const values = Object.values(data) as LoadedData<any>[]
+
+  const error = values.find(v => v.status === LoadingStatus.Error)
+  if (error) { 
+    return onError(error.value) 
   }
 
-  return true
+  // if anything is still loading
+  if (values.find(v => v.status !== LoadingStatus.Loaded)) { 
+    return <LinearProgress /> 
+  }
+
+  const loadedData = {} as T
+  for (const k in data) {
+    loadedData[k] = (data[k] as LoadedDataSuccess<any>).value 
+  }
+  return render(loadedData)
 }
 
 export const Resolver = <T,>(p: { item: T, initialValue?: React.ReactNode, resolver: (k: T) => React.ReactNode }) => {

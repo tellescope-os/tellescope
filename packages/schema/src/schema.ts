@@ -31,6 +31,7 @@ import {
 import {
   UserDisplayInfo,
   Enduser,
+  Journey,
 } from "@tellescope/types-client"
 
 import {
@@ -58,7 +59,6 @@ import {
   emailEncodingValidator,
   numberToDateValidator,
   SMSMessageValidator,
-  chatRoomTopicValidator,
   chatRoomTypeValidator,
   idStringToDateValidator,
   subdomainValidator,
@@ -82,6 +82,10 @@ import {
   intakePhoneValidator,
   formResponsesValidator,
   stringValidator25000,
+  automationActionValidator,
+  automationEventValidator,
+  automationEnduserStatusValidator,
+  listOfStringsValidatorEmptyOk,
 } from "@tellescope/validation"
 
 import {
@@ -214,9 +218,9 @@ export type Schema = {
 }
 
 const sideEffects = {
-  trackJourneyEngagement: {
-    name: "trackJourneyEngagement",
-    description: "Stores engagement events associated with a change in a user's journey"
+  handleJourneyStateChange: {
+    name: "handleJourneyStateChange",
+    description: "Handles change in an enduser's journey"
   },
   sendEmails: {
     name: "sendEmails",
@@ -265,6 +269,7 @@ export type CustomActions = {
   },
   journeys: {
     update_state: CustomAction<{ updates: JourneyState, id: string, name: string }, {}>,
+    delete_states: CustomAction<{ id: string, states: string[] }, { updated: Journey }>,
   },
   endusers: {
     set_password: CustomAction<{ id: string, password: string }, { }>,
@@ -296,6 +301,7 @@ export type CustomActions = {
   webhooks: {
     configure: CustomAction<{ url: string, secret: string, subscriptions?: WebhookSubscriptionsType }, { }>,
     update: CustomAction<{ url?: string, secret?: string, subscriptionUpdates?: WebhookSubscriptionsType }, { }>,
+    send_automation_webhook: CustomAction<{ message: string }, { }>,
   },
 } 
 
@@ -328,8 +334,8 @@ export const schema: SchemaV1 = build_schema({
   endusers: {
     info: {
       sideEffects: {
-        create: [sideEffects.trackJourneyEngagement],
-        update: [sideEffects.trackJourneyEngagement],
+        create: [sideEffects.handleJourneyStateChange],
+        update: [sideEffects.handleJourneyStateChange],
       }
     },
     constraints: {
@@ -407,7 +413,7 @@ export const schema: SchemaV1 = build_schema({
         ]
       },
       tags: { 
-        validator: listOfStringsValidator,
+        validator: listOfStringsValidatorEmptyOk,
       },
       fields: {
         validator: fieldsValidator,
@@ -573,7 +579,7 @@ export const schema: SchemaV1 = build_schema({
           dependsOn: ['endusers'],
           dependencyField: '_id',
           relationship: 'foreignKey',
-          onDependencyDelete: 'nop',
+          onDependencyDelete: 'delete',
         }]
       },
       type: {
@@ -648,13 +654,24 @@ export const schema: SchemaV1 = build_schema({
         op: 'custom', access: 'update', method: "patch",
         name: 'Update State',
         path: '/journey/:id/state/:name',
-        description: "Updates a state in a journey. Changes to state.name update endusers.journeys automatically.",
+        description: "Updates a state in a journey. Endusers and automations are updated automatically.",
         parameters: { 
           id: { validator: mongoIdStringValidator },
           name: { validator: stringValidator100 },
-          updates: { validator: journeyStateValidator },
+          updates: { validator: journeyStateValidator, required: true },
         },
         returns: {},
+      },
+      delete_states: {
+        op: 'custom', access: 'update', method: "delete",
+        name: 'Delete States',
+        path: '/journey/:id/states',
+        description: "Deletes states in a journey. Endusers and automations are updated automatically.",
+        parameters: { 
+          id: { validator: mongoIdStringValidator, required: true },
+          states: { validator: listOfStringsValidator, required: true },
+        },
+        returns: { updated: 'journey' as any },
       }
     },
   },
@@ -742,7 +759,7 @@ export const schema: SchemaV1 = build_schema({
           dependsOn: ['endusers'],
           dependencyField: '_id',
           relationship: 'foreignKey',
-          onDependencyDelete: 'setNull',
+          onDependencyDelete: 'delete',
         }]
       },
       businessUserId: {
@@ -863,7 +880,7 @@ export const schema: SchemaV1 = build_schema({
           dependsOn: ['endusers'],
           dependencyField: '_id',
           relationship: 'foreignKey',
-          onDependencyDelete: 'setNull',
+          onDependencyDelete: 'delete',
         }]
       },
       businessUserId: {
@@ -922,10 +939,10 @@ export const schema: SchemaV1 = build_schema({
         initializer: () => 'internal' as ChatRoomType
       },
       topic: {
-        validator: chatRoomTopicValidator,
+        validator: stringValidator100,
       },
-      topicId: { // this depends on a topic, dynamically based on the topic. How to best handle cleanup?
-        validator: mongoIdStringValidator,
+      topicId: {
+        validator: stringValidator100,
       },
       description: {
         validator: stringValidator250,
@@ -1257,7 +1274,15 @@ export const schema: SchemaV1 = build_schema({
            validator: fileTypeValidator,
             required: true
           },
-          enduserId: { validator: mongoIdStringValidator },
+          enduserId: { 
+            validator: mongoIdStringValidator ,
+            dependencies: [{
+              dependsOn: ['endusers'],
+              dependencyField: '_id',
+              relationship: 'foreignKey',
+              onDependencyDelete: 'setNull',
+            }]
+          },
         },
         returns: { 
           presignedUpload: {
@@ -1310,6 +1335,12 @@ export const schema: SchemaV1 = build_schema({
         validator: mongoIdStringValidator,
         required: true,
         examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['endusers'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'setNull',
+        }]
       },
       chatRoomId: {
         validator: mongoIdStringValidator,
@@ -1439,6 +1470,12 @@ export const schema: SchemaV1 = build_schema({
         validator: mongoIdStringValidator,
         required: true,
         examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['endusers'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
       },
       ticketId: {
         validator: mongoIdStringValidator,
@@ -1548,6 +1585,14 @@ export const schema: SchemaV1 = build_schema({
         For a given webhook, relatedRecords may be empty, or may not include all related ids. In such cases, you'll need to query against the Tellescope API for an up-to-date reference.
 
         Currently supported models for Webhooks: ${Object.keys(WEBHOOK_MODELS).join(', ')}
+
+        You can also handle webhooks from automations in Tellescope, which have a simpler format: <pre>{ 
+          type: 'automation'
+          message: string,
+          timestamp: string, 
+          integrity: string, 
+}</pre>
+        In this case, integrity is a simple sha256 hash of message + timestamp + secret
       `
     },
     constraints: {
@@ -1577,6 +1622,16 @@ export const schema: SchemaV1 = build_schema({
           url: { validator: urlValidator },
           secret: { validator: stringValidator5000 },
           subscriptionUpdates: { validator: WebhookSubscriptionValidator },
+        },
+        returns: {},
+      },
+      send_automation_webhook: {
+        op: "custom", access: 'create', method: "post",
+        name: 'Send Automation Webhook',
+        path: '/send-automation-webhook',
+        description: "Sends a webhook with the automations format, useful for testing automation integrations",
+        parameters: { 
+          message: { validator: stringValidator5000, required: true },
         },
         returns: {},
       },
@@ -1640,6 +1695,161 @@ export const schema: SchemaV1 = build_schema({
         validator: listOfUserIndentitiesValidator,
         initializer: () => [],
       }
+    }
+  },
+  sequence_automations: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+      access: []
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { },
+    fields: {
+      ...BuiltInFields, 
+      title: {
+        validator: stringValidator250,
+        required: true,
+        examples: ['Automation Title']
+      }
+    }
+  },
+  event_automations: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [
+        {
+          explanation: 'updateStateForJourney cannot have the same info as enterState or leaveState events',
+          evaluate: ({ action, event }) => {
+          if (action?.type === 'updateStateForJourney')
+            if (event?.type === 'enterState' && 
+              action.info?.journeyId === event.info.journeyId &&
+              action.info?.state === event.info.state
+            ) {
+              return "updateStateForJourney cannot have the same journey and state as the enterState event"
+            } 
+            else if (event?.type === 'leaveState' && 
+              action.info?.journeyId === event.info.journeyId &&
+              action.info?.state === event.info.state
+            ) {
+              return "updateStateForJourney cannot have the same journey and state as the leaveState event"
+            }
+          } 
+        },
+        {
+          explanation: 'Event and action cannot both be shared by an existing event automation (no duplicates)',
+          evaluate: () => {} // implemented in routing.ts
+        },
+      ],
+      access: []
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { },
+    fields: {
+      ...BuiltInFields, 
+      journeyId: { 
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['journeys'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      event: { 
+        validator: automationEventValidator,
+        examples: [{
+          type: "enterState",
+          info: { 
+            journeyId: PLACEHOLDER_ID,
+            state: 'state',
+          }, 
+        }],
+        required: true,
+      },
+      action: { 
+        validator: automationActionValidator,
+        required: true,
+        examples: [{
+          type: "sendEmail",
+          info: { 
+            senderId: PLACEHOLDER_ID,
+            templateId: PLACEHOLDER_ID,
+          }, 
+        }]
+      }
+    }
+  },
+  automation_endusers: {
+    info: {},
+    constraints: {
+      unique: ['enduserId'], 
+      relationship: [],
+      access: []
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { },
+    fields: {
+      ...BuiltInFields, 
+      automationId: { 
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+
+        // todo: add or replace with separate depency, when automations model migrated to this schema
+        dependencies: [{
+          dependsOn: ['event_automations'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      enduserId: { 
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['endusers'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      event: { 
+        validator: automationEventValidator,
+        examples: [{
+          type: "enterState",
+          info: { 
+            journeyId: PLACEHOLDER_ID,
+            state: 'state',
+          }, 
+        }],
+        required: true,
+      },
+      action: { 
+        validator: automationActionValidator,
+        required: true,
+        examples: [{
+          type: "sendEmail",
+          info: { 
+            senderId: PLACEHOLDER_ID,
+            templateId: PLACEHOLDER_ID,
+          }, 
+        }]
+      },
+      status: { 
+        validator: automationEnduserStatusValidator, 
+        required: true,  
+        examples: ['active']
+      },
+      stepNumber: { validator: nonNegNumberValidator },
     }
   },
 })

@@ -30,6 +30,10 @@ export {
   useFormResponses as useFormResponsesForUser, 
   useCalendarEvents as useCalendarEventsForUser,
   useEngagementEvents as useEngagementEventsForUser,
+  useJourneys as useJourneysForUser,
+  useEventAutomations as useEventAutomationsForUser,
+  useSequenceAutomations as useSequenceAutomationsUser,
+  useUsers as useUsersForUser,
 } from "./user_state"
 export {
   EnduserProvider, 

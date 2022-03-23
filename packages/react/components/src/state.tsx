@@ -34,6 +34,8 @@ import {
 export const TellescopeStoreContext = React.createContext<ReactReduxContextValue<AppDispatch>>(null as any);
 export const createTellescopeSelector = () => createSelectorHook(TellescopeStoreContext)
 
+type WithId = { id: string | number }
+
 interface FetchContextValue {
   didFetch: (s: string, force?: boolean, refetchInMS?: number) => boolean,
   setFetched: (s: string, b: boolean) => void;
@@ -76,7 +78,7 @@ export const toLoadedData = async <T,>(p: () => Promise<T>): Promise<{
 }
 
 // default add to start
-export const add_elements_to_array = <T extends { id: string }>(a: LoadedData<T[]>, elements: T[], options?: { addTo?: 'start' | 'end' }) => {
+export const add_elements_to_array = <T extends WithId>(a: LoadedData<T[]>, elements: T[], options?: { addTo?: 'start' | 'end' }) => {
   if (a.status !== LoadingStatus.Loaded) return { status: LoadingStatus.Loaded, value: elements }
  
   const newValues = elements.filter(e => a.value.find(v => v.id === e.id) === undefined) 
@@ -86,19 +88,19 @@ export const add_elements_to_array = <T extends { id: string }>(a: LoadedData<T[
   }
 }
 
-export const update_elements_in_array = <T extends { id: string }>(a: LoadedData<T[]>, updates: { [id: string]: Partial<T> }) => {
+export const update_elements_in_array = <T extends WithId>(a: LoadedData<T[]>, updates: { [id: string]: Partial<T> }) => {
   if (a.status !== LoadingStatus.Loaded) return a
 
   return { status: LoadingStatus.Loaded, value: a.value.map(e => !!updates[e.id] ? { ...e, ...updates[e.id] } : e)}
 }
 
-export const replace_elements_in_array = <T extends { id: string }>(a: LoadedData<T[]>, updated: { [id: string]: Partial<T> }) => {
+export const replace_elements_in_array = <T extends WithId>(a: LoadedData<T[]>, updated: { [id: string]: Partial<T> }) => {
   if (a.status !== LoadingStatus.Loaded) return a
 
   return { status: LoadingStatus.Loaded, value: a.value.map(e => !!updated[e.id] ? updated[e.id] : e)}
 }
 
-export const remove_elements_in_array = <T extends { id: string }>(a: LoadedData<T[]>, ids: string[]) => {
+export const remove_elements_in_array = <T extends WithId>(a: LoadedData<T[]>, ids: (string | number)[]) => {
   if (a.status !== LoadingStatus.Loaded) return a
   return { status: LoadingStatus.Loaded, value: a.value.filter(v => !ids.includes(v.id) )}
 }
@@ -118,7 +120,7 @@ interface ListReducers<T> {
   [index: string]: any
 }
 
-export const createSliceForList = <T extends { id: string }, N extends string>(name: N) => createSlice<LoadedData<T[]>, ListReducers<T>, N>({
+export const createSliceForList = <T extends { id: string | number }, N extends string>(name: N) => createSlice<LoadedData<T[]>, ListReducers<T>, N>({
   name,
   initialState: UNLOADED as LoadedData<T[]>,
   reducers: {
@@ -144,7 +146,7 @@ interface MappedListReducers<T extends { id: string | number }> {
   addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, elements: T[] }, AddOptions>) => void; 
   [index: string]: any
 }
-export const createSliceForMappedList = <T extends { id: string }, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
+export const createSliceForMappedList = <T extends WithId, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
   name,
   initialState: {} as Indexable<LoadedData<T[]>>,
   reducers: {
@@ -206,7 +208,7 @@ export interface ListUpdateMethods <T, ADD> {
   addLocalElements: (e: T[], o?: AddOptions) => T[],
   createElement: (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
-  findById: (id: string) => T | undefined,
+  findById: (id: string | number) => T | undefined,
   updateElement: (id: string, e: Partial<T>, o?: CustomUpdateOptions) => Promise<T>,
   updateLocalElement: (id: string, e: Partial<T>) => void,
   updateLocalElements: (updates: { [id: string]: Partial<T> }) => void,
@@ -303,11 +305,11 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     removeLocalElement(id)
   }, [removeLocalElement, deleteOne])
 
-  const findById = useCallback((id: string) => {
+  const findById = useCallback((id: string | number) => {
     if (!id) return undefined
     if (state.status !== LoadingStatus.Loaded) return undefined
 
-    return state.value.find(v => v.id === id)
+    return state.value.find(v => v.id.toString() === id.toString())
   }, [state])
 
   const load = useCallback((force: boolean) => {
@@ -650,7 +652,7 @@ export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRo
   const session = useResolvedSession(type)
   const dispatch = useTellescopeDispatch()
 
-  const onUpdate = useCallback((updated: ({ id: string } & Partial<ChatRoom>)[]) => {
+  const onUpdate = useCallback((updated: ({ id: string | number } & Partial<ChatRoom>)[]) => {
     for (const u of updated) {
       // fetch updated display info if enduserIds or userIds have changed
       if (u.enduserIds || u.userIds) {

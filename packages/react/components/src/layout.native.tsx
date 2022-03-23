@@ -69,7 +69,7 @@ export const List = <T extends Item>({ items, emptyComponent, render, onClick, o
       inverted={reverse}
       data={items}
       renderItem={({ item, index }) => render(item, { index, onClick: onPress ?? onClick })} 
-      keyExtractor={item => item.id}
+      keyExtractor={item => item.id.toString()}
     />
   )
 }
