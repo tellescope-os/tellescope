@@ -142,7 +142,7 @@ export const createSliceForList = <T extends { id: string | number }, N extends 
 })
 
 interface MappedListReducers<T extends { id: string | number }> {
-  setForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, data: LoadedData<T[]> }, AddOptions>) => void;
+  setForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string | number, data: LoadedData<T[]> }, AddOptions>) => void;
   addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, elements: T[] }, AddOptions>) => void; 
   [index: string]: any
 }
@@ -396,11 +396,12 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
 }
 
 export interface MappedListUpdateMethods <T, ADD>{
-  setLocalElementForKey: (key: string, e: LoadedData<T[]>) => void;
+  setLocalElementForKey: (key: string | number, e: LoadedData<T[]>) => void;
   addLocalElement: (e: T, o?: AddOptions) => void,
   addLocalElements: (e: T[], o?: AddOptions) => void,
   createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
+  findById: (id: string | number) => T | undefined,
   reload: () => void;
 }
 export type MappedListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
@@ -412,7 +413,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
   filterKey: (keyof T) & string,
   state:  Indexable<LoadedData<T[]>>, 
   session: EnduserSession | Session,
-  key: string, 
+  key: string | number, 
   slice: Slice<any, MappedListReducers<T>>,
   apiCalls: {
     loadQuery: LoadFunction<T>, 
@@ -447,8 +448,8 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     options?.onAdd?.([e])
     return e
   }, [dispatch, slice, options]) 
-  const addLocalElementsForKey = useCallback((key: string, es: T[], o?: AddOptions) => {
-    dispatch(slice.actions.addElementsForKey({ value: { key, elements: es }, options: o }))
+  const addLocalElementsForKey = useCallback((key: string | number, es: T[], o?: AddOptions) => {
+    dispatch(slice.actions.addElementsForKey({ value: { key: key.toString(), elements: es }, options: o }))
     options?.onAdd?.(es) 
     return es
   }, [dispatch, slice, options]) 
@@ -484,6 +485,13 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     return addLocalElementsForKey(key, (await addSome(es)).created, options)
   }, [filterKey, addLocalElementsForKey, addSome])
 
+  const findById = useCallback((id: string | number) => {
+    const valuesForKey = state[key]
+    if (valuesForKey.status !== LoadingStatus.Loaded) return
+
+    return valuesForKey.value?.find(v => v.id.toString() === id.toString())
+  }, [])
+
   const load = useCallback(async (force: boolean) => {
     if (options?.dontFetch) return
     if (!key) return
@@ -515,7 +523,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     })
 
     return () => { 
-      session.unsubscribe([key]) 
+      session.unsubscribe([key.toString()]) 
       setFetched(key + 'socket', false)
     }
   }, [modelName, isModelName, session, key, didFetch, socketConnection, addLocalElementForKey])
@@ -526,6 +534,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     setLocalElementForKey,
     addLocalElement,
     addLocalElements,
+    findById,
     createElement,
     createElements,
     reload,
