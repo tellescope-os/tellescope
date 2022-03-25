@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ViewStyle, TouchableHighlight, FlatList, SafeAreaView, TouchableOpacity } from "react-native"
+import { View, ViewStyle, FlatList, TouchableOpacity } from "react-native"
 
 import {
   Flex_T,
@@ -14,7 +14,6 @@ import {
 import {
   ClickableNative,
   NativeStyled,
-  Styled,
 } from "./mui"
 import {
   convert_CSS_to_RNStyles

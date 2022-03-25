@@ -1568,7 +1568,8 @@ export const schema: SchemaV1 = build_schema({
     info: {
       description: `Allows you to subscribe to Webhooks when models in Tellescope are created, updated, and deleted.
         Each webhook is a POST request to the given URL, of the form <pre>{ 
-          model: string, type: 'create' | 'update' | 'delete', 
+          model: string, 
+          type: 'create' | 'update' | 'delete', 
           records: object[], 
           timestamp: string, 
           integrity: string, 

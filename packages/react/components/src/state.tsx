@@ -455,13 +455,13 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
   }, [dispatch, slice, options]) 
   const addLocalElement = useCallback((e: T, options?: AddOptions) => {
     const key = e[filterKey]
-    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
+    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
 
-    addLocalElementForKey(key, e, options)
+    addLocalElementForKey(key.toString(), e, options)
   }, [filterKey, addLocalElementForKey])
   const addLocalElements = useCallback((es: T[], options?: AddOptions) => {
     const key = es[0]?.[filterKey]
-    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
+    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
 
     addLocalElementsForKey(key, es, options)
 
@@ -471,16 +471,16 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     if (!addOne) throw new Error(`Add element by API is not supported`)
 
     const key = e[filterKey]
-    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
+    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
 
-    return addLocalElementForKey(key, await addOne(e), options)
+    return addLocalElementForKey(key.toString(), await addOne(e), options)
   }, [filterKey, addLocalElementForKey, addOne])
 
   const createElements = useCallback(async (es: ADD[], options?: AddOptions) => {
     if (!addSome) throw new Error(`Add elements by API is not supported`)
 
     const key = es[0]?.[filterKey]
-    if (typeof key !== 'string') throw new Error(`value for filterKey ${filterKey} must be a string`)
+    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
 
     return addLocalElementsForKey(key, (await addSome(es)).created, options)
   }, [filterKey, addLocalElementsForKey, addSome])
