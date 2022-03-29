@@ -872,7 +872,11 @@ const chat_room_tests = async () => {
   await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
   await enduserSDK.authenticate(email, password).catch(console.error) 
 
+  const enduserLoggedIn = await sdk.api.endusers.getOne(enduser.id)
+  assert(new Date(enduserLoggedIn.lastActive).getTime() > Date.now() - 100, 'lastActive fail for enduser', 'lastActive for enduser')
+
   const room = await sdk.api.chat_rooms.createOne({ type: 'internal', userIds: [userId], enduserIds: [enduserSDK.userInfo.id] })
+  assert(room.numMessages === 0, 'num mesages no update', 'num messages on creation')
   await async_test(
     `get-chat-room (not a user)`, 
     () => sdk2.api.chat_rooms.getOne(room.id), 
@@ -883,6 +887,15 @@ const chat_room_tests = async () => {
     () => sdk2.api.chat_rooms.display_info({ id: room.id }), 
     { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
   )
+
+  await sdk.api.chats.createOne({ roomId: room.id, message: 'test message' })
+  let roomWithMessage = await sdk.api.chat_rooms.getOne(room.id)
+  assert(roomWithMessage.numMessages === 1, 'num mesages no update', 'num messages on send message')
+
+  // todo: enable this test when createMany allowed for messages
+  // await sdk.api.chats.createSome([{ roomId: room.id, message: 'test message 3' }, { roomId: room.id, message: 'test message 3' }])
+  // roomWithMessage = await sdk.api.chat_rooms.getOne(room.id)
+  // assert(roomWithMessage.numMessages === 3, 'num mesages no update', 'num messages on send messages')
 
   const verifyRoomDisplayInfo = (info: Indexable<UserDisplayInfo>) => {
     if (!info) return false
@@ -945,9 +958,14 @@ const chat_room_tests = async () => {
     () => sdk2.api.chat_rooms.getOne(emptyRoom.id), 
     { onResult: r => r.id === emptyRoom.id }
   ) 
-  await sdk.api.chat_rooms.deleteOne(emptyRoom.id)
+
+  await enduserSDK.logout()
+  const loggedOutEnduser = await sdk.api.endusers.getOne(enduser.id)
+  assert(new Date(loggedOutEnduser.lastLogout).getTime() > Date.now() - 100, 'lastLogout fail for enduser', 'lastLogout for enduser')
 
   await sdk.api.endusers.deleteOne(enduser.id)
+  await sdk.api.chat_rooms.deleteOne(emptyRoom.id)
+
 }
 
 const chat_tests = async() => {

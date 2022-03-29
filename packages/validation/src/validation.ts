@@ -53,6 +53,7 @@ import {
   AutomationEnduserStatus,
   AutomationForTemplate,
   CreateTaskAutomationAction,
+  ChatAttachment,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -969,6 +970,12 @@ export const userIdentityValidator = objectValidator<{
   id: mongoIdStringValidator(),
 }) 
 export const listOfUserIndentitiesValidator = listValidator(userIdentityValidator())
+
+export const chatAttachmentValidator = objectValidator<ChatAttachment>({ 
+  type: exactMatchListValidator(['image', 'file'])(),
+  secureName: stringValidator250(),
+}) 
+export const listOfChatAttachmentsValidator = listValidator(chatAttachmentValidator())
 
 export const meetingsListValidator = listValidator(objectValidator<{
   id: string,

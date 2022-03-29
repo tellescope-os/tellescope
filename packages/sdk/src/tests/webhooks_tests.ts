@@ -80,7 +80,7 @@ let webhookIndex = 0
 const check_next_webhook = async (evaluate: (hook: WebhookCall) => boolean, name: string, error: string, isSubscribed: boolean) => {
   if (isSubscribed === false) return
 
-  await wait(undefined, 25) // wait for hook to post
+  await wait(undefined, 50) // wait for hook to post
 
   const event = handledEvents[webhookIndex]
   assert(!!event, 'did not get hook', 'got hook')
@@ -155,7 +155,7 @@ const test_automation_webhooks = async () => {
     type: 'sendWebhook',
     info: { message: testMessage }
   }
-  const a1 = await sdk.api.event_automations.createOne({
+  await sdk.api.event_automations.createOne({
     journeyId: journey.id,
     event: {
       type: "enterState",
@@ -171,7 +171,7 @@ const test_automation_webhooks = async () => {
   })
 
   // wait long enough for automation to process and send webhook
-  await wait(undefined, 2000)
+  await wait(undefined, 2500)
   
   await check_next_webhook(
     ({ message }) => message === testMessage,

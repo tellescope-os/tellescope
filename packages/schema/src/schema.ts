@@ -86,6 +86,7 @@ import {
   automationEventValidator,
   automationEnduserStatusValidator,
   listOfStringsValidatorEmptyOk,
+  listOfChatAttachmentsValidator,
 } from "@tellescope/validation"
 
 import {
@@ -426,6 +427,12 @@ export const schema: SchemaV1 = build_schema({
       },
       unread: { 
         validator: booleanValidator,
+      },
+      lastActive: { 
+        validator: dateValidator,
+      },
+      lastLogout: { 
+        validator: dateValidator,
       },
       lastCommunication: { 
         validator: dateValidator,
@@ -934,6 +941,10 @@ export const schema: SchemaV1 = build_schema({
       title: {
         validator: stringValidator100,
       },
+      numMessages: {
+        validator: nonNegNumberValidator,
+        initializer: () => 0,
+      },
       type: {
         validator: chatRoomTypeValidator,
         initializer: () => 'internal' as ChatRoomType
@@ -1063,9 +1074,12 @@ export const schema: SchemaV1 = build_schema({
           onDependencyDelete: 'setNull',
         }]
       },
-      readBy:{
+      readBy: {
         validator: idStringToDateValidator,
       },
+      attachments: {
+        validator: listOfChatAttachmentsValidator,
+      }
     },
   },
   users: {
@@ -1695,7 +1709,9 @@ export const schema: SchemaV1 = build_schema({
       attendees: { 
         validator: listOfUserIndentitiesValidator,
         initializer: () => [],
-      }
+      }, 
+      fields: { validator: fieldsValidator },
+      
     }
   },
   sequence_automations: {

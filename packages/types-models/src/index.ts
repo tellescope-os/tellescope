@@ -127,12 +127,10 @@ export type CustomField  = string | number | object | {
   description?: string;
 }
 
-export interface Enduser_readonly extends ClientRecord {
+export interface Enduser_readonly extends UserActivityInfo, ClientRecord {
   lastCommunication?: Date;
   recentMessagePreview?: string;
   hashedPassword: string;
-  lastActive?: Date;
-  lastLogout?: Date;
 } 
 export interface Enduser_required {}
 export interface Enduser_updatesDisabled {}
@@ -261,6 +259,7 @@ export type ChatRoomType = 'internal' | 'external'
 export interface ChatRoom_readonly extends ClientRecord {
   recentMessage?: string,
   recentSender?: string,
+  numMessages: number,
 }
 export interface ChatRoom_required {}
 export interface ChatRoom_updatesDisabled {}
@@ -277,6 +276,11 @@ export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom
   tags?: string[];
 }
 
+export type ChatAttachment = {
+  type: 'image' | 'file',
+  secureName: string,
+}
+
 export interface ChatMessage_readonly extends ClientRecord {
   senderId: string | null;
 }
@@ -291,6 +295,7 @@ export interface ChatMessage_updatesDisabled {
 export interface ChatMessage extends ChatMessage_readonly, ChatMessage_required, ChatMessage_updatesDisabled {
   replyId?: string | null; // to support threaded replies to a specific root message
   readBy?: { [index: string] : Date };
+  attachments: ChatAttachment[]
 }
 
 export type MessageTemplateType = 'enduser' | 'team'  // default to 'enduser'
@@ -449,6 +454,7 @@ export interface CalendarEvent extends CalendarEvent_readonly, CalendarEvent_req
   attendees: UserIdentity[],
   chatRoomId?: string,
   description?: string,
+  fields?: Indexable<string | CustomField>;
 }
 
 export type WebhookRecord = {
