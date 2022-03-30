@@ -1443,6 +1443,29 @@ const automation_events_tests = async () => {
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
+const form_response_tests = async () => {
+  const enduser = await sdk.api.endusers.createOne({ email: "formresponse@tellescope.com" })
+  const form = await sdk.api.forms.createOne({
+    title: 'test form',
+    fields: [{
+      title: 'Test',
+      description: 'Enter a string',
+      type: 'string',
+      isOptional: false,
+    }]
+  })
+
+  const { url } = await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })
+  await sdk.api.emails.createOne({
+    enduserId: enduser.id,
+    subject: "Please Fill Out a Form",
+    textContent: `Please fill out the following form ${url}`,
+  })
+
+  await sdk.api.endusers.deleteOne(enduser.id)
+  await sdk.api.forms.deleteOne(form.id)
+}
+
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -1460,7 +1483,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   meetings: () => {},
   notes: () => {},
   forms: () => {},
-  form_responses: () => {},
+  form_responses: form_response_tests,
   calendar_events: calendar_events_tests,
   webhooks: () => {}, // tested separately
   event_automations: automation_events_tests,

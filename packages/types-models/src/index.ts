@@ -408,12 +408,14 @@ export interface Form extends Form_readonly, Form_required, Form_updatesDisabled
   thanksMessage?: string,
 }
 
+export type FormResponseValue = any
+
 export interface FormResponse_readonly extends ClientRecord {}
 export interface FormResponse_required {
   formId: string,
   enduserId: string,
   formTitle: string,
-  responses: any[],
+  responses: FormResponseValue[],
   submittedBy?: string,
   submittedAt?: Date,
   accessCode?: string,

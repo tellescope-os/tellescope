@@ -53,6 +53,14 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
     file_download_URL: (args: extractFields<CustomActions['files']['file_download_URL']['parameters']>) => 
                           Promise<extractFields<CustomActions['files']['file_download_URL']['returns']>>,
   },
+  form_responses: {
+    submit_form_response: (args: extractFields<CustomActions['form_responses']['submit_form_response']['parameters']>) => (
+      Promise<extractFields<CustomActions['form_responses']['submit_form_response']['returns']>>
+    ),
+    prepare_form_response: (args: extractFields<CustomActions['form_responses']['prepare_form_response']['parameters']>) => (
+      Promise<extractFields<CustomActions['form_responses']['prepare_form_response']['returns']>>
+    ),
+  },
   meetings: {
     attendee_info: (args: { id: string }) => Promise<{ attendee: Attendee, others: UserIdentity[] }>,
     my_meetings: () => Promise<Meeting[]>,
@@ -99,6 +107,11 @@ export class EnduserSession extends Session {
     this.api.meetings = { 
       attendee_info: a => this._GET('/v1/attendee-info', a),
       my_meetings: () => this._GET('/v1/my-meetings')
+    }
+
+    this.api.form_responses = { 
+      prepare_form_response: (args) => this._POST(`/v1${schema.form_responses.customActions.prepare_form_response.path}`, args),
+      submit_form_response: (args) => this._PATCH(`/v1${schema.form_responses.customActions.submit_form_response.path}`, args),
     }
 
     // files have defaultQueries

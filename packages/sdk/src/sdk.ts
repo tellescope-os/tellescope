@@ -123,6 +123,14 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     file_download_URL: (args: extractFields<CustomActions['files']['file_download_URL']['parameters']>) => 
                           Promise<extractFields<CustomActions['files']['file_download_URL']['returns']>>,
   },
+  form_responses: {
+    submit_form_response: (args: extractFields<CustomActions['form_responses']['submit_form_response']['parameters']>) => (
+      Promise<extractFields<CustomActions['form_responses']['submit_form_response']['returns']>>
+    ),
+    prepare_form_response: (args: extractFields<CustomActions['form_responses']['prepare_form_response']['parameters']>) => (
+      Promise<extractFields<CustomActions['form_responses']['prepare_form_response']['returns']>>
+    ),
+  },
   meetings: {
     start_meeting: () => Promise<{ id: string, meeting: { Meeting: MeetingInfo }, host: Attendee }>, 
     end_meeting: (args: { id: string }) => Promise<void>, 
@@ -168,6 +176,9 @@ export class Session extends SessionManager {
     
     queries.users.request_password_reset = (args) => this._POST(`/v1${schema.users.publicActions.request_password_reset.path}`, args),
     queries.users.reset_password = (args) => this._POST(`/v1${schema.users.publicActions.reset_password.path}`, args),
+
+    queries.form_responses.prepare_form_response = (args) => this._POST(`/v1${schema.form_responses.customActions.prepare_form_response.path}`, args),
+    queries.form_responses.submit_form_response = (args) => this._PATCH(`/v1${schema.form_responses.customActions.submit_form_response.path}`, args),
 
     queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args),
     queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a),

@@ -26,6 +26,7 @@ import {
   Attendee,
   ChatRoomType,
   MessageTemplateType,
+  FormResponseValue,
 } from "@tellescope/types-models"
 
 import {
@@ -154,10 +155,6 @@ export type ModelFields<T> = {
 }
 export type extractFields<Type> = Type extends ModelFields<infer X> ? X : never
 
-type ArgumentInfo = {
-  description?: string;
-}
-
 type ActionInfo = {
   name?: string,
   description?: string,
@@ -267,6 +264,10 @@ export type CustomActions = {
   files: {
     prepare_file_upload: CustomAction<{ name: string, size: number, type: string, enduserId?: string }, { presignedUpload: object, file: File }>,
     file_download_URL: CustomAction<{ secureName: string }, { downloadURL: string }>,
+  },
+  form_responses: {
+    prepare_form_response: CustomAction<{ formId: string, enduserId: string }, { accessCode: string, url: string }>,
+    submit_form_response: CustomAction<{ accessCode: string, responses: FormResponseValue  }, { }>,
   },
   journeys: {
     update_state: CustomAction<{ updates: JourneyState, id: string, name: string }, {}>,
@@ -1544,8 +1545,34 @@ export const schema: SchemaV1 = build_schema({
       relationship: [],
     },
     defaultActions: DEFAULT_OPERATIONS,
-    customActions: {},
-    enduserActions: {},
+    customActions: { 
+      prepare_form_response: {
+        op: "custom", access: 'create', method: "post",
+        path: '/prepare-form-response',
+        name: 'Prepare Form Response',
+        description: "Generates an access code that allows an enduser to submit a form response.",
+        parameters: { 
+          formId: { validator: mongoIdStringValidator, required: true },
+          enduserId: { validator: mongoIdStringValidator, required: true },
+        },
+        returns: {
+          accessCode: { validator: stringValidator250, required: true },
+          url: { validator: stringValidator250, required: true },
+        },
+      },
+      submit_form_response: {
+        op: "custom", access: 'update', method: "patch",
+        name: 'Submit Form Response',
+        path: '/submit-form-response',
+        description: "With an accessCode, stores responses to a form.",
+        parameters: { 
+          accessCode: { validator: stringValidator250, required: true },
+          responses: { validator: formResponsesValidator, required: true },
+        },
+        returns: {},
+      }
+    },
+    enduserActions: { prepare_form_response: {}, submit_form_response: {} },
     fields: {
       ...BuiltInFields, 
       formId: {
