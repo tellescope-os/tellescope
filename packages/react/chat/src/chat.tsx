@@ -1,4 +1,4 @@
-import React, { useState, CSSProperties } from "react"
+import React, { useState, CSSProperties, useEffect } from "react"
 
 import {
   AsyncIconButton,
@@ -316,6 +316,9 @@ interface SendMessage_T {
   placeholderText?: string;
   Icon?: React.ElementType<any>;
   style?: CSSProperties;
+
+  // web only
+  sendOnEnterPress?: boolean,
 }
 export const SendMessage = ({ 
   roomId, 
@@ -324,11 +327,37 @@ export const SendMessage = ({
   onNewMessage, 
   placeholderText="Enter a message", 
   style={},
+  sendOnEnterPress,
 }: SendMessage_T) => {
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
+
+  const [disabled, setDisabled] = useState(false)
+  const [chatFocused, setChatFocused] = React.useState(false)
   
   const [, { createElement: createMessage }] = useChats(roomId, type)
+
+  useEffect(() => {
+    if (!chatFocused) return
+    if (!sendOnEnterPress) return
+    if (typeof window === 'undefined') return
+
+    const handleSend = (e: any) => {
+      if (e.key !== 'Enter') return
+      setDisabled(true)
+
+      createMessage({ message, roomId })
+      .then(m => {
+        setMessage('')
+        onNewMessage?.(m)
+      })
+      .catch(console.error)
+      .finally(() => setDisabled(false))
+    }    
+
+    window.addEventListener('keypress', handleSend)
+    return () => { window.removeEventListener('keypress', handleSend) }
+  }, [sendOnEnterPress, chatFocused, message, roomId])
 
   return (
     <Flex row flex={1} alignContent="center" style={style}>
@@ -336,10 +365,13 @@ export const SendMessage = ({
         <TextField variant="outlined" value={message} onChange={setMessage} disabled={sending}
           aria-label="Enter a message" 
           placeholder={placeholderText} 
+          onFocus={() => setChatFocused(true)}
+          onBlur={() => setChatFocused(false)}
         />
       </Flex>
       <Flex column alignSelf="center">
-        <AsyncIconButton label="send" Icon={Icon} disabled={message === ''}
+        <AsyncIconButton label="send" Icon={Icon} 
+          disabled={message === '' || disabled}  
           action={() => createMessage({ message, roomId })}
           onSuccess={m => {
             setMessage('')

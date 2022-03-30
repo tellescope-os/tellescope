@@ -158,6 +158,8 @@ export type TextFieldProps = {
   error?: boolean,
   helperText?: string,
   size?: 'small',
+  onFocus?: (e: any) => void,
+  onBlur?: (e: any) => void,
 
   // web only
   autoComplete?: AutoComplete

@@ -604,7 +604,7 @@ export const schema: SchemaV1 = build_schema({
         initializer: () => new Date(),
       },
       fields: {
-        validator: objectAnyFieldsValidator,
+        validator: fieldsValidator,
       }
     },
     constraints: { unique: [], relationship: [] },

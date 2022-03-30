@@ -117,7 +117,7 @@ export interface User extends User_required, User_readonly, User_updatesDisabled
   accountType?: AccountType;
   roles?: string[];
   avatar?: string,
-  fields?: Indexable<string | CustomField>;
+  fields?: CustomFields;
 }
 
 export type Preference = 'email' | 'sms' | 'call' | 'chat'
@@ -126,6 +126,7 @@ export type CustomField  = string | number | object | {
   title?: string;
   description?: string;
 }
+export type CustomFields = Indexable<boolean | null | string | CustomField>;
 
 export interface Enduser_readonly extends UserActivityInfo, ClientRecord {
   lastCommunication?: Date;
@@ -145,7 +146,7 @@ export interface Enduser extends Enduser_readonly, Enduser_required, Enduser_upd
   dateOfBirth?: Date;
   journeys?: Indexable<string>;
   tags? : string[];
-  fields? : Indexable<string | CustomField>;
+  fields? : CustomFields;
   preference? : Preference;
   assignedTo? : string;
   avatar?: string,
@@ -170,7 +171,7 @@ export interface EngagementEvent_updatesDisabled {
 }
 export interface EngagementEvent extends EngagementEvent_readonly, EngagementEvent_required, EngagementEvent_updatesDisabled {  
   timestamp: Date,
-  fields?: Indexable<string | number | null>,
+  fields? : CustomFields;
 }
 
 export type JourneyStatePriority = "Disengaged" | "N/A" | "Engaged"

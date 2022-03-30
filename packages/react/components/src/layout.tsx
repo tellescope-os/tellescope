@@ -1,4 +1,4 @@
-import React, { CSSProperties, useEffect, useCallback, useState, JSXElementConstructor } from "react";
+import React, { CSSProperties, useState } from "react";
 import { ViewStyle } from "react-native"
 
 import {

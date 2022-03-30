@@ -355,6 +355,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   }, [load])
 
   useEffect(() => {
+    if (options?.dontFetch) return
     if (!isModelName(modelName)) return // a custom extension without our socket support
     if (socketConnection === 'none') return 
     if (didFetch(modelName + 'socket')) return
@@ -386,7 +387,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
       session.removeAllSocketListeners(`updated-${modelName}`)
       session.removeAllSocketListeners(`deleted-${modelName}`)
     }
-  }, [session, socketConnection, didFetch, isModelName])
+  }, [session, socketConnection, didFetch, isModelName, options])
 
   return [state, {
     addLocalElement, addLocalElements,
@@ -511,6 +512,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
   }, [load])
 
   useEffect(() => {
+    if (options?.dontFetch) return
     if (!isModelName(modelName)) return // a custom extension without our socket support
     if (!key) return
     if (socketConnection === 'none') return
@@ -526,7 +528,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
       session.unsubscribe([key.toString()]) 
       setFetched(key + 'socket', false)
     }
-  }, [modelName, isModelName, session, key, didFetch, socketConnection, addLocalElementForKey])
+  }, [modelName, options, isModelName, session, key, didFetch, socketConnection, addLocalElementForKey])
 
   const reload = useCallback(() => load(true), [load])
 

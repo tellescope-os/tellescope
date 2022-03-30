@@ -671,7 +671,7 @@ export const fieldsValidator: EscapeBuilder<Indexable<string | CustomField>> = (
       if (typeof val === 'string') {
         if (val.length > 512) fields[k] = val.substring(0, 512)
         continue
-      } else if (typeof val === 'number') {
+      } else if (typeof val === 'number' || val === null || typeof val === 'boolean') {
         continue // nothing to restrict on number type yet
       } else if (typeof val === 'object') {
         if (JSON.stringify(val).length > 1024) throw new Error(`object value for key ${k} exceeds the maximum length of 1024 characters in string representation`)

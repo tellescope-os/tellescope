@@ -1278,7 +1278,7 @@ const users_tests = async () => {
 
   await async_test(
     `update user (custom fields)`,
-    () => sdk.api.users.updateOne(sdk.userInfo.id, { fields: { f1: randomFieldValue, f2: randomFieldNumber, f3: { object: randomFieldValue } } }), // change back
+    () => sdk.api.users.updateOne(sdk.userInfo.id, { fields: { boolean: true, f1: randomFieldValue, f2: randomFieldNumber, f3: { object: randomFieldValue } } }), // change back
     { onResult: u => u.id === sdk.userInfo.id && u.fields?.f1 === randomFieldValue && u.fields?.f2 === randomFieldNumber && (u.fields?.f3 as any).object == randomFieldValue }
   )
   // sdkNonAdmin.userInfo.fname = 'Non' // update back in sdk instance as well
