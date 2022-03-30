@@ -19,6 +19,12 @@ export const ConditionalWrap = <P,>({ condition, Wrapper, wrapperProps, children
   return <>{children}</>
 }
 
+export interface ImageProps extends Styled {
+  src: string,
+  alt?: string,
+}
+export const Image = ({ ...props }: ImageProps) => <img {...props} />
+
 // type FlexByBreakpoint = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
 
 export interface Flex_T {

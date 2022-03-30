@@ -888,7 +888,7 @@ const chat_room_tests = async () => {
     { shouldError: true, onError: e => e.message === "Could not find a record for the given id" }
   )
 
-  await sdk.api.chats.createOne({ roomId: room.id, message: 'test message' })
+  await sdk.api.chats.createOne({ roomId: room.id, message: 'test message', attachments: [{ type: 'file', secureName: 'testsecurename'}] })
   let roomWithMessage = await sdk.api.chat_rooms.getOne(room.id)
   assert(roomWithMessage.numMessages === 1, 'num mesages no update', 'num messages on send message')
 
@@ -1384,7 +1384,7 @@ const automation_events_tests = async () => {
     type: 'sendWebhook',
     info: { message: 'test' }
   }
-  const a1 = await sdk.api.event_automations.createOne({
+  await sdk.api.event_automations.createOne({
     journeyId: journey.id,
     event: {
       type: "enterState",
@@ -1392,7 +1392,7 @@ const automation_events_tests = async () => {
     },
     action: testAction,
   })
-  const a2 = await sdk.api.event_automations.createOne({
+  await sdk.api.event_automations.createOne({
     journeyId: journey.id,
     event: {
       type: "leaveState",
@@ -1400,7 +1400,7 @@ const automation_events_tests = async () => {
     },
     action: testAction,
   })
-  const a3 = await sdk.api.event_automations.createOne({
+  await sdk.api.event_automations.createOne({
     journeyId: journey.id,
     event: {
       type: "enterState",
@@ -1444,23 +1444,41 @@ const automation_events_tests = async () => {
 }
 
 const form_response_tests = async () => {
+  log_header("Form Responses")
+
+  const stringResponse = 'Test Response Value'
+  const stringIntakeField = 'testIntakeField'
+  const stringTitle = 'Test'
   const enduser = await sdk.api.endusers.createOne({ email: "formresponse@tellescope.com" })
   const form = await sdk.api.forms.createOne({
     title: 'test form',
     fields: [{
-      title: 'Test',
+      title: stringTitle,
       description: 'Enter a string',
       type: 'string',
       isOptional: false,
+      intakeField: stringIntakeField
     }]
   })
-
-  const { url } = await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })
-  await sdk.api.emails.createOne({
-    enduserId: enduser.id,
-    subject: "Please Fill Out a Form",
-    textContent: `Please fill out the following form ${url}`,
+  await sdk.api.event_automations.createOne({
+    event: { type: "formResponse", info: { formId: form.id } },
+    action: { type: 'sendWebhook', info: { message: 'test' } },
   })
+
+  const { accessCode } = await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })
+  await sdk.api.form_responses.submit_form_response({ accessCode, responses: [stringResponse]  })
+
+  const [triggeredAutomation] = await sdk.api.automation_endusers.getSome()
+  const enduserWithUpdate = await sdk.api.endusers.getOne(enduser.id)
+  const recordedResponse = await sdk.api.form_responses.getOne({ accessCode })
+
+  assert(triggeredAutomation?.event?.type === 'formResponse', 'no form response event', 'form response event triggered')
+  assert(enduserWithUpdate?.fields?.[stringIntakeField] === stringResponse, 'no enduser update', 'enduser updated')
+  assert(
+    recordedResponse?.responses?.length === 1 && recordedResponse.responses[0]?.[stringTitle] === stringResponse, 
+    'response not recorded', 
+    'response recorded'
+  )
 
   await sdk.api.endusers.deleteOne(enduser.id)
   await sdk.api.forms.deleteOne(form.id)

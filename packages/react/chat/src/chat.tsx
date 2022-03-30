@@ -172,6 +172,12 @@ export const Message = ({
   )
 }
 
+export const MessageAttachments = ({ message } : { message: ChatMessage }) => {
+  return (
+    <Typography>Attachments: {JSON.stringify(message.attachments, null, 2)}</Typography>
+  )
+}
+
 interface Messages_T extends MessageStyles {
   resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
   messages: LoadedData<ChatMessage[]>,
@@ -192,7 +198,12 @@ export const Messages = ({
     <Flex column flex={1}>
       {Header && <Header {...headerProps}/>}
       <List reverse style={style} items={messages} render={message => (
-        <Message key={message.id} message={message} {...messageStyles}/>
+        <Flex column>
+          {message.message && <Message key={message.id} message={message} {...messageStyles}/>}
+          {message.attachments && message.attachments.length > 0 && 
+            <MessageAttachments message={message} />
+          }
+        </Flex>
       )}/>    
     </Flex>
   )}/>

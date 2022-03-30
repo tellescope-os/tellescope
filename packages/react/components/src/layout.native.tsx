@@ -1,11 +1,18 @@
 import React from "react";
-import { View, ViewStyle, FlatList, TouchableOpacity } from "react-native"
+import { 
+  Image as ImageNative, 
+  View, 
+  ViewStyle, 
+  FlatList, 
+  TouchableOpacity 
+} from "react-native"
 
 import {
   Flex_T,
   FormProps,
   Hoverable,
   Item,
+  ImageProps,
   List_T,
   resolve_direction_for_props,
   compute_flex_direction_with_props,
@@ -21,6 +28,15 @@ import {
 
 
 export const IN_REACT_WEB = false
+
+export const Image = ({ src, alt, style, ...props } : ImageProps) => (
+  <ImageNative 
+    accessibilityLabel={alt} 
+    source={{ uri: src }} 
+    style={convert_CSS_to_RNStyles(style) as any} // will fail for some ViewStyle props that don't apply to images, but okay
+    {...props} 
+  />
+)
 
 interface Flex_Native extends Flex_T, NativeStyled, ClickableNative {}
 

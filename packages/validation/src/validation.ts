@@ -54,6 +54,9 @@ import {
   AutomationForTemplate,
   CreateTaskAutomationAction,
   ChatAttachment,
+  FormFieldType,
+  FormResponseValue,
+  ChatAttachmentType,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -600,8 +603,7 @@ type MultipleChoiceOptions = {
 }
 
 const DEFAULT_ENDUSER_FIELDS = [
-  '_id', 'email', 'phone', 'userEmail', 'phoneNumber', 
-  'fname', 'lname', 'journeys', 'tags', 'preference'
+  '_id', 'email', 'phone', 'fname', 'lname', 'journeys', 'tags', 'preference'
 ]
 
 // todo: move preference to FIELD_TYPES with drop-down option in user-facing forms
@@ -614,20 +616,24 @@ const DEFAULT_ENDUSER_FIELDS = [
 //     REQUIRED: ['choices', 'radio'],
 //   }
 // }
-export const FORM_FIELD_VALIDATORS_BY_TYPE = {
+export const FORM_FIELD_VALIDATORS_BY_TYPE: { [K in FormFieldType]: (value?: FormResponseValue, options?: any, isOptional?: boolean) => any } = {
   'string': stringValidator({ maxLength: 5000, emptyStringOk: true, errorMessage: "Response must not exceed 5000 characters" }),
   'number': numberValidator({ errorMessage: "Response must be a number" }),
   'email': emailValidator(),
-  'phone': phoneValidator(),
-  'file': (fileInfo: FileResponse | undefined, _=undefined, isOptional: boolean) => 
-    (isOptional && (!fileInfo || object_is_empty(fileInfo))) 
-      ? { type: 'file', secureName: null }
-      : fileResponseValidator()(fileInfo),
-  'signature': (sigInfo: SignatureResponse | undefined, _=undefined, isOptional: boolean) => 
-    (isOptional && (!sigInfo || object_is_empty(sigInfo))) 
-      ? { type: 'signature', signed: null }
-      : signatureResponseValidator()(sigInfo),
-  'multiple_choice': (choiceInfo: { indexes: [], otherText?: string }, fieldOptions: MultipleChoiceOptions, isOptional: boolean) => {
+  'phoneNumber': phoneValidator(),
+  'file': (fileInfo: FileResponse | undefined, _, isOptional) => {
+    if (isOptional && (!fileInfo || object_is_empty(fileInfo))) { 
+      return { type: 'file', secureName: null }
+    }
+    return fileResponseValidator()(fileInfo)
+  },
+  'signature': (sigInfo: SignatureResponse | undefined, _, isOptional) => {
+    if (isOptional && (!sigInfo || object_is_empty(sigInfo)))  {
+      return { type: 'signature', signed: null }
+    }
+    return signatureResponseValidator()(sigInfo)
+  },
+  'multiple_choice': (choiceInfo: { indexes: [], otherText?: string }, fieldOptions: MultipleChoiceOptions, isOptional) => {
     if (isOptional && !choiceInfo) return []
 
     const { indexes, otherText } = choiceInfo
@@ -972,7 +978,7 @@ export const userIdentityValidator = objectValidator<{
 export const listOfUserIndentitiesValidator = listValidator(userIdentityValidator())
 
 export const chatAttachmentValidator = objectValidator<ChatAttachment>({ 
-  type: exactMatchListValidator(['image', 'file'])(),
+  type: exactMatchValidator<ChatAttachmentType>(['image', 'file'])(),
   secureName: stringValidator250(),
 }) 
 export const listOfChatAttachmentsValidator = listValidator(chatAttachmentValidator())

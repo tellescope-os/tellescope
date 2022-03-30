@@ -72,3 +72,14 @@ export interface SessionTimeoutEvent extends DelayedEvent {
     authToken: string,
   }
 }
+
+export interface ElectronicSignature extends InternalBusinessRecord {
+  ip: string,
+  termsVersion: '1.0',
+  description: string,
+  accessCode: string,
+  signatureText: string,
+  enduserId: string,
+  formResponseId: string,
+  responsesHash: string,
+}

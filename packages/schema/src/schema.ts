@@ -1797,7 +1797,6 @@ export const schema: SchemaV1 = build_schema({
       ...BuiltInFields, 
       journeyId: { 
         validator: mongoIdStringValidator,
-        required: true,
         examples: [PLACEHOLDER_ID],
         dependencies: [{
           dependsOn: ['journeys'],

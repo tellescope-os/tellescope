@@ -277,8 +277,9 @@ export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom
   tags?: string[];
 }
 
+export type ChatAttachmentType = 'image' | 'file'
 export type ChatAttachment = {
-  type: 'image' | 'file',
+  type: ChatAttachmentType,
   secureName: string,
 }
 
@@ -296,7 +297,7 @@ export interface ChatMessage_updatesDisabled {
 export interface ChatMessage extends ChatMessage_readonly, ChatMessage_required, ChatMessage_updatesDisabled {
   replyId?: string | null; // to support threaded replies to a specific root message
   readBy?: { [index: string] : Date };
-  attachments: ChatAttachment[]
+  attachments?: ChatAttachment[]
 }
 
 export type MessageTemplateType = 'enduser' | 'team'  // default to 'enduser'
@@ -531,13 +532,12 @@ export type AutomationAction = AutomationActionForType[AutomationActionType]
 
 export interface EventAutomation_readonly extends ClientRecord {}
 export interface EventAutomation_required {
-  journeyId: string,
   event: AutomationEvent
   action: AutomationAction,
 }
 export interface EventAutomation_updatesDisabled {}
 export interface EventAutomation extends EventAutomation_readonly, EventAutomation_required, EventAutomation_updatesDisabled {
-
+  journeyId?: string,
 }
 
 

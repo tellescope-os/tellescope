@@ -29,6 +29,7 @@ export interface ErrorInfo {
 export interface APIError extends ErrorInfo {
   code: ErrorCode,
 }
+export type APIErrorHandler = (e: APIError) => void;
 
 export type SessionType = "user" | "enduser"
 
