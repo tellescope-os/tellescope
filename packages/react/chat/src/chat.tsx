@@ -20,6 +20,8 @@ import {
   useChats,
   useChatRoomDisplayInfo,
   ChatRoomDisplayInfo,
+  SecureImage,
+  ImageDimensions,
 } from "@tellescope/react-components"
 
 import {
@@ -152,29 +154,43 @@ export const Message = ({
   const textBGStyle = message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle
   const textStyle = message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle
 
+  if (!message.message) {
+    textBGStyle.backgroundColor = undefined
+  }
+
+  const messageComponent = IN_REACT_WEB ? (
+    <Typography component="div" style={{ ...textStyle, ...textBGStyle }}>
+      {message.message}
+    </Typography>
+  ) : (
+    <Flex style={{ ...textBGStyle }}>
+      <Typography component="div" style={{ ...textStyle }}>
+        {message.message}
+      </Typography>   
+    </Flex>
+  )
+
   return (
     <Flex style={{ margin: 5 }}> 
       {message.senderId !== chatUserId && displayPicture}
-      {IN_REACT_WEB ? (
-        <Typography component="div" style={{ ...textStyle, ...textBGStyle }}>
-          {message.message}
-        </Typography>   
-      )
-      : (
-        <Flex style={{ ...textBGStyle }}>
-          <Typography component="div" style={{ ...textStyle }}>
-            {message.message}
-          </Typography>   
-        </Flex>
-      )}
+      {messageComponent}
       {message.senderId === chatUserId && displayPicture}
     </Flex>
   )
 }
 
-export const MessageAttachments = ({ message } : { message: ChatMessage }) => {
+export const MessageAttachments = ({ message, chatUserId, imageDimensions } : { message: ChatMessage, chatUserId: string, imageDimensions?: ImageDimensions }) => {
+  if (!message.attachments) return null
+  if (message.attachments.length === 0) return null
+
   return (
-    <Typography>Attachments: {JSON.stringify(message.attachments, null, 2)}</Typography>
+    <Flex column alignSelf={message.senderId === chatUserId ? "flex-end" : "flex-start"}>
+      {message.attachments.filter(a => a.type === 'image').map(a => (
+        <Flex style={{ margin: 10 }}>
+        <SecureImage key={a.secureName} secureName={a.secureName} alt="image attachment" {...imageDimensions} />
+        </Flex>
+      ))}
+    </Flex>
   )
 }
 
@@ -184,6 +200,7 @@ interface Messages_T extends MessageStyles {
   chatUserId: string,
   Header?: React.JSXElementConstructor<MessagesHeaderProps>,
   headerProps?: MessagesHeaderProps,
+  imageDimensions?: ImageDimensions,
 }
 export const Messages = ({ 
   resolveSenderName,
@@ -192,6 +209,7 @@ export const Messages = ({
   Header=MessagesHeader,
   headerProps,
   style,
+  imageDimensions,
   ...messageStyles 
 }: Messages_T & Styled) => (
   <LoadingLinear data={messages} render={messages => (
@@ -199,9 +217,9 @@ export const Messages = ({
       {Header && <Header {...headerProps}/>}
       <List reverse style={style} items={messages} render={message => (
         <Flex column>
-          {message.message && <Message key={message.id} message={message} {...messageStyles}/>}
-          {message.attachments && message.attachments.length > 0 && 
-            <MessageAttachments message={message} />
+          <Message key={message.id} message={message} {...messageStyles} />
+          {!!message.attachments && message.attachments.length > 0 && 
+            <MessageAttachments message={message} chatUserId={chatUserId} imageDimensions={imageDimensions} />
           }
         </Flex>
       )}/>    

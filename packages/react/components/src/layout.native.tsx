@@ -29,12 +29,14 @@ import {
 
 export const IN_REACT_WEB = false
 
-export const Image = ({ src, alt, style, ...props } : ImageProps) => (
+
+export const Image = ({ src, alt, height, width,  ...props } : ImageProps) => (
   <ImageNative 
     accessibilityLabel={alt} 
     source={{ uri: src }} 
-    style={convert_CSS_to_RNStyles(style) as any} // will fail for some ViewStyle props that don't apply to images, but okay
-    {...props} 
+    resizeMode="contain"
+    style={props}
+    // {...props} 
   />
 )
 

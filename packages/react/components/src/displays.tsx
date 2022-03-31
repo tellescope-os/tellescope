@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react"
 
 import { Avatar, AvatarProps, Styled } from "./mui"
 import { useResolvedSession } from "./authentication"
-import { Image } from "./layout"
+import { Image, ImageDimensions } from "./layout"
 import { APIError } from "."
 import { APIErrorHandler } from "@tellescope/types-utilities"
 
@@ -35,7 +35,7 @@ const useSecureImage = ({
 }
 
 
-export const SecureImage = ({ secureName, placeholder, ...props } : { placeholder?: React.ReactElement, secureName: string, alt?: string } & Styled) => {
+export const SecureImage = ({ secureName, placeholder, ...props } : { placeholder?: React.ReactElement, secureName: string, alt?: string } & ImageDimensions) => {
 const loadedImage = useSecureImage({ secureName })
 
   // if user doesn't have picture, or it's still loading
