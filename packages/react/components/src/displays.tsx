@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from "react"
 import { Avatar, AvatarProps, Styled } from "./mui"
 import { useResolvedSession } from "./authentication"
 import { Image, ImageDimensions } from "./layout"
-import { APIError } from "."
 import { APIErrorHandler } from "@tellescope/types-utilities"
 
 const useSecureImage = ({ 

@@ -38,7 +38,7 @@ type WithId = { id: string | number }
 
 interface FetchContextValue {
   didFetch: (s: string, force?: boolean, refetchInMS?: number) => boolean,
-  setFetched: (s: string, b: boolean) => void;
+  setFetched: (s: string, b: boolean, timestamp?: boolean) => void;
 }
 const FetchContext = createContext({} as FetchContextValue)
 export const WithFetchContext = ( { children } : { children: React.ReactNode }) => {
@@ -53,10 +53,10 @@ export const WithFetchContext = ( { children } : { children: React.ReactNode }) 
 
         return status // return true status
       },
-      setFetched: (s, b) => {
+      setFetched: (s, b, timestamp=true) => {
         lookupRef.current[s] = lookupRef.current[s] ?? {}
         lookupRef.current[s].status = b
-        lookupRef.current[s].lastFetch = Date.now()
+        lookupRef.current[s].lastFetch = timestamp ? Date.now() : 0
       },
      }}>
       {children}
@@ -359,7 +359,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     if (!isModelName(modelName)) return // a custom extension without our socket support
     if (socketConnection === 'none') return 
     if (didFetch(modelName + 'socket')) return
-    setFetched(modelName + 'socket', true)
+    setFetched(modelName + 'socket', true, false)
 
     session.handle_events({
       [`created-${modelName}`]: addLocalElements,
@@ -377,15 +377,16 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
       session.subscribe({ [modelName]: modelName }) // subscribe to model-wide updates
     }
 
+    // unneeded
     return () => { 
-      if (socketConnection === 'model')  {
-        session.unsubscribe([modelName])
-      }
+      // if (socketConnection === 'model')  {
+      //   session.unsubscribe([modelName])
+      // }
 
-      setFetched(modelName + 'socket', false)
-      session.removeAllSocketListeners(`created-${modelName}`)
-      session.removeAllSocketListeners(`updated-${modelName}`)
-      session.removeAllSocketListeners(`deleted-${modelName}`)
+      // setFetched(modelName + 'socket', false, false)
+      // session.removeAllSocketListeners(`created-${modelName}`)
+      // session.removeAllSocketListeners(`updated-${modelName}`)
+      // session.removeAllSocketListeners(`deleted-${modelName}`)
     }
   }, [session, socketConnection, didFetch, isModelName, options])
 
@@ -450,6 +451,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     return e
   }, [dispatch, slice, options]) 
   const addLocalElementsForKey = useCallback((key: string | number, es: T[], o?: AddOptions) => {
+    console.log('addLocalElementsForKey', modelName, key, es)
     dispatch(slice.actions.addElementsForKey({ value: { key: key.toString(), elements: es }, options: o }))
     options?.onAdd?.(es) 
     return es
@@ -517,16 +519,17 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     if (!key) return
     if (socketConnection === 'none') return
     if (didFetch(key + 'socket')) return
-    setFetched(key + 'socket', true)
+    setFetched(key + 'socket', true, false)
 
     // TODO: Add update and delete subscriptions
     session.subscribe({ [key]: modelName }, {
       [`created-${modelName}`]: (cs: T[]) => addLocalElementsForKey(key, cs, {})
     })
 
+    // not needed
     return () => { 
-      session.unsubscribe([key.toString()]) 
-      setFetched(key + 'socket', false)
+      // session.unsubscribe([key.toString()]) 
+      // setFetched(key + 'socket', false, false)
     }
   }, [modelName, options, isModelName, session, key, didFetch, socketConnection, addLocalElementForKey])
 
