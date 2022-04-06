@@ -18,8 +18,13 @@ export interface SessionOptions {
   host?: string;
   cacheKey?: string;
   expirationInSeconds?: number,
+  enableSocketLogging?: boolean,
   handleUnauthenticated?: () => Promise<void>;
 }
+
+export const wait = (f?: Promise<void>, ms=1000) => new Promise<void>((resolve, reject) => {
+  setTimeout(() => f ? f.then(resolve).catch(reject) : resolve(), ms)
+})
 
 interface RequestOptions {
   refresh_session?: () => Promise<any>,
@@ -42,28 +47,34 @@ const has_local_storage = () => typeof window !== 'undefined' && !!window.localS
 const set_cache = (key: string, authToken: string) => has_local_storage() && (window.localStorage[key] = authToken)
 const access_cache = (key=DEFAULT_AUTHTOKEN_KEY) => has_local_storage() ? window.localStorage[key] : undefined
 
+export const SOCKET_POLLING_DELAY = 200
+
 export class Session {
   host: string;
   authToken: string;
   cacheKey: string;
   apiKey?: string;
   socket?: Socket;
+  type?: string
+  enableSocketLogging?: boolean;
   handleUnauthenticated?: SessionOptions['handleUnauthenticated']
   expirationInSeconds?: number;
   socketAuthenticated: boolean;
-  userInfo: { businessId?: string };
+  userInfo: { businessId?: string, id?: string };
   sessionStart = Date.now();
   AUTO_REFRESH_MS = 3600000 // 1hr elapsed
 
   config: { headers: { Authorization: string }};
 
-  constructor(o={} as SessionOptions & RequestOptions) {
+  constructor(o={} as SessionOptions & RequestOptions & { type: string }) {
     this.host= o.host ?? DEFAULT_HOST
     this.apiKey = o.apiKey ?? '';
     this.expirationInSeconds = o.expirationInSeconds
     this.socket = undefined as Socket | undefined
     this.socketAuthenticated = false
     this.handleUnauthenticated = o.handleUnauthenticated
+    this.enableSocketLogging = o.enableSocketLogging
+    this.type = o.type
 
     this.cacheKey = o.cacheKey || DEFAULT_AUTHTOKEN_KEY
 
@@ -174,16 +185,41 @@ export class Session {
 
   EMIT = async (route: string, args: object, authenticated=true, options={} as RequestOptions) => {
     if (!this.socket) {
+      if (this.enableSocketLogging) { 
+        console.log('attempted emit with !this.socket')
+      }
+
       this.authenticate_socket() // sets namespace correctly
     }
+
+    // @ts-ignore
+    console.log(this.socket.nsp)
+
     this.socket?.emit(route, { ...args, ...authenticated ? { authToken: this.authToken } : {} } )
   }
 
   ON = <T={}>(s: string, callback: (a: T) => void) => this.socket?.on(s, callback)
 
   subscribe = (rooms: { [index: string]: keyof ClientModelForName }, handlers?: { [index: string]: (a: any) => void } ) => {
-    if (handlers) { this.handle_events(handlers) }
-    this.EMIT('join-rooms', { rooms })
+    if (this.enableSocketLogging) {
+      console.log(`${this.type} ${this.userInfo.id} subscribing ${JSON.stringify(rooms)}, socket defined: ${!!this.socket}`)
+    }
+
+    if (!this.socket) {
+      this.initialize_socket()
+    }
+
+    if (handlers) { 
+      this.handle_events(handlers) 
+    }
+    
+    this.EMIT(`join-rooms`, { rooms })
+    .then(() => {
+      if (this.enableSocketLogging) {
+        console.log(`${this.type} ${this.userInfo.id} emitted ${JSON.stringify(rooms)}`)
+      }
+    })
+    .catch(console.error)
   }
 
   handle_events = ( handlers: { [index: string]: (a: any) => void } ) => {
@@ -193,12 +229,51 @@ export class Session {
   unsubscribe = (roomIds: string[]) => this.EMIT('leave-rooms', { roomIds })
   removeAllSocketListeners = (s: string) => this.socket?.removeAllListeners(s)
 
-  authenticate_socket = () => {
-    if (!this.userInfo?.businessId) return
+  socket_log = (message: string) => {
+    console.log(`${this.type} ${this.userInfo.id} got socket message: ${message}`)
+  }
+  initialize_socket = () => {
+    if (!this.userInfo?.businessId) {
+      console.error("Attempting to initialize_socket without businessId set")
+      return 
+    }
     this.socket = io(`${this.host}/${this.userInfo.businessId}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
-    this.socket.on('disconnect', () => { this.socketAuthenticated = false })
-    this.socket.on('authenticated', () => { this.socketAuthenticated = true })
+  }
+  authenticate_socket = () => { 
+    this.initialize_socket()
+    if (!this.socket) return
+
+    this.socket.on('disconnect', () => { 
+      this.socketAuthenticated = false 
+      if (this.enableSocketLogging) { this.socket_log("disconnect") }
+    })
+    this.socket.on('authenticated', () => { 
+      this.socketAuthenticated = true 
+      if (this.enableSocketLogging) { this.socket_log("authenticated") }
+    })
+    this.socket.on('joined-rooms', value => {
+      this.socket_log(value)
+    })
 
     this.socket.emit('authenticate', this.authToken)
+  }
+
+  connectSocket = async () => {
+    let loopCount = 0
+    await wait(undefined, SOCKET_POLLING_DELAY)
+  
+    while (!(this.socketAuthenticated && this.socketAuthenticated) && ++loopCount < 10) {
+      this.authenticate_socket()
+      await wait(undefined, SOCKET_POLLING_DELAY)
+    }
+    
+    if (loopCount === 10) {
+      console.log("Failed to authenticate after 10 attempts")
+      process.exit(1)
+    }
+  
+    if (this.enableSocketLogging) {
+      console.log(`Authenticated ${this.type} ${this.userInfo.id} after ${loopCount} reconnection attempts`)
+    }
   }
 }

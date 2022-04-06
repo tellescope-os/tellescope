@@ -159,7 +159,7 @@ export class Session extends SessionManager {
   type: SessionType = 'user';
 
   constructor(o?: SessionOptions & { userInfo?: UserSession }) {
-    super({ ...o, cacheKey: o?.cacheKey || "tellescope_user" })
+    super({ ...o, cacheKey: o?.cacheKey || "tellescope_user", type: 'user' })
     if (o?.userInfo) this.userInfo = o.userInfo
 
     const queries = loadDefaultQueries(this) as Queries

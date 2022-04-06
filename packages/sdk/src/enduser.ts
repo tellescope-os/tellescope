@@ -90,7 +90,7 @@ export class EnduserSession extends Session {
   type: SessionType = 'enduser';
 
   constructor(o: EnduserSessionOptions) {
-    super({ ...o, cacheKey: o?.cacheKey || "tellescope_enduser" })
+    super({ ...o, cacheKey: o?.cacheKey || "tellescope_enduser", type: 'enduser' })
     if (o?.enduser) this.userInfo = o.enduser
     
     this.businessId = o?.businessId
