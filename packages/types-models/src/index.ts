@@ -447,6 +447,12 @@ export interface WebHook extends WebHook_readonly, WebHook_required, WebHook_upd
   subscriptions: WebhookSubscriptionsType
 }
 
+export type CalendarEventReminderType = "webhook"
+export type CalendarEventReminder = {
+  type: CalendarEventReminderType,
+  remindAt: number,
+  didRemind?: boolean,
+}
 export interface CalendarEvent_readonly extends ClientRecord {}
 export interface CalendarEvent_required {
   title: string,
@@ -458,7 +464,8 @@ export interface CalendarEvent extends CalendarEvent_readonly, CalendarEvent_req
   attendees: UserIdentity[],
   chatRoomId?: string,
   description?: string,
-  fields?: Indexable<string | CustomField>;
+  fields?: Indexable<string | CustomField>,
+  reminders?: CalendarEventReminder[],
 }
 
 export type WebhookRecord = {
@@ -469,6 +476,7 @@ export interface WebhookCall {
   model: WebhookSupportedModel,
   message: string,
   type: CUD,
+  event?: CalendarEvent & { id: string },
   records: WebhookRecord[],
   relatedRecords: { [index: string]: WebhookRecord },
   timestamp: string,

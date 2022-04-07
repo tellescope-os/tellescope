@@ -17,6 +17,7 @@ import {
   WebhookSupportedModel,
   WebhookRecord,
   WebhookCall,
+  CalendarEvent,
   CUDSubscription,
   AutomationAction,
 } from "@tellescope/types-models"
@@ -47,11 +48,20 @@ const webhookURL = `http://127.0.0.1:${PORT}${webhookEndpoint}`
 
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
-const verify_integrity = (type: string, message: string, records: WebhookRecord[], timestamp: string, integrity: string,) => (
+const verify_integrity = ({ type, message, event, records, timestamp, integrity } : { 
+  type: string, 
+  message: string, 
+  event?: CalendarEvent,
+  records: WebhookRecord[], 
+  timestamp: string, 
+  integrity: string,
+}) => (
   sha256(
     type === "automation" 
       ? message + timestamp + TEST_SECRET
-      : records.map(r => r.id).join('') + timestamp + TEST_SECRET
+      : type === 'calendar_event_reminder'
+          ? event?.id + timestamp + TEST_SECRET 
+          : records.map(r => r.id).join('') + timestamp + TEST_SECRET
   ) === integrity
 )
 
@@ -60,7 +70,7 @@ app.post(webhookEndpoint, (req, res) => {
   const body = req.body as WebhookCall
   // console.log('got hook', body.records, body.timestamp, body.integrity)
 
-  if (!verify_integrity(body.type, body.message ?? '', body.records, body.timestamp, body.integrity)) {
+  if (!verify_integrity(body)) {
     console.error("Integrity check failed for request", JSON.stringify(body, null, 2))
     process.exit(1)
   }
@@ -76,14 +86,19 @@ for (const model in WEBHOOK_MODELS) {
   emptySubscription[model as WebhookSupportedModel] = { create: false, update: false, delete: false }
 }
 
+const CHECK_WEBHOOK_DELAY_MS = 50
 let webhookIndex = 0
-const check_next_webhook = async (evaluate: (hook: WebhookCall) => boolean, name: string, error: string, isSubscribed: boolean) => {
+const check_next_webhook = async (evaluate: (hook: WebhookCall) => boolean, name: string, error: string, isSubscribed: boolean, noHookExpected?: boolean) => {
   if (isSubscribed === false) return
 
-  await wait(undefined, 50) // wait for hook to post
+  await wait(undefined, CHECK_WEBHOOK_DELAY_MS) // wait for hook to post
 
   const event = handledEvents[webhookIndex]
-  assert(!!event, 'did not get hook', 'got hook')
+  if (noHookExpected) {
+    assert(!event, error, name)
+  } else {
+    assert(!!event, 'did not get hook', 'got hook')
+  }
   if (!event) return // ensure webhookIndex not incremented
 
   const success = evaluate(event)
@@ -138,6 +153,7 @@ const meetings_tests = async (isSubscribed: boolean) => {
   )
 }
 
+const AUTOMATION_POLLING_DELAY_MS = 2000 - CHECK_WEBHOOK_DELAY_MS
 const test_automation_webhooks = async () => {
   log_header("Automation Events")
   const state1 = "State 1", state2 = "State 2";
@@ -171,7 +187,7 @@ const test_automation_webhooks = async () => {
   })
 
   // wait long enough for automation to process and send webhook
-  await wait(undefined, 2500)
+  await wait(undefined, AUTOMATION_POLLING_DELAY_MS)
   
   await check_next_webhook(
     ({ message }) => message === testMessage,
@@ -186,7 +202,105 @@ const test_automation_webhooks = async () => {
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
-const tests: { [K in WebhookSupportedModel]: (isSubscribed: boolean) => Promise<void> } = {
+
+let CALENDAR_EVENT_WEBHOOK_COUNT = 0 // 
+const calendar_event_reminders_tests = async () => {
+  log_header("Calendar Event Reminders")
+
+  const firstRemindAt = Date.now()
+  const secondRemindAt = Date.now() + AUTOMATION_POLLING_DELAY_MS * 2
+  const thirdRemindAt = Date.now() + AUTOMATION_POLLING_DELAY_MS * 4
+  const sampleCalendarEventReminders: CalendarEvent['reminders'] = [
+    {
+      remindAt: firstRemindAt,
+      type: 'webhook',
+    },
+    {
+      remindAt: thirdRemindAt, // include before secondRemindAt as test that order doesn't matter
+      type: 'webhook',
+    },
+    {
+      didRemind: false, // test to ensure order of fields doesn't matter in automations query
+      remindAt: secondRemindAt,
+      type: 'webhook',
+    }
+  ]
+  const calendarEvent = await sdk.api.calendar_events.createOne({
+    durationInMinutes: 10,
+    startTimeInMS: Date.now(),
+    title: "Test Notifications",
+    reminders: sampleCalendarEventReminders,
+  })
+  CALENDAR_EVENT_WEBHOOK_COUNT = sampleCalendarEventReminders.length
+
+  // wait long enough for automation to process and send webhook
+  await wait(undefined, AUTOMATION_POLLING_DELAY_MS) 
+  await check_next_webhook(
+    ({ event }) => (
+      event?.id === calendarEvent.id && 
+      !!event?.reminders?.find(r => r.remindAt === firstRemindAt )
+    ),
+    'Calendar event successful webhook error', 
+    'First calendar event reminder received', 
+    true,
+  )
+
+  await wait(undefined, AUTOMATION_POLLING_DELAY_MS) 
+  await check_next_webhook(
+    () => true,
+    "Correctly didn't get webhook yet", 
+    'Got calendar event webhook too early', 
+    true, true,
+  )
+
+  await wait(undefined, AUTOMATION_POLLING_DELAY_MS) 
+  await check_next_webhook(
+    ({ event }) => (
+      event?.id === calendarEvent.id && 
+      !!event?.reminders?.find(r => r.remindAt === secondRemindAt ) &&
+      !!event?.reminders?.find(r => r.remindAt === firstRemindAt && r.didRemind === true )
+    ),
+    'Calendar event successful webhook error', 
+    'First calendar event reminder received', 
+    true
+  )
+
+  await wait(undefined, AUTOMATION_POLLING_DELAY_MS) 
+  await check_next_webhook(
+    () => true,
+    "Correctly didn't get webhook yet", 
+    'Got calendar event webhook too early', 
+    true, true,
+  )
+
+  await wait(undefined, AUTOMATION_POLLING_DELAY_MS) 
+  await check_next_webhook(
+    ({ event }) => (
+      event?.id === calendarEvent.id && 
+      !!event?.reminders?.find(r => r.remindAt === thirdRemindAt ) &&
+      !!event?.reminders?.find(r => r.remindAt === secondRemindAt && r.didRemind === true ) &&
+      !!event?.reminders?.find(r => r.remindAt === firstRemindAt && r.didRemind === true )
+    ),
+    'Calendar event successful webhook error', 
+    'First calendar event reminder received', 
+    true
+  )
+
+  await wait(undefined, AUTOMATION_POLLING_DELAY_MS) 
+  await check_next_webhook(
+    () => true,
+    "Correctly didn't get webhook yet", 
+    'Got calendar event webhook too early', 
+    true, true,
+  )
+
+
+  // cleanup
+  await sdk.api.calendar_events.deleteOne(calendarEvent.id)
+}
+
+const tests: { [K in WebhookSupportedModel  | 'calendarEventReminders']: (isSubscribed: boolean) => Promise<void> } = {
+  calendarEventReminders: calendar_event_reminders_tests, 
   chats: chats_tests,
   meetings: meetings_tests,
 }
@@ -244,7 +358,7 @@ const run_tests = async () => {
   for (const t in tests) {
     await tests[t as keyof typeof tests](true)
   }
-  const finalLength = handledEvents.length
+  const finalLength = handledEvents.length + CALENDAR_EVENT_WEBHOOK_COUNT /* calendar event webhooks don't require subscriptions */
 
   await async_test(
     'update webhook (set subscriptions empty)',

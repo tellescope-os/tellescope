@@ -57,6 +57,8 @@ import {
   FormFieldType,
   FormResponseValue,
   ChatAttachmentType,
+  CalendarEventReminder,
+  CalendarEventReminderType,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -1034,6 +1036,14 @@ const _AUTOMATION_ACTIONS: { [K in AutomationActionType]: any } = {
 }
 export const AUTOMATION_ACTIONS = Object.keys(_AUTOMATION_ACTIONS) as AutomationActionType[]
 export const automationActionTypeValidator = exactMatchValidator<AutomationActionType>(AUTOMATION_ACTIONS)
+
+
+export const calendarEventReminderValidator = objectValidator<CalendarEventReminder>({
+  type: exactMatchValidator<CalendarEventReminderType>(['webhook'])(),
+  remindAt: nonNegNumberValidator(),
+  didRemind: booleanValidator({ isOptional: true }),
+})()
+export const listOfCalendarEventRemindersValidator = listValidator(calendarEventReminderValidator)
 
 export const automationEventValidator = orValidator<{ [K in AutomationEventType]: AutomationEvent & { type: K } } >({
   enterState: objectValidator<EnterStateAutomationEvent>({

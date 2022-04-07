@@ -88,6 +88,7 @@ import {
   automationEnduserStatusValidator,
   listOfStringsValidatorEmptyOk,
   listOfChatAttachmentsValidator,
+  listOfCalendarEventRemindersValidator,
 } from "@tellescope/validation"
 
 import {
@@ -304,6 +305,7 @@ export type CustomActions = {
     configure: CustomAction<{ url: string, secret: string, subscriptions?: WebhookSubscriptionsType }, { }>,
     update: CustomAction<{ url?: string, secret?: string, subscriptionUpdates?: WebhookSubscriptionsType }, { }>,
     send_automation_webhook: CustomAction<{ message: string }, { }>,
+    send_calendar_event_reminder_webhook: CustomAction<{ id: string }, { }>,
   },
 } 
 
@@ -1628,13 +1630,21 @@ export const schema: SchemaV1 = build_schema({
 
         Currently supported models for Webhooks: ${Object.keys(WEBHOOK_MODELS).join(', ')}
 
-        You can also handle webhooks from automations in Tellescope, which have a simpler format: <pre>{ 
-          type: 'automation'
-          message: string,
+        You can handle webhooks from automations in Tellescope, which have a simpler format: <pre>{ 
+        type: 'automation'
+        message: string,
           timestamp: string, 
           integrity: string, 
 }</pre>
         In this case, integrity is a simple sha256 hash of message + timestamp + secret
+
+        You can also handle calendar event reminders as webhooks, which have the format: <pre>{ 
+          type: 'calendar_event_reminder'
+          event: CalendarEvent,
+          timestamp: string, 
+          integrity: string, 
+}</pre>
+        In this case, integrity is a simple sha256 hash of event.id + timestamp + secret
       `
     },
     constraints: {
@@ -1674,6 +1684,16 @@ export const schema: SchemaV1 = build_schema({
         description: "Sends a webhook with the automations format, useful for testing automation integrations",
         parameters: { 
           message: { validator: stringValidator5000, required: true },
+        },
+        returns: {},
+      },
+      send_calendar_event_reminder_webhook: {
+        op: "custom", access: 'create', method: "post",
+        name: 'Send Calendar Event Reminder Webhook',
+        path: '/send-calendar-event-reminder-webhook',
+        description: "Sends a webhook with the calendar reminder format, useful for testing integrations",
+        parameters: { 
+          id: { validator: mongoIdStringValidator, required: true },
         },
         returns: {},
       },
@@ -1737,8 +1757,11 @@ export const schema: SchemaV1 = build_schema({
         validator: listOfUserIndentitiesValidator,
         initializer: () => [],
       }, 
-      fields: { validator: fieldsValidator },
-      
+      reminders: {
+        validator: listOfCalendarEventRemindersValidator,
+        initializer: () => [],
+      },
+      fields: { validator: fieldsValidator }, 
     }
   },
   sequence_automations: {

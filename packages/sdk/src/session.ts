@@ -234,7 +234,9 @@ export class Session {
   }
   initialize_socket = () => {
     if (!this.userInfo?.businessId) {
-      console.error("Attempting to initialize_socket without businessId set")
+      if (this.enableSocketLogging) {
+        console.warn("Attempting to initialize_socket without businessId set")
+      }
       return 
     }
     this.socket = io(`${this.host}/${this.userInfo.businessId}`, { transports: ['websocket'] }); // supporting polling requires sticky session at load balancer
