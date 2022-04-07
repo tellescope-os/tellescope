@@ -192,9 +192,6 @@ export class Session {
       this.authenticate_socket() // sets namespace correctly
     }
 
-    // @ts-ignore
-    console.log(this.socket.nsp)
-
     this.socket?.emit(route, { ...args, ...authenticated ? { authToken: this.authToken } : {} } )
   }
 

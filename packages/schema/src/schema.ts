@@ -89,6 +89,7 @@ import {
   listOfStringsValidatorEmptyOk,
   listOfChatAttachmentsValidator,
   listOfCalendarEventRemindersValidator,
+  messageTemplateModeValidator,
 } from "@tellescope/validation"
 
 import {
@@ -1227,12 +1228,12 @@ export const schema: SchemaV1 = build_schema({
         examples: ["Template Subject"],
       },
       message: {
-        validator: stringValidator5000,
+        validator: stringValidator25000,
         required: true,
         examples: ["This is the template message......"],
       },
       html: {
-        validator: stringValidator5000,
+        validator: stringValidator25000,
         examples: ["This is the template message......"],
       },
       editorState: {
@@ -1242,6 +1243,9 @@ export const schema: SchemaV1 = build_schema({
       type: {
         validator: messageTemplateTypeValidator,
         initializer: () => 'enduser' as MessageTemplateType
+      },
+      mode: {
+        validator: messageTemplateModeValidator,
       },
     }
   },

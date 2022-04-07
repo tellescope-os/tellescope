@@ -301,7 +301,7 @@ export interface ChatMessage extends ChatMessage_readonly, ChatMessage_required,
 }
 
 export type MessageTemplateType = 'enduser' | 'team'  // default to 'enduser'
-
+export type MessageTemplateMode = 'html' | 'richtext'
 export interface MessageTemplate_readonly extends ClientRecord {}
 export interface MessageTemplate_required {
   title: string;
@@ -313,6 +313,7 @@ export interface MessageTemplate extends MessageTemplate_readonly, MessageTempla
   html: string;
   type?: MessageTemplateType;
   editorState?: string
+  mode?: MessageTemplateMode,
 }
 
 export interface File_readonly extends ClientRecord {

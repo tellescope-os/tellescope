@@ -59,6 +59,7 @@ import {
   ChatAttachmentType,
   CalendarEventReminder,
   CalendarEventReminderType,
+  MessageTemplateMode,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -1037,6 +1038,13 @@ const _AUTOMATION_ACTIONS: { [K in AutomationActionType]: any } = {
 export const AUTOMATION_ACTIONS = Object.keys(_AUTOMATION_ACTIONS) as AutomationActionType[]
 export const automationActionTypeValidator = exactMatchValidator<AutomationActionType>(AUTOMATION_ACTIONS)
 
+
+const _MESSAGE_TEMPLATE_MODES: { [K in MessageTemplateMode]: any } = {
+  richtext: '',
+  html: '',
+}
+export const MESSAGE_TEMPLATE_MODES = Object.keys(_MESSAGE_TEMPLATE_MODES) as MessageTemplateMode[]
+export const messageTemplateModeValidator = exactMatchValidator<MessageTemplateMode>(MESSAGE_TEMPLATE_MODES)
 
 export const calendarEventReminderValidator = objectValidator<CalendarEventReminder>({
   type: exactMatchValidator<CalendarEventReminderType>(['webhook'])(),
