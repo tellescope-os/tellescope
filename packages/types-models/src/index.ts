@@ -423,7 +423,9 @@ export interface FormResponse_required {
   accessCode?: string,
   userEmail?: string,
 }
-export interface FormResponse_updatesDisabled {}
+export interface FormResponse_updatesDisabled {
+  submissionExpiresAt?: number,
+}
 export interface FormResponse extends FormResponse_readonly, FormResponse_required, FormResponse_updatesDisabled {}
 
 export const WEBHOOK_MODELS = {
@@ -547,6 +549,7 @@ export interface EventAutomation_required {
 export interface EventAutomation_updatesDisabled {}
 export interface EventAutomation extends EventAutomation_readonly, EventAutomation_required, EventAutomation_updatesDisabled {
   journeyId?: string,
+  formId?: string,
 }
 
 

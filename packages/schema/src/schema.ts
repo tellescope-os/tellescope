@@ -1603,6 +1603,10 @@ export const schema: SchemaV1 = build_schema({
           onDependencyDelete: 'delete',
         }]
       },
+      submissionExpiresAt: { 
+        validator: nonNegNumberValidator,
+        updatesDisabled: true,
+      },
       submittedBy: { validator: stringValidator250 },
       accessCode: { validator: stringValidator250 },
       userEmail: { validator: emailValidator },
@@ -1825,8 +1829,20 @@ export const schema: SchemaV1 = build_schema({
       journeyId: { 
         validator: mongoIdStringValidator,
         examples: [PLACEHOLDER_ID],
+        initializer: ({ event }) => (event?.info as any)?.journeyId,
         dependencies: [{
           dependsOn: ['journeys'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      formId: { 
+        validator: mongoIdStringValidator,
+        examples: [PLACEHOLDER_ID],
+        initializer: ({ event }) => (event?.info as any)?.formId,
+        dependencies: [{
+          dependsOn: ['forms'],
           dependencyField: '_id',
           relationship: 'foreignKey',
           onDependencyDelete: 'delete',
