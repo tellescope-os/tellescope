@@ -1419,7 +1419,7 @@ const automation_events_tests = async () => {
       },
       action: testAction,
     }),
-    { shouldError: true, onError: e => e.message === UniquenessViolationMessage }
+    { shouldError: true, onError: e => e.message === "You cannot create two identical event automations" }
   ) 
 
   // trigger a1 on create

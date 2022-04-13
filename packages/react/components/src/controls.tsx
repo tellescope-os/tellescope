@@ -20,7 +20,12 @@ import {
 } from "./layout"
 import { Session, EnduserSession } from '@tellescope/sdk';
 
-export interface LabeledIconButtonProps {
+export interface WithOffset {
+  offsetX?: number,
+  offsetY?: number, 
+}
+
+export interface LabeledIconButtonProps extends WithOffset {
   Icon: React.ElementType, 
   label: string, 
   id?: string, 
@@ -34,11 +39,10 @@ export interface LabeledIconButtonProps {
   className?: string,
   open?: boolean | undefined,
   size?: number | undefined,
-  offsetX?: number,
-  offsetY?: number,
   enterDelay?: number,
   enterNextDelay?: number,
 }
+export const DEFAULT_ICON_BUTTON_SIZE = 30
 export const LabeledIconButton = ({ 
   Icon=() => null, 
   label, 
@@ -51,7 +55,7 @@ export const LabeledIconButton = ({
   showArrow=true, 
   padding=5,
   open=undefined,
-  size=30,
+  size=DEFAULT_ICON_BUTTON_SIZE,
   offsetX=0,
   offsetY=0,
   enterDelay=0,
@@ -92,7 +96,7 @@ export const LabeledIconButton = ({
 
 const CircularProgressIcon = ({ style } : Styled) => <Flex style={style}><CircularProgress style={style}/></Flex>
 
-interface AsyncAction <T=any>{
+export interface AsyncAction <T=any>{
   action: () => Promise<T>,
   staysMounted?: boolean,
   onSuccess?: (v: T) => void,
@@ -122,8 +126,18 @@ export const useAsyncAction = <T,>({ action, staysMounted=true, onSuccess, onErr
 export const AsyncIconButton = <T,>({ Icon, ...props } : LabeledIconButtonProps & AsyncAction<T>) => {
   const { performingAction, handlePerformAction } = useAsyncAction(props)
 
+  props.size = (props.size ?? DEFAULT_ICON_BUTTON_SIZE)
+  if (props.size > 10) { props.size -= 5 } // reasonable size adjustment for default size of icon button
+
   return <LabeledIconButton {...props} disabled={props.disabled ?? performingAction} onClick={handlePerformAction}
-    Icon={performingAction ? CircularProgressIcon : Icon}
+    Icon={performingAction 
+      ? () => (
+        <CircularProgressIcon style={{ 
+          minHeight: props.size, minWidth: props.size,
+          maxHeight: props.size, maxWidth: props.size, 
+        }} />
+      ) : Icon
+    }
   />
 }
 interface AsyncButtonProps<T> extends AsyncAction<T> {

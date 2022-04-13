@@ -205,3 +205,7 @@ export const build_file_link_string: ToTemplateString<{ id: string, displayName:
 export const to_absolute_url = (link : string) => link.startsWith('http') ? link : '//' + link // ensure absolute url 
 
 export const throwFunction = (s: string) => { throw s }
+
+export const wait = (f?: Promise<void>, ms=1000) => new Promise<void>((resolve, reject) => {
+  setTimeout(() => f ? f.then(resolve).catch(reject) : resolve(), ms)
+})
