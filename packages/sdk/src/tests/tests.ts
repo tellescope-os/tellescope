@@ -865,7 +865,7 @@ const sms_tests = async (queries=sdk.api.sms_messages) => {
 const chat_room_tests = async () => {
   log_header("Chat Room Tests")
   const sdk2 = new Session({ host })
-  await sdk2.authenticate(email2, password2) 
+  await sdk2.authenticate(nonAdminEmail, nonAdminPassword) // non-admin has access restrictions we want to test 
 
   const email='enduser@tellescope.com', password='enduserPassword!';
   const enduser = await sdk.api.endusers.createOne({ email })
@@ -970,7 +970,7 @@ const chat_room_tests = async () => {
 
 const chat_tests = async() => {
   const sdk2 = new Session({ host })
-  await sdk2.authenticate(email2, password2) 
+  await sdk2.authenticate(nonAdminEmail, nonAdminPassword) // non-admin has access restrictions we want to test 
 
   const room  = await sdk.api.chat_rooms.createOne({ type: 'internal', userIds: [userId] })
   const chat  = await sdk.api.chats.createOne({ roomId: room.id, message: "Hello!" })
@@ -997,6 +997,11 @@ const chat_tests = async() => {
     () => sdk2.api.chats.getSome({ filter: { roomId: room.id } }), 
     { shouldError: true, onError: e => e.message === 'You do not have permission to access this resource' }
   )
+  await async_test(
+    `get-chats admin`, 
+    () => sdk.api.chats.getSome({ filter: { roomId: room.id } }), 
+    { onResult: () => true }
+  )
   // currently disabled endpoint altogether
   // await async_test(
   //   `update-chat not allowed`, 
@@ -1006,7 +1011,7 @@ const chat_tests = async() => {
   await async_test(
     `delete-chat not allowed`, 
     () => sdk2.api.chats.deleteOne(chat.id), 
-    { shouldError: true, onError: e => e.message === 'You do not have permission to access this resource' }
+    { shouldError: true, onError: e => e.message === 'Inaccessible' }
   )
 
   // currently disabled endpoint altogether
@@ -1339,6 +1344,10 @@ const calendar_events_tests = async () => {
 
 const automation_events_tests = async () => {
   log_header("Automation Events")
+  const form = await sdk.api.forms.createOne({ 
+    title: 'Form', fields: [{ title: 'Question 1', type: 'string' }]
+  })
+
   const state1 = "State 1", state2 = "State 2";
   const journey = await sdk.api.journeys.createOne({ 
     title: "Automations Test", 
@@ -1409,6 +1418,21 @@ const automation_events_tests = async () => {
     action: testAction,
   })
 
+  await sdk.api.event_automations.createOne({
+    journeyId: journey.id,
+    event: {
+      type: "formResponse",
+      info: { formId: form.id },
+    },
+    conditions: [
+      {
+        type: 'atJourneyState',
+        info: { state: state2, journeyId: journey.id }
+      } 
+    ],
+    action: testAction,
+  })
+
   await async_test(
     `Cannot insert duplicate event/action pair`,
     () => sdk.api.event_automations.createOne({
@@ -1428,19 +1452,33 @@ const automation_events_tests = async () => {
     journeys: { [journey.id]: journey.defaultState } 
   })
 
+  // should NOT trigger while user not in state 2
+  await sdk.api.form_responses.submit_form_response({ 
+    accessCode: (await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })).accessCode,
+    responses: ['Answer'] 
+  })
+
   // trigger a2 and a3 by leaving state 1 an going to state 2
   await sdk.api.endusers.updateOne(enduser.id, { journeys: { [journey.id]: state2 } })
 
+  // SHOULD trigger now that user is in state 2
+  await sdk.api.form_responses.submit_form_response({ 
+    accessCode: (await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })).accessCode,
+    responses: ['Answer 2'] 
+  })
+
   await async_test(
     `Automation events triggered correctly`,
-    // () => sdk.api.automation_endusers.getSome(),
     () => sdk.api.automation_endusers.getSome({ filter: { enduserId: enduser.id }}),
-    { onResult: es => es && es.length === 3 && es.filter(a => a.automationId === "ONE_TIME").length === 3 }
+    { onResult: es => es && es.length === 4 && es.filter(a => a.automationId === "ONE_TIME").length === 4 }
   )  
 
   // cleanup
-  await sdk.api.journeys.deleteOne(journey.id) // automation events deleted as side effect
-  await sdk.api.endusers.deleteOne(enduser.id)
+  await Promise.all([
+    sdk.api.journeys.deleteOne(journey.id), // automation events deleted as side effect
+    sdk.api.endusers.deleteOne(enduser.id),
+    sdk.api.forms.deleteOne(form.id),
+  ])
 }
 
 const form_response_tests = async () => {

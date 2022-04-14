@@ -60,6 +60,9 @@ import {
   CalendarEventReminder,
   CalendarEventReminderType,
   MessageTemplateMode,
+  AutomationCondition,
+  AutomationConditionType,
+  AtJourneyStateAutomationCondition,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -1067,6 +1070,14 @@ export const automationEventValidator = orValidator<{ [K in AutomationEventType]
     info: objectValidator<AutomationForForm>({ formId: mongoIdStringValidator() })(),
   })(),
 })
+
+export const automationConditionValidator = orValidator<{ [K in AutomationConditionType]: AutomationCondition & { type: K } } >({
+  atJourneyState: objectValidator<AtJourneyStateAutomationCondition>({
+    type: exactMatchValidator(['atJourneyState'])(),
+    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired })(),
+  })(),
+})
+export const listOfAutomationConditionsValidator = listValidatorEmptyOk(automationConditionValidator())
 
 export const automationActionValidator = orValidator<{ [K in AutomationActionType]: AutomationAction & { type: K } } >({
   sendEmail: objectValidator<SendEmailAutomationAction>({

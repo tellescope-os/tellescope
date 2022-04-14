@@ -80,3 +80,7 @@ export type UserIdentity = {
   type: SessionType,
   id: string,
 }
+
+export const assertUnreachable = (x: never): never => {
+  throw new Error("Reached invalid code - conditional logic is likely not exhaustive");
+}

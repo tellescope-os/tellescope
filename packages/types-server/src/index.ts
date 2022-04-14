@@ -55,7 +55,7 @@ export interface InternalBusinessRecord {
 
 export interface AccessToken extends InternalBusinessRecord {
   type: 'passwordReset',
-  token: string,
+  tokenHash: string,
   userId: string,
   expire24HoursAfter: Date,
   // fields: object,

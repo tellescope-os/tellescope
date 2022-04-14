@@ -1,6 +1,10 @@
 import { ObjectId } from "bson"
-import { UserActivityInfo, UserActivityStatus } from "@tellescope/types-models"
+import { Enduser, User, UserActivityInfo, UserActivityStatus } from "@tellescope/types-models"
+import { ADMIN_ROLE } from "@tellescope/constants"
 export type Indexable<T=any> = { [index: string]: T }
+
+export const user_is_admin = (u: User & { type: 'user' } | Enduser & { type: 'enduser' }) => 
+  u.type === 'enduser' ? false :  !!u?.roles?.includes(ADMIN_ROLE)
 
 export const first_letter_capitalized = (s='') => s.charAt(0).toUpperCase() + s.slice(1)
 export const first_letter_lowercase = (s='') => s.charAt(0).toUpperCase() + s.slice(1)

@@ -388,12 +388,12 @@ export interface MultipleChoiceOptions {
 
 export type FormFieldOptions = MultipleChoiceOptions
 export interface FormField {
-  isOptional  : boolean,
-  title       : string,
-  type        : FormFieldType,
-  description : string,
-  options    ?: FormFieldOptions | {},
-  intakeField?: string | null,
+  isOptional  ?: boolean,
+  title        : string,
+  type         : FormFieldType,
+  description ?: string,
+  options     ?: FormFieldOptions | {},
+  intakeField ?: string | null,
 }
 export interface Form_readonly extends ClientRecord {}
 export interface Form_required {
@@ -526,6 +526,13 @@ export type AddToSequenceAutomationAction = AutomationActionBuilder<'addToSequen
 export type RemoveFromSequenceAutomationAction = AutomationActionBuilder<'removeFromSequence', AutomationForAutomation>
 export type SendWebhookAutomationAction = AutomationActionBuilder<'sendWebhook', AutomationForWebhook>
 
+export type AutomationConditionType = 'atJourneyState'
+export type AutomationConditionBuilder <T extends AutomationConditionType, V extends object>  = {
+  type: T,
+  info: V,
+}
+export type AtJourneyStateAutomationCondition = AutomationConditionBuilder<'atJourneyState', AutomationForJourneyAndState>
+export type AutomationCondition = AtJourneyStateAutomationCondition
 
 export type AutomationActionForType = {
   "sendNotification" : SendNotificationAutomationAction,
@@ -544,6 +551,7 @@ export type AutomationAction = AutomationActionForType[AutomationActionType]
 export interface EventAutomation_readonly extends ClientRecord {}
 export interface EventAutomation_required {
   event: AutomationEvent
+  conditions?: AutomationCondition[],
   action: AutomationAction,
 }
 export interface EventAutomation_updatesDisabled {}

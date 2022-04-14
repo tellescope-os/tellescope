@@ -90,6 +90,7 @@ import {
   listOfChatAttachmentsValidator,
   listOfCalendarEventRemindersValidator,
   messageTemplateModeValidator,
+  listOfAutomationConditionsValidator,
 } from "@tellescope/validation"
 
 import {
@@ -1869,7 +1870,8 @@ export const schema: SchemaV1 = build_schema({
             templateId: PLACEHOLDER_ID,
           }, 
         }]
-      }
+      },
+      conditions: { validator: listOfAutomationConditionsValidator }
     }
   },
   automation_endusers: {
