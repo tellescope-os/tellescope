@@ -9,7 +9,7 @@ import {
   wait,
 } from "@tellescope/testing"
 import {
-  objects_equivalent
+  objects_equivalent, object_is_empty
 } from "@tellescope/utilities"
 
 import {
@@ -333,6 +333,11 @@ const run_tests = async () => {
     { shouldError: true, onError: e => e.message === "Only one webhook configuration is supported per organization. Use /update-webooks to update your configuration." }
   )
   await async_test(
+    'get initial webhook configuration',
+    () => sdk.api.webhooks.get_configuration({}),
+    { onResult: r => r.url === webhookURL && object_is_empty(r.subscriptions ?? {}) }
+  )
+  await async_test(
     'update webhook (set empty subscription)',
     () => sdk.api.webhooks.update({ subscriptionUpdates: {} }),
     { onResult: _ => true }
@@ -351,6 +356,11 @@ const run_tests = async () => {
     'update webhook invalid model',
     () => sdk.api.webhooks.update({ subscriptionUpdates: { notAModel: { create: false } } as any }),
     { shouldError: true, onError: e => e.message === "Error parsing field subscriptionUpdates: Got unexpected field(s) [notAModel]" }
+  )
+  await async_test(
+    'get initial webhook configuration after updates',
+    () => sdk.api.webhooks.get_configuration({}),
+    { onResult: r => r.url === webhookURL && objects_equivalent(r.subscriptions, fullSubscription) }
   )
 
   log_header("Webhooks Tests with Subscriptions")

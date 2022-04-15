@@ -15,10 +15,10 @@ import {
 } from "./controls"
 import {  
   Flex,
-  withHover,
   Item,
   ItemClickable,
   List,
+  WithHover,
 } from "./layout"
 
 const LIGHT_GRAY = "#fafafa"
@@ -95,19 +95,19 @@ export interface TableRowProps<T extends Item> extends Styled, HorizontalPadded,
   item: T,
   fields: TableHeaderProps<T>['fields']
   hoverColor?: CSSProperties['color'],
+  noHoverColor?: CSSProperties['color'],
   fontSize?: CSSProperties['fontSize']
   textStyle?: CSSProperties,
 }
-export const TableRow = <T extends Item>({ item, fields, onClick, onPress, hoverColor=GRAY, horizontalPadding, style, textStyle, fontSize=14 } : TableRowProps<T>) => (
-  withHover({ hoverColor, disabled: !(onClick ?? onPress) }, hoverStyle => (
+export const TableRow = <T extends Item>({ item, fields, onClick, onPress, hoverColor=GRAY, noHoverColor, horizontalPadding, style, textStyle, fontSize=14 } : TableRowProps<T>) => (
+  <WithHover hoverColor={hoverColor} noHoverColor={noHoverColor} flex>
     <Flex flex={1} alignItems="center" justifyContent="space-between" 
       onClick={() => (onClick ?? onPress)?.(item)}
       style={{ 
         paddingLeft: horizontalPadding, paddingRight: horizontalPadding, 
         minHeight: ROW_HEIGHT,
-        backgroundColor: LIGHT_GRAY,
-        ...hoverStyle,
-        ...style 
+        ...style,
+        backgroundColor: undefined, // leave in parent component
       }}
     >
       {fields.map(({ key, width=defaultWidthForFields(fields.length), textAlign='left', render }) => (
@@ -123,7 +123,7 @@ export const TableRow = <T extends Item>({ item, fields, onClick, onPress, hover
         </Flex>
       ))}
     </Flex>
-  ))
+  </WithHover>
 )
 
 export interface PaginationOptions {
@@ -302,6 +302,7 @@ export interface TableProps<T extends Item> extends WithTitle, WithHeader<T>, Wi
   HorizontalPadded, Elevated, ItemClickable<T> 
 {
   items: T[],
+  noPaper?: boolean,
   emptyText?: string,
   emptyComponent?: React.ReactElement,
   fields: TableHeaderProps<T>['fields']; // make fields required
@@ -315,6 +316,7 @@ export const Table = <T extends Item>({
   items,
   emptyText,
   emptyComponent,
+  noPaper,
   pageOptions={ paginated: true },
   style={},
   horizontalPadding=20,
@@ -337,41 +339,46 @@ export const Table = <T extends Item>({
   const { ...paginationProps } = usePagination({ items, ...pageOptions, })
   RowComponent = RowComponent ?? TableRow // don't allow to be undefined 
 
+  const table = (
+    <Flex column flex={1}>
+      {title && TitleComponent && <TitleComponent title={title} horizontalPadding={horizontalPadding}/>}
+      {fields && HeaderComponent && fields.length > 0 && items.length > 0 && 
+        <HeaderComponent fields={fields} horizontalPadding={horizontalPadding} fontSize={headerFontSize}/>
+      }
+      <List items={paginationProps.mapSelectedItems(i => i)} 
+        renderProps={{ horizontalPadding }}
+        emptyComponent={emptyComponent ?? (
+          emptyText 
+            ? <Typography style={{ padding: horizontalPadding }}>
+                {emptyText}
+              </Typography> 
+            : undefined
+          )
+        }
+        render={(item, { index }) => (
+          <RowComponent key={item.id} item={item} fields={fields} fontSize={rowFontSize} hoverColor={hoverColor}
+            horizontalPadding={horizontalPadding}
+            style={{
+              borderBottom: (
+                index < items.length - 1 && 
+                (pageOptions.pageSize === undefined || index < pageOptions.pageSize - 1)) 
+                  ? BORDER_STYLE 
+                  : undefined,
+            }}
+            onClick={onClick} onPress={onPress} 
+          />
+        )
+      } />
+      {paginated && paginationProps.numPages > 1 && FooterComponent && 
+        <FooterComponent {...paginationProps } {...pageOptions} horizontalPadding={horizontalPadding}/>
+      }
+    </Flex>
+  )
+
+  if (noPaper) return table
   return (
     <Paper style={style} elevation={elevation}>
-      <Flex column flex={1}>
-        {title && TitleComponent && <TitleComponent title={title} horizontalPadding={horizontalPadding}/>}
-        {fields && HeaderComponent && fields.length > 0 && items.length > 0 && 
-          <HeaderComponent fields={fields} horizontalPadding={horizontalPadding} fontSize={headerFontSize}/>
-        }
-        <List items={paginationProps.mapSelectedItems(i => i)} 
-          renderProps={{ horizontalPadding }}
-          emptyComponent={emptyComponent ?? (
-            emptyText 
-              ? <Typography style={{ padding: horizontalPadding }}>
-                  {emptyText}
-                </Typography> 
-              : undefined
-            )
-          }
-          render={(item, { index }) => (
-            <RowComponent key={item.id} item={item} fields={fields} fontSize={rowFontSize} hoverColor={hoverColor}
-              horizontalPadding={horizontalPadding}
-              style={{
-                borderBottom: (
-                  index < items.length - 1 && 
-                  (pageOptions.pageSize === undefined || index < pageOptions.pageSize - 1)) 
-                    ? BORDER_STYLE 
-                    : undefined,
-              }}
-              onClick={onClick} onPress={onPress} 
-            />
-          )
-        } />
-        {paginated && paginationProps.numPages > 1 && FooterComponent && 
-          <FooterComponent {...paginationProps } {...pageOptions} horizontalPadding={horizontalPadding}/>
-        }
-      </Flex>
+      {table}
     </Paper>
   )
 }

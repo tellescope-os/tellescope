@@ -70,21 +70,31 @@ export const compute_flex_direction_with_props = <T extends string>(direction: T
     : direction
 )
 
-export type Hoverable = (
-  o: { hoverColor?: string, disabled?: boolean, style?: CSSProperties },
-  render: (style: { backgroundColor?: CSSProperties['backgroundColor']}) => React.ReactElement  
-) => React.ReactElement 
-export const withHover : Hoverable = ({ hoverColor="#888888", disabled, style={} }, render) => {
+export interface WithHoverColors {
+  hoverColor?: CSSProperties['backgroundColor'], 
+  noHoverColor?: CSSProperties['backgroundColor'],
+}
+export interface WithHoverProps extends WithHoverColors { 
+  disabled?: boolean,
+  style?: CSSProperties 
+  flex?: boolean,
+  children: React.ReactNode,
+}
+export const WithHover = ({ hoverColor="#888888", noHoverColor, flex, disabled, children, style={} } : WithHoverProps) => {
   const [hovered, setHovered] = useState(false)
 
   return (
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} 
-      style={{ cursor: disabled ? undefined : 'pointer', display: 'flex', ...style }}
+    <span onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} 
+      style={{ 
+        display: flex ? 'flex' : undefined,
+        flex: flex ? 1 : undefined,
+        cursor: disabled ? undefined : 'pointer', 
+        backgroundColor: hovered && !disabled ? hoverColor : noHoverColor, 
+        ...style,
+      }}
     >
-      {render({
-        backgroundColor: hovered && !disabled ? hoverColor : undefined,
-      })}
-    </div>
+      {children}
+    </span>
   )
 }
 
@@ -165,9 +175,9 @@ export const ObjectHeader = <T extends Item>({ item }: ItemOptions<T>) => {
     </Flex>
   )
 }
-export const ObjectRow = <T extends Item>({ item, onClick, index }: ItemOptions<T>) => {
+export const ObjectRow = <T extends Item>({ item, onClick, index, style }: ItemOptions<T> & Styled) => {
   return (
-    <Flex row>
+    <Flex row style={style}>
     {
       Object.keys(item).map((_k, i) => {
         const key = _k as keyof T
@@ -185,31 +195,34 @@ export const ObjectRow = <T extends Item>({ item, onClick, index }: ItemOptions<
   )
 }
 
-export interface ListItem_T <T extends Item, P={}> extends ListOptions<T>, ItemOptions<T> {}
-export const ListItem = <T extends Item, P={}>({ item, index, render, onClick, renderProps }: ListItem_T<T, P>) => {
+export interface ListItem_T <T extends Item, P={}> extends ListOptions<T>, ItemOptions<T>, Styled {}
+export const ListItem = <T extends Item, P={}>({ item, index, render, onClick, renderProps, style }: ListItem_T<T, P>) => {
   if (render) return render(item, { index, onClick, ...renderProps })
 
-  return <ObjectRow item={item} index={index} onClick={onClick}/>
+  return <ObjectRow item={item} index={index} onClick={onClick} style={style} />
 }
 
-export interface List_T <T extends Item, P={}> extends ListOptions<T, P> {
+export interface List_T <T extends Item, P={}> extends ListOptions<T, P>, WithHoverColors {
   items: T[],
   emptyComponent?: React.ReactElement,
   header?: React.ReactNode,
+  rowStyle?: React.CSSProperties,
   onClick?: (item: T) => void;
   onPress?: (item: T) => void;
-  reverse?: boolean
+  reverse?: boolean,
 }
-export const List = <T extends Item, P={}>({ items, emptyComponent, render, renderProps, onClick, reverse, style }: List_T<T> & Styled) => {
+export const List = <T extends Item, P={}>({ items, hoverColor, noHoverColor, emptyComponent, render, renderProps, onClick, reverse, style, rowStyle, }: List_T<T> & Styled) => {
   if (items.length === 0 && emptyComponent) return emptyComponent
   
   return (
     <Flex flex={1} column reverse={reverse} style={style}>
       {items.map((item, i) => 
-        <ListItem key={item.id ?? i} index={i} item={item} render={render} renderProps={renderProps} onClick={onClick}/>
+        hoverColor 
+          ? <WithHover key={item.id ?? i} flex hoverColor={hoverColor} noHoverColor={noHoverColor}>  
+              <ListItem index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
+            </WithHover>
+          : <ListItem key={item.id ?? i} index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
       )}
     </Flex>
   )
 }
-
-// export const NativeWrapper = ({ children } : { children: React.ReactNode } & Styled) => <>{children}</>

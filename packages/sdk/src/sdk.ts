@@ -150,6 +150,8 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     update: (args: { url?: string, secret?: string, subscriptionUpdates?: WebhookSubscriptionsType }) => Promise<void>
     send_automation_webhook: (args: extractFields<CustomActions['webhooks']['send_automation_webhook']['parameters']>) => 
       Promise<extractFields<CustomActions['webhooks']['send_automation_webhook']['returns']>>,
+    get_configuration: (args: extractFields<CustomActions['webhooks']['get_configuration']['parameters']>) => 
+      Promise<extractFields<CustomActions['webhooks']['get_configuration']['returns']>>,
   },
 }
 
@@ -194,7 +196,8 @@ export class Session extends SessionManager {
 
     queries.webhooks.configure = a => this._POST('/v1/configure-webhooks', a)
     queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)
-    queries.webhooks.send_automation_webhook = a => this._POST(`/v1${schema.webhooks.customActions.send_automation_webhook}`, a),
+    queries.webhooks.send_automation_webhook = a => this._POST(`/v1${schema.webhooks.customActions.send_automation_webhook.path}`, a),
+    queries.webhooks.get_configuration = a => this._GET(`/v1${schema.webhooks.customActions.get_configuration.path}`, a),
 
     this.api = queries
   }

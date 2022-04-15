@@ -10,12 +10,12 @@ import {
 import {
   Flex_T,
   FormProps,
-  Hoverable,
   Item,
   ImageProps,
   List_T,
   resolve_direction_for_props,
   compute_flex_direction_with_props,
+  WithHoverProps,
 } from "./layout.js"
 
 import {
@@ -26,9 +26,7 @@ import {
   convert_CSS_to_RNStyles
 } from "./mui.native"
 
-
 export const IN_REACT_WEB = false
-
 
 export const Image = ({ src, alt, height, width,  ...props } : ImageProps) => (
   <ImageNative 
@@ -91,11 +89,5 @@ export const List = <T extends Item>({ items, emptyComponent, render, onClick, o
   )
 }
 
-export const withHover: Hoverable = ({ }, r) => r({})
-
-// adding styles in a native-only wrapper
-// export const NativeWrapper = ({ children, style }: { children: React.ReactNode } & Styled) => (
-//   <View style={convert_CSS_to_RNStyles(style)}>
-//     {children}
-//   </View>
-// )
+// nop since hover not relevant for native mobile views
+export const WithHover = ({ children } : WithHoverProps) => <>{children}</>

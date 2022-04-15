@@ -306,6 +306,7 @@ export type CustomActions = {
   webhooks: {
     configure: CustomAction<{ url: string, secret: string, subscriptions?: WebhookSubscriptionsType }, { }>,
     update: CustomAction<{ url?: string, secret?: string, subscriptionUpdates?: WebhookSubscriptionsType }, { }>,
+    get_configuration: CustomAction<{ }, { url?: string, subscriptions?: WebhookSubscriptionsType }>,
     send_automation_webhook: CustomAction<{ message: string }, { }>,
     send_calendar_event_reminder_webhook: CustomAction<{ id: string }, { }>,
   },
@@ -1673,6 +1674,17 @@ export const schema: SchemaV1 = build_schema({
           subscriptions: { validator: WebhookSubscriptionValidator },
         },
         returns: {},
+      },
+      get_configuration: {
+        op: "custom", access: 'read', method: "get",
+        name: 'Get current configuration info',
+        path: '/webhook-configuration',
+        description: "Returns current webhook configuration",
+        parameters: { },
+        returns: {
+          subscriptions: { validator: WebhookSubscriptionValidator },
+          url: { validator: stringValidator5000 },
+        },
       },
       update: {
         op: "custom", access: 'update', method: "patch",
