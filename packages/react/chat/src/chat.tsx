@@ -59,16 +59,8 @@ export {
 
 const MESSAGE_BORDER_RADIUS = 25
 
-const defaultSentContainerStyle: CSSProperties = {
-  margin: 5,
-}
-const defaultReceivedContainerStyle: CSSProperties = {
-  margin: 5,
-}
-
 const baseMessageStyle: CSSProperties = {
   borderRadius: MESSAGE_BORDER_RADIUS,
-  maxWidth: '80%',
   paddingRight: 10,
   paddingLeft: 10,
   paddingTop: 6,
@@ -131,8 +123,6 @@ interface MessageProps extends MessageStyles {
 export const Message = ({ 
   message, 
   iconSize=30,
-  sentMessageContainerStyle=defaultSentContainerStyle,
-  receivedMessageContainerStyle=defaultReceivedContainerStyle,
   sentMessageStyle=defaultSentStyle,
   receivedMessageStyle=defaultReceivedStyle, 
   sentMessageTextStyle=defaultSentTextStyle,
@@ -144,15 +134,9 @@ export const Message = ({
   const [displayInfo] = useChatRoomDisplayInfo(message.roomId, session.type)
   const displayInfoLookup = value_is_loaded(displayInfo) ? displayInfo.value : {} as ChatRoomDisplayInfo
 
-  const displayPicture = (
-    <DisplayPicture 
-      user={displayInfoLookup[message.senderId ?? ''] ?? { id: message.senderId, avatar: '' }}
-      size={iconSize} style={{ position: 'relative' }}
-    />
-  )
-
-  const textBGStyle = message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle
-  const textStyle = message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle
+  // deep copy so that the override of background color doesn't affect other messages
+  const textBGStyle = { ...message.senderId === chatUserId ? sentMessageStyle : receivedMessageStyle }
+  const textStyle = { ...message.senderId === chatUserId ? sentMessageTextStyle : receivedMessageTextStyle }
 
   if (!message.message) {
     textBGStyle.backgroundColor = undefined
@@ -170,8 +154,16 @@ export const Message = ({
     </Flex>
   )
 
+  const displayPicture = (
+    <DisplayPicture 
+      style={{ maxWidth: '10%' }}
+      user={displayInfoLookup[message.senderId ?? ''] ?? { id: message.senderId, avatar: '' }}
+      size={iconSize}
+    />
+  )
+
   return (
-    <Flex style={{ margin: 5 }}> 
+    <Flex style={{ margin: 5, flexWrap: 'nowrap' }}> 
       {message.senderId !== chatUserId && displayPicture}
       {messageComponent}
       {message.senderId === chatUserId && displayPicture}
@@ -185,9 +177,9 @@ export const MessageAttachments = ({ message, chatUserId, imageDimensions } : { 
 
   return (
     <Flex column alignSelf={message.senderId === chatUserId ? "flex-end" : "flex-start"}>
-      {message.attachments.filter(a => a.type === 'image').map(a => (
-        <Flex style={{ margin: 10 }}>
-        <SecureImage key={a.secureName} secureName={a.secureName} alt="image attachment" {...imageDimensions} />
+      {message.attachments.filter(a => a.type === 'image').map(a=> (
+        <Flex key={a.secureName} style={{ margin: 10 }}>
+          <SecureImage key={a.secureName} secureName={a.secureName} alt="image attachment" {...imageDimensions} />
         </Flex>
       ))}
     </Flex>
@@ -215,9 +207,9 @@ export const Messages = ({
   <LoadingLinear data={messages} render={messages => (
     <Flex column flex={1}>
       {Header && <Header {...headerProps}/>}
-      <List reverse style={style} items={messages} render={message => (
+      <List reverse style={style} items={messages} render={(message, i) => (
         <Flex column>
-          <Message key={message.id} message={message} {...messageStyles} />
+          <Message message={message} {...messageStyles} />
           {!!message.attachments && message.attachments.length > 0 && 
             <MessageAttachments message={message} chatUserId={chatUserId} imageDimensions={imageDimensions} />
           }

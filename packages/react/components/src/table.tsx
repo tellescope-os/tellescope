@@ -31,15 +31,27 @@ export interface HorizontalPadded { horizontalPadding?: number }
 export interface TableTitleProps extends Styled, HorizontalPadded {
   title: string,
   textStyle?: CSSProperties,
+  actionsComponent?: React.ReactNode,
 }
-export const TableTitle = ({ title, style, textStyle={}, horizontalPadding } : TableTitleProps) => (
-  <Flex flex={1} alignItems="center" style={{ 
+export const TableTitle = ({ title, actionsComponent, style, textStyle={}, horizontalPadding } : TableTitleProps) => (
+  <Flex flex={1} alignItems="center" justifyContent={"space-between"} style={{ 
     paddingLeft: horizontalPadding, paddingRight: horizontalPadding, 
     backgroundColor: LIGHT_GRAY,
-    minHeight: 60,
-    ...style 
+    minHeight: 50,
+    ...style,
+    paddingTop: 0,
   }}> 
-    <Typography component="h3" style={{ fontWeight: 600, fontSize: 18, ...textStyle }}>{title}</Typography>
+    <Typography component="h3" style={{ 
+      fontWeight: 600, 
+      fontSize: 18, 
+      marginRight: horizontalPadding,
+      ...textStyle 
+    }}>
+      {title}
+    </Typography>
+    <Flex flex={1} alignItems="center" justifyContent={"flex-end"}>
+      {actionsComponent}
+    </Flex>
   </Flex>
 )
 
@@ -302,6 +314,7 @@ export interface TableProps<T extends Item> extends WithTitle, WithHeader<T>, Wi
   HorizontalPadded, Elevated, ItemClickable<T> 
 {
   items: T[],
+  titleActionsComponent?: React.ReactNode,
   noPaper?: boolean,
   emptyText?: string,
   emptyComponent?: React.ReactElement,
@@ -327,6 +340,7 @@ export const Table = <T extends Item>({
   onPress,
 
   title,
+  titleActionsComponent,
   TitleComponent=TableTitle,
   fields,
   HeaderComponent=TableHeader,
@@ -341,7 +355,7 @@ export const Table = <T extends Item>({
 
   const table = (
     <Flex column flex={1}>
-      {title && TitleComponent && <TitleComponent title={title} horizontalPadding={horizontalPadding}/>}
+      {title && TitleComponent && <TitleComponent title={title} actionsComponent={titleActionsComponent} horizontalPadding={horizontalPadding}/>}
       {fields && HeaderComponent && fields.length > 0 && items.length > 0 && 
         <HeaderComponent fields={fields} horizontalPadding={horizontalPadding} fontSize={headerFontSize}/>
       }
