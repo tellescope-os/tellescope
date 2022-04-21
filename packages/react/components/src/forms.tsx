@@ -119,7 +119,6 @@ export const validators = {
             .matches(/[a-z]/, "Must contain a lowercase letter")
             .matches(/[A-Z]/, "Must contain an uppercase letter")
             .matches(/[0-9@#!$%^&*(){}[\];:\\|'",<.>/?]/, "Must contain a number or special character"),
-  passwordRelaxed: stringValidation({ min: 8, max: 100, }),
 }
 
 interface MuiComponentProps <V> {
@@ -187,28 +186,6 @@ export const passwordInput = <T, ID extends keyof T>(
 ): FormField<T, ID, Parameters<typeof TextField>[0], string>  => ({
   id, name, label, initialValue,
   validation: validators.password,
-  Component: TextField,
-  componentProps: {
-    autoComplete,
-    type: 'password',
-    required,
-    ...props,
-  }
-})
-
-export const passwordRelaxedInput = <T, ID extends keyof T>(
-  { 
-    id, 
-    name=id, 
-    label=id, 
-    initialValue='', 
-    required=true, 
-    autoComplete="current-password",
-    ...props
-  }: FormFieldInfo<T, ID, string> & Partial<MuiComponentProps<string>> 
-): FormField<T, ID, Parameters<typeof TextField>[0], string>  => ({
-  id, name, label, initialValue,
-  validation: validators.passwordRelaxed,
   Component: TextField,
   componentProps: {
     autoComplete,

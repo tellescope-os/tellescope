@@ -256,8 +256,8 @@ export class Session extends SessionManager {
   }
 
   prepare_and_upload_file = async (details: FileDetails, file: Blob | Buffer | ReactNativeFile) => {
-    const { name, size, type } = details
-    const { presignedUpload, file: createdFile } = await this.api.files.prepare_file_upload({ name, size, type })
+    const { name, size, type, enduserId } = details
+    const { presignedUpload, file: createdFile } = await this.api.files.prepare_file_upload({ name, size, type, enduserId })
     await this.UPLOAD(presignedUpload, file)
     return createdFile
   }

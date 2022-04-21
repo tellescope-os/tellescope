@@ -18,7 +18,6 @@ import {
   emailInput,
   passwordInput,
   FormBuilder,
-  passwordRelaxedInput,
 } from "./forms"
 import {
   Styled,
@@ -140,7 +139,7 @@ export const LoginForm = ({ onSubmit, style, fillEmail, fillPassword } : Account
     style={style}
     fields={{
       email: emailInput({ id: 'email', initialValue: fillEmail }),
-      password: passwordRelaxedInput({ id: 'password', initialValue: fillPassword }),
+      password: passwordInput({ id: 'password', initialValue: fillPassword }),
     }}
     submitText="Login"
     submittingText="Logging in"
