@@ -956,7 +956,7 @@ export const schema: SchemaV1 = build_schema({
         initializer: () => 'internal' as ChatRoomType
       },
       topic: {
-        validator: stringValidator100,
+        validator: stringValidator5000, // long to support MP use case / custom topics
       },
       topicId: {
         validator: stringValidator100,

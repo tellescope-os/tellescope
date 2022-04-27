@@ -119,6 +119,7 @@ interface MessageStyles {
 interface MessageProps extends MessageStyles {
   message: ChatMessage,
   iconSize?: number,
+  imageDimensions?: ImageDimensions,
 }
 export const Message = ({ 
   message, 
@@ -127,6 +128,7 @@ export const Message = ({
   receivedMessageStyle=defaultReceivedStyle, 
   sentMessageTextStyle=defaultSentTextStyle,
   receivedMessageTextStyle=defaultReceivedTextStyle,
+  imageDimensions,
 }: MessageProps) => {
   const session = useResolvedSession()
   const chatUserId = session.userInfo.id
@@ -142,14 +144,21 @@ export const Message = ({
     textBGStyle.backgroundColor = undefined
   }
 
+  const attachments = (
+    !!message.attachments && message.attachments.length > 0 
+      && <MessageAttachments message={message} chatUserId={chatUserId} imageDimensions={imageDimensions} />
+  )
+
   const messageComponent = IN_REACT_WEB ? (
     <Typography component="div" style={{ ...textStyle, ...textBGStyle }}>
       {message.message}
+      {attachments}
     </Typography>
   ) : (
     <Flex style={{ ...textBGStyle }}>
       <Typography component="div" style={{ ...textStyle }}>
         {message.message}
+        {attachments}
       </Typography>   
     </Flex>
   )
@@ -166,6 +175,7 @@ export const Message = ({
     <Flex style={{ margin: 5, flexWrap: 'nowrap' }}> 
       {message.senderId !== chatUserId && displayPicture}
       {messageComponent}
+      
       {message.senderId === chatUserId && displayPicture}
     </Flex>
   )
@@ -209,10 +219,7 @@ export const Messages = ({
       {Header && <Header {...headerProps}/>}
       <List reverse style={style} items={messages} render={(message, i) => (
         <Flex column>
-          <Message message={message} {...messageStyles} />
-          {!!message.attachments && message.attachments.length > 0 && 
-            <MessageAttachments message={message} chatUserId={chatUserId} imageDimensions={imageDimensions} />
-          }
+          <Message message={message} imageDimensions={imageDimensions} {...messageStyles} />
         </Flex>
       )}/>    
     </Flex>
