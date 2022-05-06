@@ -133,7 +133,9 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     ),
   },
   meetings: {
-    start_meeting: () => Promise<{ id: string, meeting: { Meeting: MeetingInfo }, host: Attendee }>, 
+    start_meeting: (args?: extractFields<CustomActions['meetings']['start_meeting']['parameters']>) => (
+      Promise<extractFields<CustomActions['meetings']['start_meeting']['returns']>>
+    ),
     end_meeting: (args: { id: string }) => Promise<void>, 
     add_attendees_to_meeting: (args: { id: string, attendees: UserIdentity[] }) => Promise<void>, 
     my_meetings: () => Promise<Meeting[]>,

@@ -27,6 +27,7 @@ import {
   ChatRoomType,
   MessageTemplateType,
   FormResponseValue,
+  MeetingInfo,
 } from "@tellescope/types-models"
 
 import {
@@ -298,7 +299,7 @@ export type CustomActions = {
     display_info: CustomAction<{ id: string }, { id: string, display_info: { [index: string]: UserDisplayInfo } }>,
   },
   meetings: {
-    start_meeting: CustomAction<{ }, { id: string, meeting: object, host: Attendee }>, 
+    start_meeting: CustomAction<{ attendees?: UserIdentity[] }, { id: string, meeting: { Meeting: MeetingInfo }, host: Attendee }>, 
     send_invite: CustomAction<{ meetingId: string, enduserId: string }, { }>, 
     end_meeting: CustomAction<{ id: string }, { }>, 
     add_attendees_to_meeting: CustomAction<{ id: string, attendees: UserIdentity[] }, { }>, 
@@ -1412,8 +1413,9 @@ export const schema: SchemaV1 = build_schema({
         parameters: { },
         returns: { 
           id: { validator: mongoIdStringValidator, required: true },
-          meeting: { validator: objectAnyFieldsAnyValuesValidator, required: true },
+          meeting: { validator: meetingInfoValidator, required: true },
           host: { validator: attendeeValidator, required: true },
+          attendees: { validator: listOfUserIndentitiesValidator },
         },
       },
       send_invite: { 

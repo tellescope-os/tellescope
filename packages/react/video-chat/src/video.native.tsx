@@ -195,12 +195,7 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
   const createAndStartMeeting = async (initialAttendees?: UserIdentity[]) => {
     setStarting(true)
     try {
-      const { id, meeting, host } = await session.api.meetings.start_meeting()
-
-      if (initialAttendees) {
-        session.api.meetings.add_attendees_to_meeting({ id: meeting.Meeting.ExternalMeetingId, attendees: initialAttendees }) 
-      }
-
+      const { id, meeting, host } = await session.api.meetings.start_meeting({ attendees: initialAttendees })
       NativeFunction.startMeeting(meeting.Meeting, host.info.Attendee)
 
       setMeeting(meeting.Meeting)

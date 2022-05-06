@@ -20,6 +20,7 @@ import {
   CalendarEvent,
   CUDSubscription,
   AutomationAction,
+  AttendeeInfo,
 } from "@tellescope/types-models"
 
 import { Session } from "../sdk"
@@ -137,12 +138,31 @@ const chats_tests = async (isSubscribed: boolean) => {
 
 const meetings_tests = async (isSubscribed: boolean) => {
   log_header(`Meetings Tests, isSubscribed=${isSubscribed}`)
+
+  const enduser = await sdk.api.endusers.createOne({ email: 'deleteme@tellescope.com' })
   const meeting = await sdk.api.meetings.start_meeting()
 
   await check_next_webhook(a => objects_equivalent(a.records, [meeting]), 'Create meeting error', 'Create meeting webhook', isSubscribed)
 
+  await sdk.api.meetings.add_attendees_to_meeting({ id: meeting.id, attendees: [{ type: 'enduser', id: enduser.id }]})
+  await check_next_webhook(
+    a => (
+      a.records[0].id === meeting.id 
+      && a.type === 'update'
+      && a.records[0].attendees.length === 2
+      && !!a.records[0].attendees.find((a: { id: string }) => a.id === enduser.id)
+    ), 
+    'Add attendees webhook error', 'add attendees webhook', 
+    isSubscribed
+  )
+
   // cleanup
   await sdk.api.meetings.end_meeting({ id: meeting.id }) // also cleans up messages
+  await check_next_webhook(
+    a => (a.records[0].id === meeting.id && a.records[0].status === 'ended' && a.type === 'update'),
+    'End meeting error', 'end meeting webhook', 
+    isSubscribed
+  )
 
   const meetings = await sdk.api.meetings.my_meetings()
   const endedMeeting = meetings.find(m => m.id === meeting.id) 
@@ -151,6 +171,8 @@ const meetings_tests = async (isSubscribed: boolean) => {
     'Meeting missing updated values on end', 
     'Meeting ended correctly'
   )
+
+  await sdk.api.endusers.deleteOne(enduser.id)
 }
 
 const AUTOMATION_POLLING_DELAY_MS = 2000 - CHECK_WEBHOOK_DELAY_MS
@@ -300,9 +322,9 @@ const calendar_event_reminders_tests = async () => {
 }
 
 const tests: { [K in WebhookSupportedModel  | 'calendarEventReminders']: (isSubscribed: boolean) => Promise<void> } = {
+  meetings: meetings_tests,
   calendarEventReminders: calendar_event_reminders_tests, 
   chats: chats_tests,
-  meetings: meetings_tests,
 }
 
 const run_tests = async () => {
