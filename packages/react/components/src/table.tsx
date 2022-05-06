@@ -22,7 +22,7 @@ import {
 } from "./layout"
 
 const LIGHT_GRAY = "#fafafa"
-const GRAY = "#EFEFEF"
+export const GRAY = "#EFEFEF"
 const DARK_GRAY = "#E8E8E8"
 const DARKER_GRAY = "#52575C"
 
@@ -57,7 +57,8 @@ export const TableTitle = ({ title, actionsComponent, style, textStyle={}, horiz
 
 const defaultWidthForFields = (n: number) => n <= 0 ? '100%' : `${Math.floor(100/n)}%`
 
-type Renderer <T> = (value: T) => React.ReactElement | string | number
+type Indices = { index: number, indexOfPage: number }
+type Renderer <T> = (value: T, indices: Indices) => React.ReactElement | string | number
 export type TableField <T> = {
   key: string,
   label: string,
@@ -77,22 +78,25 @@ export const TableHeader = <T extends Item>({ fields, style, textStyle, horizont
     backgroundColor: DARK_GRAY,
     ...style 
   }}>
-    {fields.map(({ key, label, textAlign, width=defaultWidthForFields(fields.length) }) => (
-      <Typography key={key} component="h5" style={{ 
-        width: width, textAlign, fontSize,
-        fontWeight: 600,
-        ...textStyle 
-      }}>
-        {label}
-      </Typography>
+    {fields.map(({ key, label, textAlign, width }) => (
+      <Flex key={key} flex={width !== undefined ? 0 : 1}>
+        <Typography component="h5" style={{ 
+          textAlign, fontSize,
+          width: width ?? defaultWidthForFields(fields.length), 
+          fontWeight: 600,
+          ...textStyle 
+        }}>
+          {label}
+        </Typography>
+      </Flex>
     ))}
   </Flex>
 )
 
 const ROW_DIVIDER_STYLE = `1px solid ${DARK_GRAY}` 
 
-const get_display_value = <T,>(item: T, key: string, render?: Renderer<T>) => {
-  if (render) { return render(item) }
+const get_display_value = <T,>(item: T, key: string, indices: Indices, render?: Renderer<T>) => {
+  if (render) { return render(item, indices) }
 
   const value = item[key as keyof T]
   if (!(key in item)) console.warn(`Value missing for key ${key} while rendering Table without a specified render function.`)
@@ -105,14 +109,16 @@ const get_display_value = <T,>(item: T, key: string, render?: Renderer<T>) => {
 }
 export interface TableRowProps<T extends Item> extends Styled, HorizontalPadded, ItemClickable<T> {
   item: T,
+  indices: Indices,
   fields: TableHeaderProps<T>['fields']
-  hoverColor?: CSSProperties['color'],
-  noHoverColor?: CSSProperties['color'],
+  hoveredColor?: CSSProperties['color'],
+  notHoveredColor?: CSSProperties['color'],
+  hover?: boolean,
   fontSize?: CSSProperties['fontSize']
   textStyle?: CSSProperties,
 }
-export const TableRow = <T extends Item>({ item, fields, onClick, onPress, hoverColor=GRAY, noHoverColor, horizontalPadding, style, textStyle, fontSize=14 } : TableRowProps<T>) => (
-  <WithHover hoverColor={hoverColor} noHoverColor={noHoverColor} flex>
+export const TableRow = <T extends Item>({ item, indices, fields, onClick, onPress, hover, hoveredColor, notHoveredColor, horizontalPadding, style, textStyle, fontSize=14 } : TableRowProps<T>) => (
+  <WithHover hoveredColor={hoveredColor ?? GRAY} notHoveredColor={notHoveredColor} disabled={!hover} flex>
     <Flex flex={1} alignItems="center" justifyContent="space-between" 
       onClick={() => (onClick ?? onPress)?.(item)}
       style={{ 
@@ -122,16 +128,16 @@ export const TableRow = <T extends Item>({ item, fields, onClick, onPress, hover
         backgroundColor: undefined, // leave in parent component
       }}
     >
-      {fields.map(({ key, width=defaultWidthForFields(fields.length), textAlign='left', render }) => (
-        <Flex flex={1} key={key} 
-          justifyContent={textAlign === "right" ? 'flex-end' : 'flex-start'}
-          style={{ 
-            textAlign, width: width, 
+      {fields.map(({ key, width, textAlign='left', render }) => (
+        <Flex flex={width !== undefined ? 0 : 1} key={key}>
+          <Typography style={{ 
+            textAlign, 
+            width: width ?? defaultWidthForFields(fields.length), 
             color: DARKER_GRAY, fontSize, 
             ...textStyle
-          }}
-        >
-          {get_display_value(item, key, render)}
+          }}>
+            {get_display_value(item, key, indices, render)}
+          </Typography>
         </Flex>
       ))}
     </Flex>
@@ -146,7 +152,8 @@ export interface PaginationOptions {
 export interface PaginationProps<T> extends PaginationOptions {
   items: T[];
 }
-export const usePagination = <T,>({ items, pageSize=10, initialPage }: PaginationProps<T>) => {
+const DEFAULT_PAGE_SIZE = 10
+export const usePagination = <T,>({ items, pageSize=DEFAULT_PAGE_SIZE, initialPage }: PaginationProps<T>) => {
   if (pageSize < 1) throw new Error("pageSize must be greater than 0")
   if (initialPage && initialPage < 0) throw new Error("initialPage must be a positive number")
 
@@ -157,20 +164,20 @@ export const usePagination = <T,>({ items, pageSize=10, initialPage }: Paginatio
 
   const goToPage = useCallback((page: number) => {
     setSelectedPage(s => (s !== page && page <= numPages && page >= 0) ? page : s)
-  }, [setSelectedPage, numPages])
+  }, [numPages])
   const goToNext = useCallback(() => {
     setSelectedPage(s => s <= numPages ? s + 1 : s)
-  }, [setSelectedPage, numPages])
+  }, [numPages])
   const goToPrevious = useCallback(() => {
     setSelectedPage(s => s > 0 ? s - 1 : s)
-  }, [setSelectedPage])
+  }, [])
   const mapSelectedItems = useCallback(<R,>(apply: (item: T, info: { index: number, isLast: boolean }) => R) => {
     const mapped: R[] = []
     for (let i=selectedPage * pageSize; i < (selectedPage + 1) * pageSize && i < count; i++) {
       mapped.push(apply(items[i], { index: i, isLast: i === count -1 || i === (selectedPage + 1) * pageSize - 1 }))
     }
     return mapped
-  }, [selectedPage, numPages, pageSize])
+  }, [items, count, selectedPage, numPages, pageSize])
 
   return {
     selectedPage,
@@ -303,7 +310,7 @@ export type WithHeader<T extends Item> = {
 } 
 export type WithRows <T extends Item> = {
   fields?: TableRowProps<T>['fields']; 
-  hoverColor?: TableRowProps<T>['hoverColor']; 
+  hoveredColor?: TableRowProps<T>['hoveredColor']; 
   RowComponent?: JSXElementConstructor<TableRowProps<T>>;
 } 
 export type WithFooter = {
@@ -323,7 +330,8 @@ export interface TableProps<T extends Item> extends WithTitle, WithHeader<T>, Wi
   paddingHorizontal?: number,
   headerFontSize?: CSSProperties['fontSize'],
   rowFontSize?: CSSProperties['fontSize'],
-  footerStyle?: 'numbered' | 'prev-next' 
+  footerStyle?: 'numbered' | 'prev-next',
+  hover?: boolean,
 }
 export const Table = <T extends Item>({
   items,
@@ -344,7 +352,8 @@ export const Table = <T extends Item>({
   TitleComponent=TableTitle,
   fields,
   HeaderComponent=TableHeader,
-  hoverColor,
+  hover,
+  hoveredColor,
   RowComponent=TableRow,
   footerStyle='numbered',
   FooterComponent=footerStyle === 'numbered' ? TableFooterNumbered : TableFooter, 
@@ -369,8 +378,18 @@ export const Table = <T extends Item>({
             : undefined
           )
         }
-        render={(item, { index }) => (
-          <RowComponent key={item.id} item={item} fields={fields} fontSize={rowFontSize} hoverColor={hoverColor}
+        render={(item, { index }) => ( // index within this list, e.g. a single page
+          <RowComponent 
+            key={item.id} item={item} 
+            indices={{ 
+              // selectedPage indexed by zero
+              index: index + paginationProps.selectedPage * (pageOptions.pageSize ?? DEFAULT_PAGE_SIZE), 
+              indexOfPage: index 
+            }}
+            fields={fields} 
+            hover={hover}
+            hoveredColor={hoveredColor}
+            fontSize={rowFontSize} 
             horizontalPadding={horizontalPadding}
             style={{
               borderBottom: (

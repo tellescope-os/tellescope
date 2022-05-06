@@ -101,7 +101,8 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
   journeys: {
-    update_state: (args: { id: string, name: string, updates: JourneyState }) => Promise<void>
+    update_state: (args: extractFields<CustomActions['journeys']['update_state']['parameters']>) => 
+                          Promise<extractFields<CustomActions['journeys']['update_state']['returns']>>,
     delete_states: (args: extractFields<CustomActions['journeys']['delete_states']['parameters']>) => 
                           Promise<extractFields<CustomActions['journeys']['delete_states']['returns']>>,
   },

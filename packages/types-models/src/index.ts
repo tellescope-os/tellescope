@@ -260,7 +260,11 @@ export type ChatRoomType = 'internal' | 'external'
 export interface ChatRoom_readonly extends ClientRecord {
   recentMessage?: string,
   recentSender?: string,
+  recentMessageSentAt?: number,
   numMessages: number,
+}
+export type ChatRoomUserInfo = {
+  unreadCount: number
 }
 export interface ChatRoom_required {}
 export interface ChatRoom_updatesDisabled {}
@@ -275,6 +279,9 @@ export interface ChatRoom extends ChatRoom_readonly, ChatRoom_required, ChatRoom
   ticketId?: string; // for connecting with a related ticket
   endedAt?: Date;
   tags?: string[];
+  infoForUser?: {
+    [index: string]: ChatRoomUserInfo,
+  }
 }
 
 export type ChatAttachmentType = 'image' | 'file'

@@ -63,6 +63,7 @@ import {
   AutomationCondition,
   AutomationConditionType,
   AtJourneyStateAutomationCondition,
+  ChatRoomUserInfo,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -309,14 +310,16 @@ export const objectValidator = <T extends object>(i: InputValidation<Required<T>
   }, { ...o, isObject: true, listOf: false }
 )
 
-export const objectAnyFieldsValidator: EscapeBuilder<Indexable<string | number>> = (o={}) => build_validator(
+export const objectAnyFieldsValidator = <T=string | number>(valueValidator?: EscapeFunction<T>): EscapeBuilder<Indexable<T>> => (o={}) => build_validator(
   (object: any) => {
     if (!is_object(object)) { throw new Error("Expected a non-null object by got ${object}") }
 
     const validated = {} as Indexable
 
     for (const field in object) {
-      if (typeof object[field] === 'number') {
+      if (valueValidator) {
+        validated[field] = valueValidator(object[field])
+      } else if (typeof object[field] === 'number') {
         validated[field] = numberValidator(object[field])
       } else if (typeof object[field] === 'string') {
         validated[field] = stringValidator(object[field])
@@ -330,6 +333,8 @@ export const objectAnyFieldsValidator: EscapeBuilder<Indexable<string | number>>
     return validated
   }, { ...o, isObject: true, listOf: false }
 )
+
+export const objectAnyFieldsAnyValuesValidator = objectAnyFieldsValidator()
 
 export const escapeString: EscapeWithOptions<string> = (o={}) => string => {
   if (typeof string !== "string") throw new Error('Expecting string value')
@@ -371,7 +376,7 @@ export const listValidatorEmptyOk = <T>(b: EscapeFunction<T>): EscapeBuilder<T[]
 
 export const listOfStringsValidator = listValidator(stringValidator()) 
 export const listOfStringsValidatorEmptyOk = listValidatorEmptyOk(stringValidator()) 
-export const listOfObjectAnyFieldsValidator = listValidator(objectAnyFieldsValidator())
+export const listOfObjectAnyFieldsAnyValuesValidator = listValidator(objectAnyFieldsAnyValuesValidator())
 
 export const booleanValidator: EscapeBuilder<boolean> = (options={}) => build_validator(
   boolean => {
@@ -734,6 +739,12 @@ export const journeyStateValidator = objectValidator<JourneyState>({
   description: stringValidator({ isOptional: true }),
   requiresFollowup: booleanValidator({ isOptional: true }),
 })
+export const journeyStateUpdateValidator = objectValidator<JourneyState>({
+  name: stringValidator100({ isOptional: true }),
+  priority: journeyStatePriorityValidator({ isOptional: true }),
+  description: stringValidator({ isOptional: true }),
+  requiresFollowup: booleanValidator({ isOptional: true }),
+})
 export const journeyStatesValidator = listValidator(journeyStateValidator())
 
 export const emailEncodingValidator = exactMatchValidator<EmailEncoding>(['', 'base64'])
@@ -971,7 +982,7 @@ export const attendeeValidator = objectValidator<{
 }) 
 export const listOfAttendeesValidator = listValidator(attendeeValidator())
 export const meetingInfoValidator = objectValidator<{ Meeting: MeetingInfo }>({ 
-  Meeting: objectAnyFieldsValidator(),
+  Meeting: objectAnyFieldsAnyValuesValidator(),
 }) 
 
 export const userIdentityValidator = objectValidator<{
@@ -1010,6 +1021,10 @@ export const userDisplayInfoValidator = objectValidator<UserDisplayInfo>({
   email: emailValidator(),
 })
 export const meetingDisplayInfoValidator = indexableValidator(mongoIdStringRequired, userDisplayInfoValidator())
+
+export const chatRoomUserInfoValidator = objectAnyFieldsValidator(objectValidator<ChatRoomUserInfo>({
+  unreadCount: nonNegNumberValidator(),
+})())
 
 const _AUTOMATION_ENDUSER_STATUS: { [K in AutomationEnduserStatus]: any } = {
   active: '',

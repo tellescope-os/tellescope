@@ -228,7 +228,6 @@ export const Messages = ({
 
 const defaultSidebarStyle: CSSProperties  = {
   borderRadius: 5,
-  backgroundColor: 'gray',
   overflowY: 'auto',
 }
 const defaultSidebarItemStyle: CSSProperties  = {

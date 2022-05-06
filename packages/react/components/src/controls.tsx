@@ -123,7 +123,7 @@ export const useAsyncAction = <T,>({ action, staysMounted=true, onSuccess, onErr
 
   return { performingAction, handlePerformAction }
 }
-export const AsyncIconButton = <T,>({ Icon, ...props } : LabeledIconButtonProps & AsyncAction<T>) => {
+export const AsyncIconButton = <T,>({ Icon, ...props } : LabeledIconButtonProps & AsyncAction<T> & Styled) => {
   const { performingAction, handlePerformAction } = useAsyncAction(props)
 
   props.size = (props.size ?? DEFAULT_ICON_BUTTON_SIZE)

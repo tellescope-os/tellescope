@@ -154,7 +154,7 @@ export const createSliceForMappedList = <T extends WithId, N extends string>(nam
       state[action.payload.value.key] = action.payload.value.data
     },
     addElementsForKey: (state, action) => {
-      if (state[action.payload.value.key].status !== LoadingStatus.Loaded) {
+      if (state[action.payload.value.key]?.status !== LoadingStatus.Loaded) {
         state[action.payload.value.key] = { status: LoadingStatus.Loaded, value: action.payload.value.elements }
       }
 
@@ -206,6 +206,7 @@ export type AddOptions = {
 export interface ListUpdateMethods <T, ADD> {
   addLocalElement: (e: T, o?: AddOptions) => T,
   addLocalElements: (e: T[], o?: AddOptions) => T[],
+  replaceLocalElement: (id: string, e: T) => T,
   createElement: (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
   findById: (id: string | number) => T | undefined,
@@ -244,6 +245,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
 
   const socketConnection = options?.socketConnection ?? 'model'
   const loadFilter = options?.loadFilter
+  const returnFilter = options?.returnFilter
 
   const dispatch = useTellescopeDispatch()
   const { didFetch, setFetched } = useContext(FetchContext)
@@ -390,11 +392,16 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     }
   }, [session, socketConnection, didFetch, isModelName, options])
 
-  return [state, {
-    addLocalElement, addLocalElements,
-    createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements,
-    reload,
-  }]
+  return [
+    returnFilter && state.status === LoadingStatus.Loaded 
+      ? { ...state, value: state.value.filter(returnFilter) } 
+      : state, 
+    {
+      addLocalElement, addLocalElements, replaceLocalElement,
+      createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements,
+      reload,
+    }
+  ]
 }
 
 export interface MappedListUpdateMethods <T, ADD>{
@@ -437,6 +444,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
   }
 
   const loadFilter = options?.loadFilter
+  const returnFilter = options?.returnFilter
   const socketConnection = options?.socketConnection ?? 'keys'
 
   const dispatch = useTellescopeDispatch()
@@ -451,7 +459,6 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     return e
   }, [dispatch, slice, options]) 
   const addLocalElementsForKey = useCallback((key: string | number, es: T[], o?: AddOptions) => {
-    console.log('addLocalElementsForKey', modelName, key, es)
     dispatch(slice.actions.addElementsForKey({ value: { key: key.toString(), elements: es }, options: o }))
     options?.onAdd?.(es) 
     return es
@@ -467,7 +474,6 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
 
     addLocalElementsForKey(key, es, options)
-
   }, [filterKey, addLocalElementsForKey])
 
   const createElement = useCallback(async (e: ADD, options?: AddOptions) => {
@@ -535,15 +541,22 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
 
   const reload = useCallback(() => load(true), [load])
 
-  return [state[key] ?? UNLOADED, {
-    setLocalElementForKey,
-    addLocalElement,
-    addLocalElements,
-    findById,
-    createElement,
-    createElements,
-    reload,
-  }]
+  const stateToReturn = state[key] ?? UNLOADED
+
+  return [
+    returnFilter && stateToReturn.status === LoadingStatus.Loaded
+      ? { status: LoadingStatus.Loaded, value: stateToReturn.value.filter(returnFilter) }
+      : stateToReturn,
+    {
+      setLocalElementForKey,
+      addLocalElement,
+      addLocalElements,
+      findById,
+      createElement,
+      createElements,
+      reload,
+    }
+  ]
 }
 
 export interface MappedStateUpdateMethods <T, ADD>{
@@ -604,6 +617,7 @@ export const useMappedStateHook = <T extends { id: string | number }, ADD extend
 
 export type HookOptions<T> = {
   loadFilter?: Partial<T>,
+  returnFilter?: (t: T) => boolean,
   refetchInMS?: number,
   dontFetch?: boolean,
   addTo?: AddOptions['addTo'],
@@ -706,7 +720,7 @@ export const useChats = (roomId: string, type: SessionType, options={} as HookOp
   // don't rely on socket update for new messages
   const onAdd = useCallback((ms: ChatMessage[]) => {
     const newest = ms[0]
-    updateLocalChatRoom(roomId, { recentMessage: newest.message, recentSender: newest.senderId ?? '' })
+    updateLocalChatRoom(newest.roomId, { recentMessage: newest.message, recentSender: newest.senderId ?? '' })
   }, [updateLocalChatRoom])
 
   const toReturn = useMappedListStateHook(

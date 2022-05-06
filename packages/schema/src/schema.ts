@@ -52,7 +52,7 @@ import {
   mongoIdStringValidator,
   listOfMongoIdStringValidator,
   preferenceValidator,
-  objectAnyFieldsValidator,
+  objectAnyFieldsAnyValuesValidator,
   stringValidator,
   stringValidator100,
   listOfStringsValidator,
@@ -91,6 +91,8 @@ import {
   listOfCalendarEventRemindersValidator,
   messageTemplateModeValidator,
   listOfAutomationConditionsValidator,
+  journeyStateUpdateValidator,
+  chatRoomUserInfoValidator,
 } from "@tellescope/validation"
 
 import {
@@ -273,7 +275,7 @@ export type CustomActions = {
     submit_form_response: CustomAction<{ accessCode: string, responses: FormResponseValue  }, { }>,
   },
   journeys: {
-    update_state: CustomAction<{ updates: JourneyState, id: string, name: string }, {}>,
+    update_state: CustomAction<{ updates: Partial<JourneyState>, id: string, name: string }, { updated: Journey }>,
     delete_states: CustomAction<{ id: string, states: string[] }, { updated: Journey }>,
   },
   endusers: {
@@ -671,9 +673,11 @@ export const schema: SchemaV1 = build_schema({
         parameters: { 
           id: { validator: mongoIdStringValidator },
           name: { validator: stringValidator100 },
-          updates: { validator: journeyStateValidator, required: true },
+          updates: { validator: journeyStateUpdateValidator, required: true },
         },
-        returns: {},
+        returns: { 
+          updated: { validator: 'journey' as any }
+        },
       },
       delete_states: {
         op: 'custom', access: 'update', method: "delete",
@@ -951,6 +955,9 @@ export const schema: SchemaV1 = build_schema({
         validator: nonNegNumberValidator,
         initializer: () => 0,
       },
+      recentMessageSentAt: {
+        validator: nonNegNumberValidator,
+      },
       type: {
         validator: chatRoomTypeValidator,
         initializer: () => 'internal' as ChatRoomType
@@ -993,6 +1000,9 @@ export const schema: SchemaV1 = build_schema({
       tags: {
         validator: listOfStringsValidator,
       },
+      infoForUser: { // todo: access-permissions allow updates for self only (when non-admin)
+        validator: chatRoomUserInfoValidator,
+      }
     },
     defaultActions: DEFAULT_OPERATIONS,
     enduserActions: { create: {}, read: {}, readMany: {}, display_info: {} },
@@ -1309,7 +1319,7 @@ export const schema: SchemaV1 = build_schema({
         },
         returns: { 
           presignedUpload: {
-            validator: objectAnyFieldsValidator,
+            validator: objectAnyFieldsAnyValuesValidator,
           },
           file: {
             validator: 'file' as any, // todo: add file validator
@@ -1402,7 +1412,7 @@ export const schema: SchemaV1 = build_schema({
         parameters: { },
         returns: { 
           id: { validator: mongoIdStringValidator, required: true },
-          meeting: { validator: objectAnyFieldsValidator, required: true },
+          meeting: { validator: objectAnyFieldsAnyValuesValidator, required: true },
           host: { validator: attendeeValidator, required: true },
         },
       },
@@ -1828,7 +1838,7 @@ export const schema: SchemaV1 = build_schema({
           } 
         },
         {
-          explanation: 'Event and action cannot both be shared by an existing event automation (no duplicates)',
+          explanation: 'Event, action, and conditions cannot all be shared by an existing event automation (no duplicates)',
           evaluate: () => {} // implemented in routing.ts
         },
       ],

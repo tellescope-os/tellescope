@@ -452,7 +452,7 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
 
   // If no create, cannot test get, update, or delete
   if (!(model.defaultActions.create || model.customActions.create)) return
-
+  
   if (has_required_field(model.fields)) {
     await async_test(
       `create-${singularName} (missing a required field)`,
@@ -463,7 +463,7 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
   await async_test(
     `create-${singularName}`, 
     () => queries.createOne(instance), 
-    { onResult: r => !!(_id = r.id) && validateReturnType(returns.create, r, defaultValidation) }
+    { onResult: r => !!(_id = r.id) && (name === 'api_keys' || !!r.creator) && validateReturnType(returns.create, r, defaultValidation) }
   )
   if (model.defaultActions.update) {
     await async_test(
@@ -891,6 +891,12 @@ const chat_room_tests = async () => {
   await sdk.api.chats.createOne({ roomId: room.id, message: 'test message', attachments: [{ type: 'file', secureName: 'testsecurename'}] })
   let roomWithMessage = await sdk.api.chat_rooms.getOne(room.id)
   assert(roomWithMessage.numMessages === 1, 'num mesages no update', 'num messages on send message')
+  assert((roomWithMessage?.recentMessageSentAt ?? 0) > Date.now() - 1000, 'recent message timestamp bad', 'recent message timestamp')
+  assert(roomWithMessage?.infoForUser?.[userId]?.unreadCount === 1, 'bad unread count for user', 'unread count for user')
+  assert(roomWithMessage?.infoForUser?.[enduserSDK.userInfo.id]?.unreadCount === 1, 'bad unread count for enduser', 'unread count for enduser')
+
+  roomWithMessage = await sdk.api.chat_rooms.updateOne(roomWithMessage.id, { infoForUser: { [userId]: { unreadCount: 0 }}})
+  assert(roomWithMessage?.infoForUser?.[userId]?.unreadCount === 0, 'bad reset unread count for user', 'reset unread count for user')
 
   // todo: enable this test when createMany allowed for messages
   // await sdk.api.chats.createSome([{ roomId: room.id, message: 'test message 3' }, { roomId: room.id, message: 'test message 3' }])

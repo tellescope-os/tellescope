@@ -71,8 +71,8 @@ export const compute_flex_direction_with_props = <T extends string>(direction: T
 )
 
 export interface WithHoverColors {
-  hoverColor?: CSSProperties['backgroundColor'], 
-  noHoverColor?: CSSProperties['backgroundColor'],
+  hoveredColor?: CSSProperties['backgroundColor'], 
+  notHoveredColor?: CSSProperties['backgroundColor'],
 }
 export interface WithHoverProps extends WithHoverColors { 
   disabled?: boolean,
@@ -80,7 +80,7 @@ export interface WithHoverProps extends WithHoverColors {
   flex?: boolean,
   children: React.ReactNode,
 }
-export const WithHover = ({ hoverColor="#888888", noHoverColor, flex, disabled, children, style={} } : WithHoverProps) => {
+export const WithHover = ({ hoveredColor, notHoveredColor, flex, disabled, children, style={} } : WithHoverProps) => {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -89,7 +89,7 @@ export const WithHover = ({ hoverColor="#888888", noHoverColor, flex, disabled, 
         display: flex ? 'flex' : undefined,
         flex: flex ? 1 : undefined,
         cursor: disabled ? undefined : 'pointer', 
-        backgroundColor: hovered && !disabled ? hoverColor : noHoverColor, 
+        backgroundColor: hovered && !disabled ? hoveredColor : notHoveredColor, 
         ...style,
       }}
     >
@@ -211,14 +211,14 @@ export interface List_T <T extends Item, P={}> extends ListOptions<T, P>, WithHo
   onPress?: (item: T) => void;
   reverse?: boolean,
 }
-export const List = <T extends Item, P={}>({ items, hoverColor, noHoverColor, emptyComponent, render, renderProps, onClick, reverse, style, rowStyle, }: List_T<T> & Styled) => {
+export const List = <T extends Item, P={}>({ items, hoveredColor, notHoveredColor, emptyComponent, render, renderProps, onClick, reverse, style, rowStyle, }: List_T<T> & Styled) => {
   if (items.length === 0 && emptyComponent) return emptyComponent
   
   return (
     <Flex flex={1} column reverse={reverse} style={style}>
       {items.map((item, i) => 
-        hoverColor 
-          ? <WithHover key={item.id ?? i} flex hoverColor={hoverColor} noHoverColor={noHoverColor}>  
+        hoveredColor 
+        ? <WithHover key={item.id ?? i} flex hoveredColor={hoveredColor} notHoveredColor={notHoveredColor}>  
               <ListItem index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
             </WithHover>
           : <ListItem key={item.id ?? i} index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
