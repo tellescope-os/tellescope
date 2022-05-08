@@ -190,7 +190,7 @@ export class Session extends SessionManager {
     queries.chat_rooms.join_room = a => this._POST('/v1/join-chat-room', a),
     queries.chat_rooms.display_info = a => this._GET(`/v1${schema.chat_rooms.customActions.display_info.path}`, a),
 
-    queries.meetings.start_meeting = () => this._POST('/v1/start-meeting')
+    queries.meetings.start_meeting = a => this._POST('/v1/start-meeting', a)
     queries.meetings.end_meeting = a => this._POST('/v1/end-meeting', a)
     queries.meetings.add_attendees_to_meeting = a => this._POST('/v1/add-attendees-to-meeting', a)
     queries.meetings.attendee_info = a => this._GET('/v1/attendee-info', a)

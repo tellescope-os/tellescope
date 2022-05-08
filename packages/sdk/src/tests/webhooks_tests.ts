@@ -24,7 +24,7 @@ import {
 } from "@tellescope/types-models"
 
 import { Session } from "../sdk"
-import { ChatMessage } from "@tellescope/types-client"
+import { ChatMessage, Meeting } from "@tellescope/types-client"
 
 const [email, password] = [process.env.TEST_EMAIL, process.env.TEST_PASSWORD]
 const [email2, password2] = [process.env.TEST_EMAIL_2, process.env.TEST_PASSWORD_2]
@@ -142,7 +142,13 @@ const meetings_tests = async (isSubscribed: boolean) => {
   const enduser = await sdk.api.endusers.createOne({ email: 'deleteme@tellescope.com' })
   const meeting = await sdk.api.meetings.start_meeting()
 
-  await check_next_webhook(a => objects_equivalent(a.records, [meeting]), 'Create meeting error', 'Create meeting webhook', isSubscribed)
+  await check_next_webhook(a => (
+      objects_equivalent(a.records[0]?.meetingInfo, meeting.meeting)
+      && (a.records[0] as Meeting).attendees?.length === 1
+      && (a.records[0] as Meeting).attendees?.[0].id === sdk.userInfo.id
+    ),
+    'Create meeting error', 'Create meeting webhook', isSubscribed
+  )
 
   await sdk.api.meetings.add_attendees_to_meeting({ id: meeting.id, attendees: [{ type: 'enduser', id: enduser.id }]})
   await check_next_webhook(
@@ -171,6 +177,15 @@ const meetings_tests = async (isSubscribed: boolean) => {
     'Meeting missing updated values on end', 
     'Meeting ended correctly'
   )
+
+  const meetingWithAttendees = await sdk.api.meetings.start_meeting({ attendees: [{ id: enduser.id, type: 'enduser' }]})
+  await check_next_webhook((a => (
+      a.records[0] as Meeting).attendees?.length === 2
+    ),
+    'Create meeting with attendees error', 'Create meeting with attendees webhook', isSubscribed
+  )
+
+  await sdk.api.meetings.end_meeting({ id: meetingWithAttendees.id }) // also cleans up messages
 
   await sdk.api.endusers.deleteOne(enduser.id)
 }

@@ -1410,12 +1410,13 @@ export const schema: SchemaV1 = build_schema({
         name: 'Start Meeting',
         path: '/start-meeting',
         description: "Generates an video meeting room",
-        parameters: { },
+        parameters: { 
+          attendees: { validator: listOfUserIndentitiesValidator },
+        },
         returns: { 
           id: { validator: mongoIdStringValidator, required: true },
           meeting: { validator: meetingInfoValidator, required: true },
           host: { validator: attendeeValidator, required: true },
-          attendees: { validator: listOfUserIndentitiesValidator },
         },
       },
       send_invite: { 
