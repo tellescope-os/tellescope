@@ -465,11 +465,22 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
     () => queries.createOne(instance), 
     { onResult: r => !!(_id = r.id) && (name === 'api_keys' || !!r.creator) && validateReturnType(returns.create, r, defaultValidation) }
   )
+  await async_test(
+    `log-${singularName} create`, 
+    () => sdk.api.user_logs.getOne({ resourceId: _id, resource: name, action: 'create' }), 
+    { onResult: r => r && r.userId === sdk.userInfo.id }
+  )
+
   if (model.defaultActions.update) {
     await async_test(
       `update-${singularName}`, 
       () => queries.updateOne(_id, updates, { replaceObjectFields: true }), 
       { onResult: u => typeof u === 'object' && u.id === _id }
+    )
+    await async_test(
+      `log-${singularName} update`, 
+      () => sdk.api.user_logs.getOne({ resourceId: _id, resource: name, action: 'update' }), 
+      { onResult: r => r && r.userId === sdk.userInfo.id }
     )
   }
   await async_test(
@@ -509,6 +520,13 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
     `get-${singularName} (verify delete)`, 
     () => queries.getOne(_id), 
     { shouldError: true, onError: e => e.message === 'Could not find a record for the given id' } 
+  )
+
+  await wait(undefined, 25)
+  await async_test(
+    `log-${singularName} delete`, 
+    () => sdk.api.user_logs.getOne({ resourceId: _id, resource: name, action: 'delete' }), 
+    { onResult: r => r && r.userId === sdk.userInfo.id }
   )
 }
 
@@ -1551,6 +1569,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   event_automations: automation_events_tests,
   sequence_automations: () => {},
   automation_endusers: () => {},
+  user_logs: () => {},
 };
 
 (async () => {

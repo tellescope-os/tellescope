@@ -943,6 +943,8 @@ const _CUD: { [K in CUDType]: any } = {
 }
 export const CUD = Object.keys(_CUD) as CUDType[]
 
+export const CUDStringValidator = exactMatchValidator<CUDType>(CUD)
+
 export const CUDValidator = objectValidator<CUDSubscription>({
   create: booleanValidator({ isOptional: true }),
   update: booleanValidator({ isOptional: true }),

@@ -136,7 +136,9 @@ export const useDisplayPictureUploadForSelf = (o={} as UseFileUploaderOptions) =
   const handleUpload: FileUploadHandler = useCallback(async (details, file, options) => {
     setUpdating(true)
 
-    const { secureName, ...fileInfo } = await hookHandleUpload(details, file, options)
+    const { secureName, ...fileInfo } = await hookHandleUpload({
+      name: details.name, type: details.type, size: details.size, enduserId: o.enduserId,
+    }, file, options)
     try {
       if (session instanceof Session) {
         await updateUserInfo({ avatar: secureName })

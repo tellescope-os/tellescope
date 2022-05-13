@@ -96,7 +96,8 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   event_automations: defaultQueries(s, 'event_automations'),
   sequence_automations: defaultQueries(s, 'sequence_automations'),
   automation_endusers: defaultQueries(s, 'automation_endusers'),
-  webhooks: defaultQueries(s, 'webhooks')
+  webhooks: defaultQueries(s, 'webhooks'),
+  user_logs: defaultQueries(s, 'user_logs'),
 })
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {

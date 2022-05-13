@@ -83,6 +83,7 @@ export const List = <T extends Item>({ items, emptyComponent, render, onClick, o
     <FlatList 
       inverted={reverse}
       data={items}
+      style={convert_CSS_to_RNStyles(style)}
       renderItem={({ item, index }) => render(item, { index, onClick: onPress ?? onClick })} 
       keyExtractor={item => item.id.toString()}
     />

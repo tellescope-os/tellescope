@@ -31,6 +31,7 @@ export type EventAutomation = ClientModelForName['event_automations']
 export type SequenceAutomation = ClientModelForName['sequence_automations']
 export type AutomationEnduser = ClientModelForName['automation_endusers']
 export type User = ClientModelForName['users']
+export type UserLog = ClientModelForName['user_logs']
 
 
 export interface UserDisplayInfo extends models.UserActivityInfo { 

@@ -595,6 +595,15 @@ export interface SequenceAutomation extends SequenceAutomation_readonly, Sequenc
 
 }
 
+export interface UserLog_readonly extends ClientRecord {
+  userId: string,
+  resource: string,
+  resourceId: string,
+  action: CUD,
+}
+export interface UserLog_required {}
+export interface UserLog_updatesDisabled {}
+export interface UserLog extends UserLog_readonly, UserLog_required, UserLog_updatesDisabled {}
 
 export type ModelForName_required = {
   endusers: Enduser_required;
@@ -619,6 +628,7 @@ export type ModelForName_required = {
   automation_endusers: AutomationEnduser_required,
   sequence_automations: SequenceAutomation_required,
   webhooks: WebHook_required;
+  user_logs: UserLog_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
 
@@ -645,6 +655,7 @@ export interface ModelForName_readonly {
   automation_endusers: AutomationEnduser_readonly,
   sequence_automations: SequenceAutomation_readonly,
   webhooks: WebHook_readonly;
+  user_logs: UserLog_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
 
@@ -671,6 +682,7 @@ export interface ModelForName_updatesDisabled {
   automation_endusers: AutomationEnduser_updatesDisabled, 
   sequence_automations: SequenceAutomation_updatesDisabled,
   webhooks: WebHook_updatesDisabled;
+  user_logs: UserLog_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
 
@@ -697,6 +709,7 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   automation_endusers: AutomationEnduser,
   sequence_automations: SequenceAutomation,
   webhooks: WebHook;
+  user_logs: UserLog;
 }
 export type ModelName = keyof ModelForName
 export type Model = ModelForName[keyof ModelForName]
@@ -733,6 +746,7 @@ export const modelNameChecker: { [K in ModelName] : true } = {
   automation_endusers: true,
   sequence_automations: true,
   webhooks: true, 
+  user_logs: true,
 }
 
 export const isModelName = (s: string): s is ModelName => modelNameChecker[s as ModelName]

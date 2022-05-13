@@ -129,7 +129,8 @@ export const Message = ({
   sentMessageTextStyle=defaultSentTextStyle,
   receivedMessageTextStyle=defaultReceivedTextStyle,
   imageDimensions,
-}: MessageProps) => {
+  style,
+}: MessageProps & Styled) => {
   const session = useResolvedSession()
   const chatUserId = session.userInfo.id
 
@@ -172,10 +173,9 @@ export const Message = ({
   )
 
   return (
-    <Flex style={{ margin: 5, flexWrap: 'nowrap' }}> 
+    <Flex style={{ margin: 5, flexWrap: 'nowrap', ...style }}> 
       {message.senderId !== chatUserId && displayPicture}
       {messageComponent}
-      
       {message.senderId === chatUserId && displayPicture}
     </Flex>
   )
@@ -200,11 +200,10 @@ interface Messages_T extends MessageStyles {
   resolveSenderName?: (room: ChatRoom) => React.ReactNode; 
   messages: LoadedData<ChatMessage[]>,
   chatUserId: string,
-  Header?: React.JSXElementConstructor<MessagesHeaderProps>,
   headerProps?: MessagesHeaderProps,
   imageDimensions?: ImageDimensions,
 }
-export const Messages = ({ 
+export const MessagesWithHeader = ({ 
   resolveSenderName,
   messages, 
   chatUserId, 
@@ -213,16 +212,32 @@ export const Messages = ({
   style,
   imageDimensions,
   ...messageStyles 
-}: Messages_T & Styled) => (
+}: Messages_T & Styled & { Header?: React.JSXElementConstructor<MessagesHeaderProps> }) => (
   <LoadingLinear data={messages} render={messages => (
-    <Flex column flex={1}>
+    <Flex column flex={1} style={{ ...style, overflowY: 'scroll' }}>
       {Header && <Header {...headerProps}/>}
-      <List reverse style={style} items={messages} render={(message, i) => (
+      <List reverse items={messages} render={(message, i) => (
         <Flex column>
           <Message message={message} imageDimensions={imageDimensions} {...messageStyles} />
         </Flex>
       )}/>    
     </Flex>
+  )}/>
+)
+
+export const Messages = ({ 
+  resolveSenderName,
+  messages, 
+  chatUserId, 
+  headerProps,
+  style,
+  imageDimensions,
+  ...messageStyles 
+}: Messages_T & Styled) => (
+  <LoadingLinear data={messages} render={messages => (
+    <List reverse items={messages} style={style} render={(message) => (
+      <Message message={message} imageDimensions={imageDimensions} {...messageStyles} />
+    )}/>    
   )}/>
 )
 
@@ -317,14 +332,16 @@ interface ConversationsProps extends SidebarInfo {
   rooms: LoadedData<ChatRoom[]>;
 }
 export const Conversations = ({ rooms, selectedRoom, onRoomSelect, PreviewComponent=ConversationPreview, style, selectedItemStyle, itemStyle } : ConversationsProps) => {
-
   return ( 
     <LoadingLinear data={rooms} render={rooms =>
-      <List style={style ?? defaultSidebarStyle} items={rooms} onClick={r => onRoomSelect(r.id)} render={(room, { onClick, index }) => 
-        <PreviewWithData key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
-          selectedStyle={selectedItemStyle} style={itemStyle} PreviewComponent={PreviewComponent}
-        />
-      }/>    
+      <List items={rooms.sort((r1, r2) => new Date(r2.updatedAt).getTime() - new Date(r1.updatedAt).getTime() )} 
+        style={style ?? defaultSidebarStyle} onClick={r => onRoomSelect(r.id)} 
+        render={(room, { onClick, index }) => 
+          <PreviewWithData key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
+            selectedStyle={selectedItemStyle} style={itemStyle} PreviewComponent={PreviewComponent}
+          />
+        }  
+      />    
     }/>
   )
 }

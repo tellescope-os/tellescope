@@ -94,6 +94,8 @@ import {
   listOfAutomationConditionsValidator,
   journeyStateUpdateValidator,
   chatRoomUserInfoValidator,
+  CUDValidator,
+  CUDStringValidator,
 } from "@tellescope/validation"
 
 import {
@@ -1963,6 +1965,46 @@ export const schema: SchemaV1 = build_schema({
         examples: ['active']
       },
       stepNumber: { validator: nonNegNumberValidator },
+    }
+  },
+  user_logs: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+      access: []
+    },
+    defaultActions: { read: {}, readMany: {} },
+    customActions: { },
+    enduserActions: { },
+    fields: {
+      ...BuiltInFields, 
+      userId: { 
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        // dependencies: [{
+        //   dependsOn: ['users'], 
+        //   dependencyField: '_id',
+        //   relationship: 'foreignKey',
+        //   onDependencyDelete: 'delete',
+        // }]
+      },
+      resource: { 
+        validator: stringValidator100,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+      },
+      resourceId: { 
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+      },
+      action: { 
+        validator: CUDStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+      },
     }
   },
 })

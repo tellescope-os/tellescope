@@ -241,8 +241,8 @@ const test_automation_webhooks = async () => {
 
 
 let CALENDAR_EVENT_WEBHOOK_COUNT = 0 // 
-const calendar_event_reminders_tests = async () => {
-  log_header("Calendar Event Reminders")
+const calendar_event_reminders_tests = async (isSubscribed: boolean) => {
+  log_header(`Calendar Event Reminders, isSubscribed=${isSubscribed}`)
 
   const firstRemindAt = Date.now()
   const secondRemindAt = Date.now() + AUTOMATION_POLLING_DELAY_MS * 2
@@ -337,9 +337,9 @@ const calendar_event_reminders_tests = async () => {
 }
 
 const tests: { [K in WebhookSupportedModel  | 'calendarEventReminders']: (isSubscribed: boolean) => Promise<void> } = {
-  meetings: meetings_tests,
   calendarEventReminders: calendar_event_reminders_tests, 
   chats: chats_tests,
+  meetings: meetings_tests,
 }
 
 const run_tests = async () => {
@@ -405,16 +405,20 @@ const run_tests = async () => {
   for (const t in tests) {
     await tests[t as keyof typeof tests](true)
   }
-  const finalLength = handledEvents.length + CALENDAR_EVENT_WEBHOOK_COUNT /* calendar event webhooks don't require subscriptions */
+  const finalLength = handledEvents.length
 
   await async_test(
     'update webhook (set subscriptions empty)',
-    () => sdk.api.webhooks.update({ subscriptionUpdates: emptySubscription }),
+    () => sdk.api.webhooks.update({ subscriptionUpdates: { ...emptySubscription } }),
     { onResult: _ => true }
   )
 
   log_header("Webhooks Tests without Subscriptions")
   for (const t in tests) {
+    if (tests[t as keyof typeof tests] === tests.calendarEventReminders) {
+      continue // don't require subscription / can't unsubscribe
+    }
+
     await tests[t as keyof typeof tests](false)
   }
   assert(finalLength === handledEvents.length, 'length changed after subscriptions', 'No webhooks posted when no subscription')

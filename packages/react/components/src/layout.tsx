@@ -215,14 +215,16 @@ export const List = <T extends Item, P={}>({ items, hoveredColor, notHoveredColo
   if (items.length === 0 && emptyComponent) return emptyComponent
   
   return (
-    <Flex flex={1} column reverse={reverse} style={style}>
+    <div style={{ overflowY: 'scroll', ...style }}>
+    <Flex flex={1} column reverse={reverse}>
       {items.map((item, i) => 
         hoveredColor 
         ? <WithHover key={item.id ?? i} flex hoveredColor={hoveredColor} notHoveredColor={notHoveredColor}>  
-              <ListItem index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
-            </WithHover>
-          : <ListItem key={item.id ?? i} index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
+            <ListItem index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
+          </WithHover>
+        : <ListItem key={item.id ?? i} index={i} item={item} render={render} renderProps={renderProps} onClick={onClick} style={rowStyle} />
       )}
     </Flex>
+    </div>
   )
 }

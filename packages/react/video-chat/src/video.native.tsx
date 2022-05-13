@@ -252,7 +252,7 @@ export const useJoinVideoCall = (): JoinVideoCallReturnType => {
     }
     if (!meetingInfo || typeof meetingInfo === 'string' || !attendeeInfo) return
 
-    NativeFunction.startMeeting(meetingInfo.Meeting, attendeeInfo.Attendee)
+    NativeFunction.startMeeting(meetingInfo.Meeting ?? meetingInfo, attendeeInfo.Attendee ?? attendeeInfo)
   }
 
   const leaveMeeting = () => setMeeting(undefined)

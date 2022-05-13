@@ -35,6 +35,7 @@ export type CalendarEvent = ServerModelForName['calendar_events']
 export type EventAutomation = ServerModelForName['event_automations']
 export type AutomationEnduser = ServerModelForName['automation_endusers']
 export type SequenceAutomation = ServerModelForName['sequence_automations']
+export type UserLog = ServerModelForName['user_logs']
 export type WebHook = ServerModelForName['webhooks']
 
 export type Organization = ToServerModel<BaseOrganization>
