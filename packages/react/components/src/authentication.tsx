@@ -32,6 +32,7 @@ export interface WithAnySession {
 
 interface SessionContext_T {
   session: UserSession,
+  logout: () => void,
   // setSession: React.Dispatch<React.SetStateAction<Session>>
   updateUserInfo: (updates: Parameters<Session['api']['users']['updateOne']>[1]) => Promise<void>,
   updateLocalSessionInfo: (u: Partial<User>, authToken?: string) => void
@@ -39,6 +40,11 @@ interface SessionContext_T {
 export const SessionContext = createContext({} as SessionContext_T)
 export const WithSession = (p : { children: React.ReactNode, sessionOptions?: UserSessionOptions }) => {
   const [session, setSession] = useState(() => new Session(p.sessionOptions))
+
+  const logout = () => {
+    session.logout().then(console.error)
+    setSession(s => new Session(p.sessionOptions))
+  }
 
   const updateLocalSessionInfo: SessionContext_T['updateLocalSessionInfo'] = (u, a) => setSession(s => new Session({ 
     ...s,
@@ -57,6 +63,7 @@ export const WithSession = (p : { children: React.ReactNode, sessionOptions?: Us
   return (
     <SessionContext.Provider value={{ 
       session, //setSession,
+      logout,
       updateUserInfo,
       updateLocalSessionInfo,
     }}>
@@ -68,6 +75,7 @@ export const useSessionContext = () => useContext(SessionContext)
 
 interface EnduserSessionContext_T {
   enduserSession: EnduserSession,
+  logout: () => void,
   // setEnduserSession: React.Dispatch<React.SetStateAction<EnduserSession>>
   updateUserInfo: (updates: Parameters<EnduserSession['api']['endusers']['updateOne']>[1]) => Promise<void>,
   updateLocalSessionInfo: (u: Partial<Enduser>, authToken?: string) => void
@@ -75,6 +83,11 @@ interface EnduserSessionContext_T {
 export const EnduserSessionContext = createContext({} as EnduserSessionContext_T)
 export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptions: EnduserSessionOptions }) => {
   const [enduserSession, setEnduserSession] = useState(() => new EnduserSession(p.sessionOptions))
+
+  const logout = () => {
+    enduserSession.logout().then(console.error)
+    setEnduserSession(s => new EnduserSession(p.sessionOptions))
+  }
 
   const updateLocalSessionInfo: EnduserSessionContext_T['updateLocalSessionInfo'] = (u, a) => {
     setEnduserSession(s => new EnduserSession({ 
@@ -95,6 +108,7 @@ export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptio
   return (
     <EnduserSessionContext.Provider value={{ 
       enduserSession, 
+      logout,
       updateUserInfo,
       updateLocalSessionInfo,
     }}>

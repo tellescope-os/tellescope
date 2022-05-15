@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, createContext } from 'react'
 
 import { TypedUseSelectorHook, createDispatchHook, createSelectorHook, ReactReduxContextValue, useDispatch } from 'react-redux'
-import { createSlice, configureStore, PayloadAction, Slice } from '@reduxjs/toolkit'
+import { createSlice, configureStore, PayloadAction, Slice, createAction } from '@reduxjs/toolkit'
  
 import {
   APIError,
@@ -30,6 +30,9 @@ import {
   Session, 
   EnduserSession,
 } from '@tellescope/sdk'
+
+const RESET_CACHE_TYPE = "cache/reset" as const
+export const resetStateAction = createAction(RESET_CACHE_TYPE)
 
 export const TellescopeStoreContext = React.createContext<ReactReduxContextValue<AppDispatch>>(null as any);
 export const createTellescopeSelector = () => createSelectorHook(TellescopeStoreContext)
@@ -138,7 +141,12 @@ export const createSliceForList = <T extends { id: string | number }, N extends 
     updateSome: (state, action) => update_elements_in_array(state, action.payload.value),
     remove: (s, a) => remove_elements_in_array(s, [a.payload.value.id]),
     removeSome: (s, a) => remove_elements_in_array(s, a.payload.value.ids),
-  }
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetStateAction, () => {
+      return UNLOADED as LoadedData<T[]> 
+    })
+  },
 })
 
 interface MappedListReducers<T extends { id: string | number }> {
@@ -146,6 +154,7 @@ interface MappedListReducers<T extends { id: string | number }> {
   addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, elements: T[] }, AddOptions>) => void; 
   [index: string]: any
 }
+
 export const createSliceForMappedList = <T extends WithId, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
   name,
   initialState: {} as Indexable<LoadedData<T[]>>,
@@ -171,7 +180,12 @@ export const createSliceForMappedList = <T extends WithId, N extends string>(nam
         (state[action.payload.value.key].value as T[]).unshift(...toAdd)
       }
     }
-  }
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetStateAction, () => {
+      return {} as Indexable<LoadedData<T[]>> 
+    })
+  },
 })
 
 export type ChatRoomDisplayInfo = { id: string } & { [index: string]: UserDisplayInfo }
@@ -195,6 +209,12 @@ export const sharedConfig = {
 const _store = configureStore(sharedConfig)
 type RootState = ReturnType<typeof _store.getState>
 type AppDispatch = typeof _store.dispatch
+
+export const useResetState = () => {
+  const dispatch = useTellescopeDispatch()
+  return () => dispatch({ type: RESET_CACHE_TYPE })
+  // _store.dispatch({ type: RESET_CACHE_TYPE })
+}
 
 const useTypedSelector = createTellescopeSelector() as any as TypedUseSelectorHook<RootState> 
 const useTellescopeDispatch = createDispatchHook(TellescopeStoreContext) 
