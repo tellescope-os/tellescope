@@ -216,10 +216,11 @@ export interface Email_readonly extends ClientRecord {
   delivered: boolean; 
   threadId: string; 
   source: string; // email address of sender
-  openedAt?: Date;
   linkOpens?: { [index: number]: Date };
+  openedAt?: Date;
   textEncoding?: EmailEncoding,
   htmlEncoding?: EmailEncoding,
+  s3id: string | null,
 }
 export interface Email_required {
   enduserId: string | null;
@@ -238,8 +239,8 @@ export interface Email extends Email_required, Email_readonly, Email_updatesDisa
 }
 
 export interface SMSMessage_readonly extends ClientRecord {
-  businessUserId: string, 
   delivered: boolean, 
+  internalMessageId?: string,
 }
 export interface SMSMessage_required {
   enduserId: string, 
@@ -247,11 +248,11 @@ export interface SMSMessage_required {
 }
 export interface SMSMessage_updatesDisabled {}
 export interface SMSMessage extends SMSMessage_readonly, SMSMessage_required, SMSMessage_updatesDisabled {
+  userId?: string, // defaults to self, but should allow future options to send as other user
   logOnly?: boolean,
-  timestamp: Date, 
   inbound: boolean, 
   newThread: boolean, 
-  usingPublicNumber?: boolean, // flagged on outgoing messages from public number
+  // usingPublicNumber?: boolean, // flagged on outgoing messages from public number
   // sentAt: string, // only outgoing
 }
 
@@ -339,11 +340,12 @@ export interface File extends File_readonly, File_required, File_updatesDisabled
 export interface Ticket_readonly extends ClientRecord {}
 export interface Ticket_required {
   title: string;
-  enduserId: string;
 }
 export interface Ticket_updatesDisabled {}
 export interface Ticket extends Ticket_readonly, Ticket_required, Ticket_updatesDisabled {
+  enduserId?: string;
   closedAt?: Date;
+  dueDateInMS?: number;
   message?: string;
   type?: string;
   owner?: string;
@@ -567,6 +569,18 @@ export interface EventAutomation extends EventAutomation_readonly, EventAutomati
   formId?: string,
 }
 
+export type RelatedRecord = { type: string, id: string }
+export interface UserNotification_readonly extends ClientRecord {}
+export interface UserNotification_required {
+  userId: string,
+  type: string,
+  message: string,
+}
+export interface UserNotification_updatesDisabled {}
+export interface UserNotification extends UserNotification_readonly, UserNotification_required, UserNotification_updatesDisabled {
+  read?: boolean,
+  relatedRecords?: RelatedRecord[],
+}
 
 export type AutomationEnduserStatus = 'active' | 'paused' | 'finished' 
 export interface AutomationEnduser_readonly extends ClientRecord {}
@@ -629,6 +643,7 @@ export type ModelForName_required = {
   sequence_automations: SequenceAutomation_required,
   webhooks: WebHook_required;
   user_logs: UserLog_required;
+  user_notifications: UserNotification_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
 
@@ -656,6 +671,7 @@ export interface ModelForName_readonly {
   sequence_automations: SequenceAutomation_readonly,
   webhooks: WebHook_readonly;
   user_logs: UserLog_readonly;
+  user_notifications: UserNotification_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
 
@@ -683,6 +699,7 @@ export interface ModelForName_updatesDisabled {
   sequence_automations: SequenceAutomation_updatesDisabled,
   webhooks: WebHook_updatesDisabled;
   user_logs: UserLog_updatesDisabled;
+  user_notifications: UserNotification_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
 
@@ -710,6 +727,7 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   sequence_automations: SequenceAutomation,
   webhooks: WebHook;
   user_logs: UserLog;
+  user_notifications: UserNotification;
 }
 export type ModelName = keyof ModelForName
 export type Model = ModelForName[keyof ModelForName]
@@ -747,6 +765,7 @@ export const modelNameChecker: { [K in ModelName] : true } = {
   sequence_automations: true,
   webhooks: true, 
   user_logs: true,
+  user_notifications: true,
 }
 
 export const isModelName = (s: string): s is ModelName => modelNameChecker[s as ModelName]

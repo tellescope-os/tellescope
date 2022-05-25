@@ -263,8 +263,27 @@ const deauthentication_tests = async (byTimeout=false) => {
   ])
 }
 
+export const notification_tests = async () => {
+  log_header(`Notification Tests`)
+
+  const userEvents = [] as ChatMessage[]
+  user2.handle_events({ 'created-user_notifications': rs => userEvents.push(...rs) }) 
+
+  const notification = await user1.api.user_notifications.createOne({ 
+    message: 'test notification',
+    type: 'type',
+    userId: user2.userInfo.id,
+  })
+  await wait(undefined, AWAIT_SOCKET_DURATION)
+
+  assert(userEvents.length === 1 && userEvents[0].id === notification.id, 'user did not get notification', 'user got notification')
+
+  // cleanup
+  await user1.api.user_notifications.deleteOne(notification.id)
+}
+
 const calendar_events = async () => {
-  log_header(`Meetings Tests`)
+  log_header(`Calendar Events Tests`)
 
   const enduser = await user1.api.endusers.createOne({ email: "socketenduser@tellescope.com" })
   await user1.api.endusers.set_password({ id: enduser.id, password: 'enduserPassword!' })
@@ -307,9 +326,10 @@ const calendar_events = async () => {
     await access_tests()
     await calendar_events()
     await enduser_tests()
+    await notification_tests()
 
-    // await deauthentication_tests() // should come last!
-    // await deauthentication_tests(true) // should come last!
+    await deauthentication_tests() // should come last!
+    await deauthentication_tests(true) // should come last!
 
   } catch(err) {
     console.error(err)

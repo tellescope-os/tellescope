@@ -94,8 +94,8 @@ import {
   listOfAutomationConditionsValidator,
   journeyStateUpdateValidator,
   chatRoomUserInfoValidator,
-  CUDValidator,
   CUDStringValidator,
+  listOfRelatedRecordsValidator,
 } from "@tellescope/validation"
 
 import {
@@ -315,6 +315,9 @@ export type CustomActions = {
     send_automation_webhook: CustomAction<{ message: string }, { }>,
     send_calendar_event_reminder_webhook: CustomAction<{ id: string }, { }>,
   },
+  user_notifications: {
+    send_user_email_notification: CustomAction<{ userId: string, message: string, subject?: string }, { }>,
+  }
 } 
 
 export type PublicActions = {
@@ -847,6 +850,9 @@ export const schema: SchemaV1 = build_schema({
         validator: emailEncodingValidator,
         readonly: true
       },
+      s3id: {
+        validator: stringValidator250,
+      }
     }, 
     defaultActions: { 
       create: {
@@ -888,10 +894,6 @@ export const schema: SchemaV1 = build_schema({
         required: true,
         examples: ["Test message"],
       },
-      timestamp: {
-        validator: dateValidator,
-        initializer: () => new Date(),
-      },
       enduserId: {
         validator: mongoIdStringValidator,
         required: true,
@@ -903,10 +905,10 @@ export const schema: SchemaV1 = build_schema({
           onDependencyDelete: 'delete',
         }]
       },
-      businessUserId: {
+      userId: {
         validator: mongoIdStringValidator,
         readonly: true, // default to only self-sending, for now
-        initializer: (a, s) => (s as UserSession).id,
+        initializer: (a, s) => s.id,
         dependencies: [{
           dependsOn: ['users'],
           dependencyField: '_id',
@@ -926,9 +928,9 @@ export const schema: SchemaV1 = build_schema({
         readonly:  true,
         initializer: s => !!s.logOnly
       },
-      usingPublicNumber: {
-        validator: booleanValidator,
-      },
+      internalMessageId: {
+        validator: stringValidator250,
+      }
     }, 
     defaultActions: { 
       create: {
@@ -1369,7 +1371,6 @@ export const schema: SchemaV1 = build_schema({
       },
       enduserId: {
         validator: mongoIdStringValidator,
-        required: true,
         examples: [PLACEHOLDER_ID],
         dependencies: [{
           dependsOn: ['endusers'],
@@ -1380,6 +1381,9 @@ export const schema: SchemaV1 = build_schema({
       },
       chatRoomId: {
         validator: mongoIdStringValidator,
+      },
+      dueDateInMS: {
+        validator: nonNegNumberValidator,
       },
       closedAt: {
         validator: dateValidator,
@@ -2005,6 +2009,50 @@ export const schema: SchemaV1 = build_schema({
         required: true,
         examples: [PLACEHOLDER_ID],
       },
+    }
+  },
+  user_notifications: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+      access: [
+        { type: 'filter', field: 'userId' }, 
+      ]
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { 
+      send_user_email_notification: {
+        op: "custom", access: 'create', method: "post",
+        name: 'Send Team Email Notification',
+        path: '/send-user-email-notification',
+        description: "Sends an email notification to a team member (user)",
+        parameters: { 
+          userId: { validator: mongoIdStringValidator, required: true },
+          message: { validator: stringValidator5000, required: true },
+          subject: { validator: stringValidator250 },
+        },
+        returns: {},
+      }
+    },
+    enduserActions: { },
+    fields: {
+      ...BuiltInFields, 
+      userId: { 
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['users'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      type: { validator: stringValidator100, required: true, examples: ['type'] },
+      message: { validator: stringValidator5000, required: true, examples: ['message'] },
+      read: { validator: booleanValidator },
+      relatedRecords: { validator: listOfRelatedRecordsValidator },
     }
   },
 })

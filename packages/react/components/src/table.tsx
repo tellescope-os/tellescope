@@ -62,6 +62,7 @@ type Renderer <T> = (value: T, indices: Indices) => React.ReactElement | string 
 export type TableField <T> = {
   key: string,
   label: string,
+  hidden?: boolean,
   render?: Renderer<T>,
   width?: CSSProperties['width'],
   textAlign?: CSSProperties['textAlign'],
@@ -78,7 +79,7 @@ export const TableHeader = <T extends Item>({ fields, style, textStyle, horizont
     backgroundColor: DARK_GRAY,
     ...style 
   }}>
-    {fields.map(({ key, label, textAlign, width }) => (
+    {fields.map(({ key, label, textAlign, width, hidden }) => hidden ? null : (
       <Flex key={key} flex={width !== undefined ? 0 : 1}>
         <Typography component="h5" style={{ 
           textAlign, fontSize,
@@ -128,7 +129,7 @@ export const TableRow = <T extends Item>({ item, indices, fields, onClick, onPre
         backgroundColor: undefined, // leave in parent component
       }}
     >
-      {fields.map(({ key, width, textAlign='left', render }) => (
+      {fields.map(({ key, width, textAlign='left', render, hidden }) => hidden ? null : (
         <Flex flex={width !== undefined ? 0 : 1} key={key}>
           <Typography style={{ 
             textAlign, 

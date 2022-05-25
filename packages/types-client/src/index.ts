@@ -17,10 +17,12 @@ export type Enduser = ClientModelForName['endusers']
 export type EngagementEvent = ClientModelForName['engagement_events']
 export type ChatRoom = ClientModelForName['chat_rooms']
 export type ChatMessage = ClientModelForName['chats']
+export type Email = ClientModelForName['emails']
 export type File = ClientModelForName['files']
 export type Form = ClientModelForName['forms']
 export type FormResponse = ClientModelForName['form_responses']
 export type Journey = ClientModelForName['journeys']
+export type SMSMessage = ClientModelForName['sms_messages']
 export type Task = ClientModelForName['tasks']
 export type Template = ClientModelForName['templates']
 export type MessageTemplate = ClientModelForName['templates']
@@ -32,6 +34,7 @@ export type SequenceAutomation = ClientModelForName['sequence_automations']
 export type AutomationEnduser = ClientModelForName['automation_endusers']
 export type User = ClientModelForName['users']
 export type UserLog = ClientModelForName['user_logs']
+export type UserNotification = ClientModelForName['user_notifications']
 
 
 export interface UserDisplayInfo extends models.UserActivityInfo { 
@@ -42,3 +45,7 @@ export interface UserDisplayInfo extends models.UserActivityInfo {
   fname?: string, 
   lname?: string,
 }
+
+export type CreateFields <N extends keyof ClientModelForName, T=ClientModelForName[N]> = (
+  Omit<ClientModelForName_required[N] & Partial<T>, keyof ClientModelForName_readonly[N]>
+)

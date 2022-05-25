@@ -16,6 +16,7 @@ export class RNVideoView extends React.Component<{ tileId: number, style?: ViewS
     setTimeout(() => {
       NativeFunction.bindVideoView(findNodeHandle(this), this.props.tileId);
     });
+    // can try setting a longer timeout
   }
 
   componentWillUnmount() {
@@ -27,4 +28,5 @@ export class RNVideoView extends React.Component<{ tileId: number, style?: ViewS
   }
 }
 
+// can try ts ignore and using RNVideoView as a second argument to this function
 const RNVideoRenderViewNative = requireNativeComponent('RNVideoView');

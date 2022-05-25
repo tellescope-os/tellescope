@@ -23,6 +23,7 @@ import {
   Enduser,
   File,
   Meeting,
+  CreateFields,
 } from "@tellescope/types-client"
 import { CustomUpdateOptions, SortOption, S3PresignedPost, UserIdentity, FileDetails, ReactNativeFile, SessionType } from "@tellescope/types-utilities"
 import { url_safe_path } from "@tellescope/utilities"
@@ -44,7 +45,7 @@ export interface APIQuery<
   N extends keyof ClientModelForName, 
   T=ClientModelForName[N], 
   Req=ClientModelForName_required[N], 
-  CREATE=Omit<Req & Partial<T>, keyof ClientModelForName_readonly[N]>, 
+  CREATE=CreateFields<N>, 
   UPDATE=Omit<Partial<T>, keyof (ClientModelForName_readonly[N] & ClientModelForName_updatesDisabled[N])>,
 > 
 {
@@ -98,6 +99,7 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   automation_endusers: defaultQueries(s, 'automation_endusers'),
   webhooks: defaultQueries(s, 'webhooks'),
   user_logs: defaultQueries(s, 'user_logs'),
+  user_notifications: defaultQueries(s, 'user_notifications'),
 })
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
@@ -157,6 +159,11 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     get_configuration: (args: extractFields<CustomActions['webhooks']['get_configuration']['parameters']>) => 
       Promise<extractFields<CustomActions['webhooks']['get_configuration']['returns']>>,
   },
+  user_notifications: {
+    send_user_email_notification: (args: extractFields<CustomActions['user_notifications']['send_user_email_notification']['parameters']>) => 
+      Promise<extractFields<CustomActions['user_notifications']['send_user_email_notification']['returns']>>,
+
+  }
 }
 
 export class Session extends SessionManager {
@@ -202,6 +209,8 @@ export class Session extends SessionManager {
     queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)
     queries.webhooks.send_automation_webhook = a => this._POST(`/v1${schema.webhooks.customActions.send_automation_webhook.path}`, a),
     queries.webhooks.get_configuration = a => this._GET(`/v1${schema.webhooks.customActions.get_configuration.path}`, a),
+
+    queries.user_notifications.send_user_email_notification = a => this._POST(`/v1${schema.user_notifications.customActions.send_user_email_notification.path}`, a),
 
     this.api = queries
   }

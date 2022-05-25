@@ -1570,6 +1570,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   sequence_automations: () => {},
   automation_endusers: () => {},
   user_logs: () => {},
+  user_notifications: () => {},
 };
 
 (async () => {

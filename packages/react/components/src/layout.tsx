@@ -215,7 +215,7 @@ export const List = <T extends Item, P={}>({ items, hoveredColor, notHoveredColo
   if (items.length === 0 && emptyComponent) return emptyComponent
   
   return (
-    <div style={{ overflowY: 'scroll', ...style }}>
+    <div style={{ overflowY: 'auto', ...style }}>
     <Flex flex={1} column reverse={reverse}>
       {items.map((item, i) => 
         hoveredColor 

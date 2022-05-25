@@ -64,6 +64,7 @@ import {
   AutomationConditionType,
   AtJourneyStateAutomationCondition,
   ChatRoomUserInfo,
+  RelatedRecord,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -1135,3 +1136,8 @@ export const automationActionValidator = orValidator<{ [K in AutomationActionTyp
   })(),
 })
 
+export const relatedRecordValidator = objectValidator<RelatedRecord>({
+  type: stringValidator100(),
+  id: mongoIdStringValidator(),
+})
+export const listOfRelatedRecordsValidator = listValidatorEmptyOk(relatedRecordValidator())

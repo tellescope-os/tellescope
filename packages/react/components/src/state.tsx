@@ -19,17 +19,21 @@ import {
   EngagementEvent, 
   UserDisplayInfo,
   CalendarEvent,
+  Email,
+  SMSMessage,
+  UserNotification,
 } from "@tellescope/types-client"
 import { isModelName } from "@tellescope/types-models"
 
 import {
-  useResolvedSession
+  useResolvedSession, useSession
 } from "./index"
 import { 
   LoadFunction,
   Session, 
   EnduserSession,
 } from '@tellescope/sdk'
+import { value_is_loaded } from './loading'
 
 const RESET_CACHE_TYPE = "cache/reset" as const
 export const resetStateAction = createAction(RESET_CACHE_TYPE)
@@ -81,13 +85,25 @@ export const toLoadedData = async <T,>(p: () => Promise<T>): Promise<{
 }
 
 // default add to start
-export const add_elements_to_array = <T extends WithId>(a: LoadedData<T[]>, elements: T[], options?: { addTo?: 'start' | 'end' }) => {
+export const add_elements_to_array = <T extends WithId>(a: LoadedData<T[]>, elements: T[], options?: AddOptions) => {
   if (a.status !== LoadingStatus.Loaded) return { status: LoadingStatus.Loaded, value: elements }
- 
+
+  // original / default behavior
+  if (!options?.replaceIfMatch) {
+    const newValues = elements.filter(e => a.value.find(v => v.id === e.id) === undefined) 
+    return { 
+      status: LoadingStatus.Loaded, 
+      value: options?.addTo === 'end' ? [...a.value, ...newValues] : [...newValues, ...a.value] 
+    }
+  }
+
   const newValues = elements.filter(e => a.value.find(v => v.id === e.id) === undefined) 
+  const existingOrUpdatedValues = a.value.map(a => 
+    elements.find(e => e.id === a.id) ?? a // return a match, deferring to the new element, or keep existing when no match
+  )
   return { 
     status: LoadingStatus.Loaded, 
-    value: options?.addTo === 'end' ? [...a.value, ...newValues] : [...newValues, ...a.value] 
+    value: options?.addTo === 'end' ? [...existingOrUpdatedValues, ...newValues] : [...newValues, ...existingOrUpdatedValues] 
   }
 }
 
@@ -117,6 +133,7 @@ interface ListReducers<T> {
   addSome: (state: LoadedData<T[]>, action: PayloadActionWithOptions<T[], AddOptions>) => void; 
   update: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ id: string, updates: Partial<T>}>) => void; 
   updateSome: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ [id: string]: Partial<T>}>) => void; 
+  modifyElements: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ filter: (e: T) => boolean, modifier: (e: T) => T }>) => void;
   replace: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ id: string, updated: T}>) => void; 
   remove: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ id: string }>) => void; 
   removeSome: (state: LoadedData<T[]>, action: PayloadActionWithOptions<{ ids: string[] }>) => void; 
@@ -139,6 +156,18 @@ export const createSliceForList = <T extends { id: string | number }, N extends 
     }),
     replace: (state, action) => replace_elements_in_array(state, { [action.payload.value.id]: action.payload.value.updated }),
     updateSome: (state, action) => update_elements_in_array(state, action.payload.value),
+    modifyElements: (state, action) => {
+      if (state.status !== LoadingStatus.Loaded) return state
+
+      for (let i = 0; i < state.value.length; i++) {
+        const element = state.value[i]
+        if (action.payload.value.filter(element)) {
+          state.value[i] = action.payload.value.modifier(element)
+        }
+      }
+
+      return state
+    },
     remove: (s, a) => remove_elements_in_array(s, [a.payload.value.id]),
     removeSome: (s, a) => remove_elements_in_array(s, a.payload.value.ids),
   },
@@ -195,6 +224,9 @@ const calendarEventsSlice = createSliceForList<CalendarEvent, 'calendar_events'>
 const chatsSlice = createSliceForMappedList<ChatMessage, 'chats'>('chats')
 const chatRoomDisplayInfoslice = createSliceForMappedList<ChatRoomDisplayInfo, 'chat-room-display-info'>('chat-room-display-info')
 const engagementEventsSlice = createSliceForList<EngagementEvent, 'engagement_events'>('engagement_events')
+const emailsSlice = createSliceForList<Email, 'email'>('email')
+const smsMessagesSlice = createSliceForList<SMSMessage, 'sms_messages'>('sms_messages')
+const userNotifcationsSlice = createSliceForList<UserNotification, 'user_notifications'>('user_notifications')
 
 export const sharedConfig = {
   reducer: { 
@@ -203,6 +235,9 @@ export const sharedConfig = {
     chatRoomDisplayInfo: chatRoomDisplayInfoslice.reducer,
     calendar_events: calendarEventsSlice.reducer,
     engagement_events: engagementEventsSlice.reducer,
+    emails: emailsSlice.reducer,
+    sms_messages: smsMessagesSlice.reducer,
+    user_notifications: userNotifcationsSlice.reducer,
   },
 }
 
@@ -220,7 +255,8 @@ const useTypedSelector = createTellescopeSelector() as any as TypedUseSelectorHo
 const useTellescopeDispatch = createDispatchHook(TellescopeStoreContext) 
 
 export type AddOptions = {
-  addTo?: 'start' | 'end'
+  addTo?: 'start' | 'end',
+  replaceIfMatch?: boolean,
 }
 
 export interface ListUpdateMethods <T, ADD> {
@@ -230,9 +266,11 @@ export interface ListUpdateMethods <T, ADD> {
   createElement: (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
   findById: (id: string | number) => T | undefined,
+  searchLocalElements: (query: string) => T[],
   updateElement: (id: string, e: Partial<T>, o?: CustomUpdateOptions) => Promise<T>,
   updateLocalElement: (id: string, e: Partial<T>) => void,
   updateLocalElements: (updates: { [id: string]: Partial<T> }) => void,
+  modifyLocalElements: (filter: (e: T) => boolean, modifier: (e: T) => T) => void,
   removeElement: (id: string) => Promise<void>,
   removeLocalElements: (ids: string[]) => void,
   reload: () => void;
@@ -303,6 +341,10 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     options?.onUpdate?.(updated)
   }, [dispatch, options, slice])
 
+  const modifyLocalElements: ListUpdateMethods<T, ADD>['modifyLocalElements'] = useCallback((filter, modifier) => {
+    dispatch(slice.actions.modifyElements({ value: { filter, modifier } }))
+  }, [dispatch, options, slice])
+
   const replaceLocalElement = useCallback((id: string, updated: T) => {
     dispatch(slice.actions.replace({ value: { id, updated } }))
     options?.onUpdate?.([{ ...updated, id }])
@@ -334,6 +376,32 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     return state.value.find(v => v.id.toString() === id.toString())
   }, [state])
 
+  const searchLocalElements: ListUpdateMethods<T, ADD>['searchLocalElements'] = useCallback(query => {
+    const matches: T[] = []
+    if (state.status !== LoadingStatus.Loaded) return matches
+
+    const queryLC = query.toLowerCase()
+    for (const element of state.value) {
+      // todo: recursive search matches on array / object fields
+      for (const field in element) {
+        if (['createdAt', 'updatedAt', 'businessId', 'creator'].includes(field)) continue
+
+        const value = element[field]
+
+        if (field === 'id'){
+          if ((value as any as string | number).toString().toLowerCase() === queryLC) {
+            matches.push(element)
+          } 
+        } else if (typeof value === 'string' && value.toLowerCase().includes(queryLC)) {
+          matches.push(element);
+          break;
+        }
+      }
+    }
+
+    return matches
+  }, [state])
+
   const load = useCallback((force: boolean) => {
     if (options?.dontFetch) return
     const fetchKey = loadFilter ? JSON.stringify(loadFilter) + modelName : modelName
@@ -343,7 +411,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     toLoadedData(() => loadQuery({ filter: loadFilter })).then(
       es => {
         if (es.status === LoadingStatus.Loaded) {
-          dispatch(slice.actions.addSome({ value: es.value }))
+          dispatch(slice.actions.addSome({ value: es.value, options: { replaceIfMatch: true } }))
 
           if (!isModelName(modelName)) return // a custom extension without our socket support
 
@@ -417,7 +485,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
       ? { ...state, value: state.value.filter(returnFilter) } 
       : state, 
     {
-      addLocalElement, addLocalElements, replaceLocalElement,
+      addLocalElement, addLocalElements, replaceLocalElement, modifyLocalElements, searchLocalElements,
       createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements,
       reload,
     }
@@ -532,7 +600,12 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
 
     const filter: Partial<T> = { ...loadFilter, [filterKey]: key } as any // we know [filterKey] is a keyof T
     const data = await toLoadedData(() => loadQuery({ filter }))
-    dispatch(slice.actions.setForKey({ value: { key, data } }))
+    if (!value_is_loaded(data)) return
+
+    dispatch(slice.actions.addElementsForKey({ 
+      value: { key: key.toString(), elements: data.value }, 
+      options: { replaceIfMatch: true },
+    }))
   }, [key, loadFilter, dispatch, didFetch, loadQuery, options?.dontFetch])
 
   useEffect(() => {
@@ -696,14 +769,67 @@ export const useEngagementEvents = (type: SessionType, options={} as HookOptions
   )
 }
 
+export const useEmails = (options={} as HookOptions<Email>) => {
+  const session = useSession() // endusers cannot send emails for now
+
+  return useListStateHook('emails', useTypedSelector(s => s.emails), session, emailsSlice,
+    { 
+      loadQuery: session.api.emails.getSome,
+      addOne: session.api.emails.createOne,
+      addSome: session.api.emails.createSome,
+      deleteOne: session.api.emails.deleteOne,
+      updateOne: session.api.emails.updateOne,
+    },
+    { 
+      ...options,
+      socketConnection: 'self',
+    },
+  )
+}
+export const useSmsMessages = (options={} as HookOptions<SMSMessage>) => {
+  const session = useSession() // endusers cannot send sms messages for now
+
+  return useListStateHook('sms_messages', useTypedSelector(s => s.sms_messages), session, smsMessagesSlice,
+    { 
+      loadQuery: session.api.sms_messages.getSome,
+      addOne: session.api.sms_messages.createOne,
+      addSome: session.api.sms_messages.createSome,
+      deleteOne: session.api.sms_messages.deleteOne,
+      updateOne: session.api.sms_messages.updateOne,
+    },
+    { 
+      ...options,
+      socketConnection: 'self',
+    },
+  )
+}
+export const useNotifications = (options={} as HookOptions<UserNotification>) => {
+  const session = useSession() // endusers do not have notifications
+
+  return useListStateHook('user_notifications', useTypedSelector(s => s.user_notifications), session, userNotifcationsSlice,
+    { 
+      loadQuery: session.api.user_notifications.getSome,
+      addOne: session.api.user_notifications.createOne,
+      addSome: session.api.user_notifications.createSome,
+      deleteOne: session.api.user_notifications.deleteOne,
+      updateOne: session.api.user_notifications.updateOne,
+    },
+    { 
+      ...options,
+      socketConnection: 'self',
+    },
+  )
+}
+
 export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRoom>) => {
   const session = useResolvedSession(type)
   const dispatch = useTellescopeDispatch()
+  const rooms = useTypedSelector(s => s.chat_rooms)
 
   const onUpdate = useCallback((updated: ({ id: string | number } & Partial<ChatRoom>)[]) => {
     for (const u of updated) {
       // fetch updated display info if enduserIds or userIds have changed
-      if (u.enduserIds || u.userIds) {
+      if (!(value_is_loaded(rooms) && rooms.value.find(v => v.id === u.id && v.updatedAt === u.updatedAt))) {
         session.api.chat_rooms.display_info({ id: u.id })
         .then(({ id, display_info }) => {
           dispatch(chatRoomDisplayInfoslice.actions.setForKey({ value: { 
@@ -716,7 +842,7 @@ export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRo
     }
   }, [session, dispatch])
 
-  return useListStateHook('chat_rooms', useTypedSelector(s => s.chat_rooms), session, chatRoomsSlice,
+  return useListStateHook('chat_rooms', rooms, session, chatRoomsSlice,
     { 
       loadQuery: session.api.chat_rooms.getSome,
       addOne: session.api.chat_rooms.createOne,
