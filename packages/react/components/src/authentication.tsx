@@ -85,8 +85,8 @@ export const WithEnduserSession = (p : { children: React.ReactNode, sessionOptio
   const [enduserSession, setEnduserSession] = useState(() => new EnduserSession(p.sessionOptions))
 
   const logout = () => {
-    enduserSession.logout().then(console.error)
     setEnduserSession(s => new EnduserSession(p.sessionOptions))
+    return enduserSession.logout()
   }
 
   const updateLocalSessionInfo: EnduserSessionContext_T['updateLocalSessionInfo'] = (u, a) => {

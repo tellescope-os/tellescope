@@ -182,8 +182,8 @@ export class EnduserSession extends Session {
     }
   }
 
-  logout = async () => {
+  logout = () => {
     this.clearState()
-    await this.api.endusers.logout().catch(console.error)
+    return this.api.endusers.logout()
   }
 }

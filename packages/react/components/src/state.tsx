@@ -46,10 +46,12 @@ type WithId = { id: string | number }
 interface FetchContextValue {
   didFetch: (s: string, force?: boolean, refetchInMS?: number) => boolean,
   setFetched: (s: string, b: boolean, timestamp?: boolean) => void;
+  reset: () => void;
 }
 const FetchContext = createContext({} as FetchContextValue)
 export const WithFetchContext = ( { children } : { children: React.ReactNode }) => {
   const lookupRef = React.useRef({} as Indexable<{ lastFetch: number, status: boolean }>)  
+  const reset = () => lookupRef.current = {}
 
   return (
     <FetchContext.Provider value={{
@@ -65,6 +67,7 @@ export const WithFetchContext = ( { children } : { children: React.ReactNode }) 
         lookupRef.current[s].status = b
         lookupRef.current[s].lastFetch = timestamp ? Date.now() : 0
       },
+      reset,
      }}>
       {children}
     </FetchContext.Provider>
@@ -247,7 +250,13 @@ type AppDispatch = typeof _store.dispatch
 
 export const useResetState = () => {
   const dispatch = useTellescopeDispatch()
-  return () => dispatch({ type: RESET_CACHE_TYPE })
+  const { reset: resetContext } = React.useContext(FetchContext) 
+
+  
+  return () => {
+    resetContext() // resets fetch cache context
+    dispatch({ type: RESET_CACHE_TYPE }) // resets Redux state
+  }
   // _store.dispatch({ type: RESET_CACHE_TYPE })
 }
 
