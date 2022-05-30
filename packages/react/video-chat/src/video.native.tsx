@@ -36,13 +36,10 @@ import {
 import {
   CurrentCallContext,
   RNVideoRenderView,
-} from "./index"
-
-import {
   getSDKEventEmitter,
   MobileSDKEvent,
   NativeFunction,
-} from "./native/bridge"
+} from "./index"
 
 interface TileState {
   isLocal: boolean,
