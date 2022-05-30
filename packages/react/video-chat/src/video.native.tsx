@@ -27,22 +27,22 @@ import {
 } from "@tellescope/react-components/lib/esm/mui.native"
 
 import {
-  CurrentCallContext,
   JoinVideoCallReturnType,
   StartVideoCallReturnType,
   VideoProps,
   AttendeeDisplayInfo,
   VideoViewProps,
 } from "./video_shared"
+import {
+  CurrentCallContext,
+  RNVideoRenderView,
+} from "./index"
 
 import {
   getSDKEventEmitter,
   MobileSDKEvent,
   NativeFunction,
 } from "./native/bridge"
-import { RNVideoRenderView } from "./native/RNVideoRenderView"
-
-export { CurrentCallContext }
 
 interface TileState {
   isLocal: boolean,

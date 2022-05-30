@@ -4,7 +4,7 @@ import { Session, SessionOptions } from "./session"
 import { APIQuery } from "./sdk"
 import { url_safe_path } from "@tellescope/utilities"
 
-import { FileBlob, FileBuffer, FileDetails, ReactNativeFile, S3PresignedPost, SessionType, UserIdentity } from "@tellescope/types-utilities"
+import { FileDetails, ReactNativeFile, S3PresignedPost, SessionType, UserIdentity } from "@tellescope/types-utilities"
 import { 
   Attendee,
 } from "@tellescope/types-models"

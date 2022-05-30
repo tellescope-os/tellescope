@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, createContext } from 'react'
 
-import { TypedUseSelectorHook, createDispatchHook, createSelectorHook, ReactReduxContextValue, useDispatch } from 'react-redux'
+import { TypedUseSelectorHook, createDispatchHook, createSelectorHook, ReactReduxContextValue } from 'react-redux'
 import { createSlice, configureStore, PayloadAction, Slice, createAction } from '@reduxjs/toolkit'
  
 import {
@@ -26,7 +26,8 @@ import {
 import { isModelName } from "@tellescope/types-models"
 
 import {
-  useResolvedSession, useSession
+  useResolvedSession, 
+  useSession,
 } from "./index"
 import { 
   LoadFunction,

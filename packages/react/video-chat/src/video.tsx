@@ -38,10 +38,10 @@ import {
   // useRemoteVideoTileState,
   // useContentShareControls, // screen sharing
 } from 'amazon-chime-sdk-component-library-react';
-
 import {
   CurrentCallContext,
-
+} from "./index"
+import {
   AttendeeDisplayInfo,
   VideoProps,
   VideoViewProps,
