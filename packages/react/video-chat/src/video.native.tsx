@@ -193,7 +193,7 @@ export const useStartVideoCall = (): StartVideoCallReturnType => {
     setStarting(true)
     try {
       const { id, meeting, host } = await session.api.meetings.start_meeting({ attendees: initialAttendees })
-      NativeFunction.startMeeting(meeting.Meeting, host.info.Attendee)
+      NativeFunction.startMeeting(meeting.Meeting, host.info)
 
       setMeeting(meeting.Meeting)
       setIsHost(true)
@@ -245,11 +245,11 @@ export const useJoinVideoCall = (): JoinVideoCallReturnType => {
       const meetings = await session.api.meetings.my_meetings()
       const meeting = meetings.find(m => m.id === meetingInfo)
       meetingInfo = meeting?.meetingInfo as { Meeting: MeetingInfo }
-      attendeeInfo = meeting?.attendees.find?.(a => a.id === session.userInfo.id)?.info as { Attendee: AttendeeInfo }
+      attendeeInfo = { Attendee: meeting?.attendees.find?.(a => a.id === session.userInfo.id)?.info as AttendeeInfo}
     }
     if (!meetingInfo || typeof meetingInfo === 'string' || !attendeeInfo) return
 
-    NativeFunction.startMeeting(meetingInfo.Meeting ?? meetingInfo, attendeeInfo.Attendee ?? attendeeInfo)
+    NativeFunction.startMeeting(meetingInfo.Meeting ?? meetingInfo, attendeeInfo)
   }
 
   const leaveMeeting = () => setMeeting(undefined)

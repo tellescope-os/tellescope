@@ -977,7 +977,7 @@ export const attendeeInfoValidator = objectValidator<AttendeeInfo>({
 export const attendeeValidator = objectValidator<{
   type: SessionType,
   id: string,
-  info: { Attendee: AttendeeInfo },
+  info: AttendeeInfo,
 }>({ 
   type: sessionTypeValidator(),
   id: mongoIdStringValidator(),

@@ -358,7 +358,7 @@ export type AttendeeInfo = {
   AttendeeId: string,
   JoinToken: string,
 }
-export type Attendee = UserIdentity & { info: { Attendee: AttendeeInfo }}
+export type Attendee = UserIdentity & { info: AttendeeInfo }
 export type MeetingStatus = 'scheduled' | 'live' | 'ended'
 export type MeetingInfo = {
   MeetingId: string,

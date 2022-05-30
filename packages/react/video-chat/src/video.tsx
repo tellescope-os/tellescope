@@ -155,7 +155,7 @@ export const useJoinVideoCall = (props?: JoinVideoCallProps): JoinVideoCallRetur
       const meetings = await session.api.meetings.my_meetings()
       const meeting = meetings.find(m => m.id === meetingInfo)
       meetingInfo = meeting?.meetingInfo as { Meeting: MeetingInfo }
-      attendeeInfo = meeting?.attendees.find?.(a => a.id === session.userInfo.id)?.info as { Attendee: AttendeeInfo }
+      attendeeInfo = { Attendee: meeting?.attendees.find?.(a => a.id === session.userInfo.id)?.info as AttendeeInfo}
     }
     if (!meetingInfo || typeof meetingInfo === 'string' || !attendeeInfo) return
 
