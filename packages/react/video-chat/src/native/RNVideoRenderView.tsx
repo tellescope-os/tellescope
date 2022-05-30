@@ -7,7 +7,7 @@ import React from 'react';
 import { requireNativeComponent, findNodeHandle, ViewStyle } from 'react-native';
 import { NativeFunction } from './bridge';
 
-export class RNVideoView extends React.Component<{ tileId: number, style?: ViewStyle }> {
+export class RNVideoRenderView extends React.Component<{ tileId: number, style?: ViewStyle }> {
   componentDidMount() {
     // we need to delay the bind video 
     // Because "componentDidMount" will be called "immediately after the initial rendering occurs"
@@ -29,4 +29,5 @@ export class RNVideoView extends React.Component<{ tileId: number, style?: ViewS
 }
 
 // can try ts ignore and using RNVideoView as a second argument to this function
-const RNVideoRenderViewNative = requireNativeComponent('RNVideoView');
+// @ts-ignore 
+const RNVideoRenderViewNative = requireNativeComponent('RNVideoView', RNVideoRenderView);

@@ -21,6 +21,11 @@ export interface CallContext {
 }
 
 export const CurrentCallContext = React.createContext({} as CallContext)
+
+export const useCurrentCallContext = () => {
+  return React.useContext(CurrentCallContext)
+}
+
 export interface VideoProps {
   children?: React.ReactNode,
 }

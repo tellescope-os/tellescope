@@ -40,7 +40,7 @@ import {
   MobileSDKEvent,
   NativeFunction,
 } from "./native/bridge"
-import { RNVideoView } from "./native/RNVideoRenderView"
+import { RNVideoRenderView } from "./native/RNVideoRenderView"
 
 export { CurrentCallContext }
 
@@ -172,7 +172,7 @@ export const useRemoteViews = (props={} as { style: React.CSSProperties }) => {
   const nonLocal = videoTiles.filter(v => v !== localTileId)
 
   return nonLocal.map(tileId => 
-    <RNVideoView key={tileId} style={convert_CSS_to_RNStyles(props.style) ?? styles.video} tileId={tileId} />
+    <RNVideoRenderView key={tileId} style={convert_CSS_to_RNStyles(props.style) ?? styles.video} tileId={tileId} />
   )
 }
 
@@ -181,7 +181,7 @@ export const SelfView = ({ style } : VideoViewProps) => {
   if (localTileId === null) return null // localTileId may be zero, don't return null on simple falsey check
   
   return (
-    <RNVideoView style={convert_CSS_to_RNStyles(style) ?? styles.video} tileId={localTileId}/>
+    <RNVideoRenderView style={convert_CSS_to_RNStyles(style) ?? styles.video} tileId={localTileId}/>
   )
 }
 
@@ -271,7 +271,7 @@ export const VideoTileGrid = () => {
       <Flex style={styles.videoContainer}>
         {
           videoTiles.length > 0 ? videoTiles.map(tileId => 
-            <RNVideoView style={styles.video} key={tileId} tileId={tileId} />
+            <RNVideoRenderView style={styles.video} key={tileId} tileId={tileId} />
           ) : <Typography style={styles.subtitle}>No one is sharing video at this moment</Typography>
         }
       </Flex>
@@ -282,7 +282,7 @@ export const VideoTileGrid = () => {
         <React.Fragment>
           <Typography style={styles.title}>Screen Share</Typography>
           <View style={styles.videoContainer}>
-            <RNVideoView style={styles.screenShare} key={shareScreenId} tileId={shareScreenId} />
+            <RNVideoRenderView style={styles.screenShare} key={shareScreenId} tileId={shareScreenId} />
           </View>
         </React.Fragment>
       } 
