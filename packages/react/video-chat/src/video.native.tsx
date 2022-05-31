@@ -39,7 +39,7 @@ import {
   getSDKEventEmitter,
   MobileSDKEvent,
   NativeFunction,
-} from "./index"
+} from "./index.native"
 
 interface TileState {
   isLocal: boolean,
