@@ -269,7 +269,20 @@ export type AddOptions = {
   replaceIfMatch?: boolean,
 }
 
-export interface ListUpdateMethods <T, ADD> {
+interface LoadMoreOptions {
+  key?: string,
+  limit?: number,
+}
+
+export interface LoadMoreFunctions {
+  loadMore: (options?: LoadMoreOptions) => Promise<void>;
+  doneLoading: (id?: string) => boolean,
+}
+
+const DEFAULT_FETCH_LIMIT = 250
+const DONE_LOADING_TOKEN = 'doneLoading'
+
+export interface ListUpdateMethods <T, ADD> extends LoadMoreFunctions {
   addLocalElement: (e: T, o?: AddOptions) => T,
   addLocalElements: (e: T[], o?: AddOptions) => T[],
   replaceLocalElement: (id: string, e: T) => T,
@@ -386,6 +399,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     return state.value.find(v => v.id.toString() === id.toString())
   }, [state])
 
+  // make consistent with search function in Webapp search.tsx
   const searchLocalElements: ListUpdateMethods<T, ADD>['searchLocalElements'] = useCallback(query => {
     const matches: T[] = []
     if (state.status !== LoadingStatus.Loaded) return matches
@@ -418,9 +432,12 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     if (didFetch(fetchKey, force, options?.refetchInMS)) return
     setFetched(fetchKey, true)
 
-    toLoadedData(() => loadQuery({ filter: loadFilter })).then(
+    toLoadedData(() => loadQuery({ filter: loadFilter, limit: DEFAULT_FETCH_LIMIT })).then(
       es => {
         if (es.status === LoadingStatus.Loaded) {
+          if (es.value.length < DEFAULT_FETCH_LIMIT) {
+            setFetched('id' + modelName + DONE_LOADING_TOKEN, true) 
+          }
           dispatch(slice.actions.addSome({ value: es.value, options: { replaceIfMatch: true } }))
 
           if (!isModelName(modelName)) return // a custom extension without our socket support
@@ -446,7 +463,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
 
     //   session.unsubscribe(state.value.map(e => e.id.toString()))
     // }
-  }, [socketConnection, didFetch, modelName, isModelName, loadFilter, loadQuery, options?.dontFetch])
+  }, [socketConnection, setFetched, didFetch, modelName, isModelName, loadFilter, loadQuery, options?.dontFetch])
 
   const reload = useCallback(() => load(true), [load])
 
@@ -490,6 +507,49 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     }
   }, [session, socketConnection, didFetch, isModelName, options])
 
+  const loadMore = useCallback(async (options?: LoadMoreOptions) => {
+    if (!value_is_loaded(state)) {
+      console.warn("loadMore called before state is loaded. This is a no op")
+      return
+    }
+
+    // todo: support for updatedAt as well, and more?
+    const key = options?.key ?? 'id' 
+    if (key !== 'id') console.warn("Unrecognized key provided")
+
+    let oldestRecord = state.value[0]
+    for (const record of state.value) {
+      if (new Date((record as any).createdAt ?? 0).getTime() < new Date((oldestRecord as any).createdAt).getTime()) {
+        oldestRecord = record
+      }
+    }
+
+    const limit = options?.limit ?? DEFAULT_FETCH_LIMIT
+    return toLoadedData(() => loadQuery({ lastId: oldestRecord.id.toString(), limit })).then(
+      es => {
+        if (es.status === LoadingStatus.Loaded) {
+          if (es.value.length < limit) {
+            setFetched(key + modelName + DONE_LOADING_TOKEN, true) 
+          }
+
+          dispatch(slice.actions.addSome({ value: es.value, options: { replaceIfMatch: true, addTo: 'end' } }))
+
+          if (!isModelName(modelName)) return // a custom extension without our socket support
+
+          if (socketConnection !== 'keys') return
+          const subscription = { } as Indexable         
+          for (const e of es.value) {
+            subscription[e.id] = modelName
+          }
+          session.subscribe(subscription)
+        } 
+      }
+    )
+  }, [state, socketConnection, modelName, isModelName, loadQuery])
+  const doneLoading = useCallback((key="id") => (
+    didFetch(key + modelName + DONE_LOADING_TOKEN)
+  ), [state])
+
   return [
     returnFilter && state.status === LoadingStatus.Loaded 
       ? { ...state, value: state.value.filter(returnFilter) } 
@@ -497,12 +557,12 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     {
       addLocalElement, addLocalElements, replaceLocalElement, modifyLocalElements, searchLocalElements,
       createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements,
-      reload,
+      reload, loadMore, doneLoading,
     }
   ]
 }
 
-export interface MappedListUpdateMethods <T, ADD>{
+export interface MappedListUpdateMethods <T, ADD> extends LoadMoreFunctions {
   setLocalElementForKey: (key: string | number, e: LoadedData<T[]>) => void;
   addLocalElement: (e: T, o?: AddOptions) => void,
   addLocalElements: (e: T[], o?: AddOptions) => void,
@@ -609,14 +669,18 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     setFetched(fetchKey, true)
 
     const filter: Partial<T> = { ...loadFilter, [filterKey]: key } as any // we know [filterKey] is a keyof T
-    const data = await toLoadedData(() => loadQuery({ filter }))
+    const data = await toLoadedData(() => loadQuery({ filter, limit: DEFAULT_FETCH_LIMIT }))
     if (!value_is_loaded(data)) return
+
+    if (data.value.length < DEFAULT_FETCH_LIMIT) {
+      setFetched('id' + modelName + DONE_LOADING_TOKEN, true) 
+    }
 
     dispatch(slice.actions.addElementsForKey({ 
       value: { key: key.toString(), elements: data.value }, 
       options: { replaceIfMatch: true },
     }))
-  }, [key, loadFilter, dispatch, didFetch, loadQuery, options?.dontFetch])
+  }, [key, loadFilter, dispatch, didFetch, setFetched, loadQuery, options?.dontFetch])
 
   useEffect(() => {
     load(false)
@@ -646,6 +710,49 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
 
   const stateToReturn = state[key] ?? UNLOADED
 
+  const loadMore = useCallback(async (options?: LoadMoreOptions) => {
+    if (!value_is_loaded(stateToReturn)) {
+      console.warn("loadMore called before state is loaded. This is a no op")
+      return
+    }
+
+    // todo: support for updatedAt as well, and more?
+    const key = options?.key ?? 'id' 
+    if (key !== 'id') console.warn("Unrecognized key provided")
+
+    let oldestRecord = stateToReturn.value[0]
+    for (const record of stateToReturn.value) {
+      if (new Date((record as any).createdAt ?? 0).getTime() < new Date((oldestRecord as any).createdAt).getTime()) {
+        oldestRecord = record
+      }
+    }
+
+    const limit = options?.limit ?? DEFAULT_FETCH_LIMIT
+    return toLoadedData(() => loadQuery({ lastId: oldestRecord.id.toString(), limit })).then(
+      es => {
+        if (es.status === LoadingStatus.Loaded) {
+          dispatch(slice.actions.addElementsForKey({ value: { key, elements: es.value }, options: { replaceIfMatch: true, addTo: 'end' } }))
+
+          if (es.value.length < limit) {
+            setFetched(key + modelName + DONE_LOADING_TOKEN, true) 
+          }
+
+          if (!isModelName(modelName)) return // a custom extension without our socket support
+
+          if (socketConnection !== 'keys') return
+          const subscription = { } as Indexable         
+          for (const e of es.value) {
+            subscription[e.id] = modelName
+          }
+          session.subscribe(subscription)
+        } 
+      }
+    )
+  }, [state, socketConnection, modelName, isModelName, loadQuery])
+  const doneLoading = useCallback((key="id") => (
+    didFetch(key + modelName + DONE_LOADING_TOKEN)
+  ), [state])
+
   return [
     returnFilter && stateToReturn.status === LoadingStatus.Loaded
       ? { status: LoadingStatus.Loaded, value: stateToReturn.value.filter(returnFilter) }
@@ -658,6 +765,8 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
       createElement,
       createElements,
       reload,
+      loadMore,
+      doneLoading,
     }
   ]
 }

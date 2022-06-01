@@ -1227,6 +1227,14 @@ const files_tests = async () => {
 
   const buff = buffer.Buffer.from('test file data')
 
+  await async_test(
+    `non admin can prepare file upload`,
+    () => sdkNonAdmin.api.files.prepare_file_upload({ 
+      name: 'Test File', size: buff.byteLength, type: 'text/plain' 
+    }),
+    { onResult: t => true }
+  )
+
   const { presignedUpload, file } = await sdk.api.files.prepare_file_upload({ 
     name: 'Test File', size: buff.byteLength, type: 'text/plain' 
   })
@@ -1546,6 +1554,55 @@ const form_response_tests = async () => {
   await sdk.api.forms.deleteOne(form.id)
 }
 
+export const meetings_tests = async () => {
+  log_header("Meetings")
+
+  await async_test(
+    `Admin can get meetings`,
+    sdk.api.meetings.getSome,
+    { onResult: () => true },
+  ) 
+  await async_test(
+    `Non-Admin can't get meetings`,
+    sdkNonAdmin.api.meetings.getSome,
+    { shouldError: true, onError: e => e.message === "Admin access only" },
+  ) 
+}
+
+const search_tests = async () => {
+  log_header("Search")
+
+  const e1 = await sdk.api.endusers.createOne({ email: 'e1_search@tellescope.com', fname: 'JoHn', lname: "strauss" })
+  const e2 = await sdk.api.endusers.createOne({ email: 'e2_search@tellescope.com', fname: 'sebastian', lname: "coates" })
+  
+  await async_test(
+    `Search full fname case insensitive`,
+    () => sdk.api.endusers.getSome({ search: { query: 'john'} }),
+    { onResult: es => es.length === 1 && es[0].id === e1.id },
+  )  
+  await async_test(
+    `Search start fname case insensitive`,
+    () => sdk.api.endusers.getSome({ search: { query: 'joh'} }),
+    { onResult: es => es.length === 1 && es[0].id === e1.id },
+  )  
+  await async_test(
+    `Search end fname case insensitive`,
+    () => sdk.api.endusers.getSome({ search: { query: 'ohn'} }),
+    { onResult: es => es.length === 1 && es[0].id === e1.id },
+  )  
+  await async_test(
+    `Search by email`,
+    () => sdk.api.endusers.getSome({ search: { query: 'search@tellescope'} }),
+    { onResult: es => es.length === 2 },
+  )  
+
+  await Promise.all([
+    sdk.api.endusers.deleteOne(e1.id),
+    sdk.api.endusers.deleteOne(e2.id),
+  ])
+}
+
+const NO_TEST = () => {}
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
   endusers: enduser_tests,
@@ -1557,20 +1614,20 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   sms_messages: sms_tests,
   chat_rooms: chat_room_tests,
   users: users_tests,
-  templates: () => {},
+  templates: NO_TEST,
   files: files_tests,
-  tickets: () => {},
-  meetings: () => {},
-  notes: () => {},
-  forms: () => {},
+  tickets: NO_TEST,
+  meetings: meetings_tests,
+  notes: NO_TEST,
+  forms: NO_TEST,
   form_responses: form_response_tests,
   calendar_events: calendar_events_tests,
-  webhooks: () => {}, // tested separately
+  webhooks: NO_TEST, // tested separately
   event_automations: automation_events_tests,
-  sequence_automations: () => {},
-  automation_endusers: () => {},
-  user_logs: () => {},
-  user_notifications: () => {},
+  sequence_automations: NO_TEST,
+  automation_endusers: NO_TEST,
+  user_logs: NO_TEST,
+  user_notifications: NO_TEST,
 };
 
 (async () => {
@@ -1583,6 +1640,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
     ])
     await setup_tests()
     await multi_tenant_tests() // should come right after setup tests
+    await search_tests()
     await badInputTests()
     await filterTests()
     await updatesTests()

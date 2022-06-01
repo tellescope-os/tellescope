@@ -65,6 +65,7 @@ import {
   AtJourneyStateAutomationCondition,
   ChatRoomUserInfo,
   RelatedRecord,
+  SearchOptions,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -1141,3 +1142,7 @@ export const relatedRecordValidator = objectValidator<RelatedRecord>({
   id: mongoIdStringValidator(),
 })
 export const listOfRelatedRecordsValidator = listValidatorEmptyOk(relatedRecordValidator())
+
+export const searchOptionsValidator = objectValidator<SearchOptions>({
+  query: stringValidator100(),
+})

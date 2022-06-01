@@ -178,7 +178,7 @@ export const SelfView = ({ style } : VideoViewProps) => {
   if (localTileId === null) return null // localTileId may be zero, don't return null on simple falsey check
   
   return (
-    <RNVideoRenderView style={convert_CSS_to_RNStyles(style) ?? styles.video} tileId={localTileId}/>
+    <RNVideoRenderView style={convert_CSS_to_RNStyles(style) ?? styles.video} tileId={localTileId} />
   )
 }
 

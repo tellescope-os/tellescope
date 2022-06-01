@@ -168,6 +168,7 @@ type ActionInfo = {
   description?: string,
   notes?: string[],
   warnings?: string[],
+  adminOnly?: boolean,
 }
 
 export type CustomAction <P=any, R=any> = {
@@ -1409,7 +1410,12 @@ export const schema: SchemaV1 = build_schema({
       unique: [], 
       relationship: [],
     },
-    defaultActions: { },
+    defaultActions: { 
+      readMany: {
+        ...DEFAULT_OPERATIONS['readMany'],
+        adminOnly: true,
+      }
+    },
     customActions: {
       start_meeting: {
         op: "custom", access: 'create', method: "post",

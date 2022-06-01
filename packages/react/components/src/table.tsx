@@ -1,4 +1,4 @@
-import React, { useCallback, useState, CSSProperties, JSXElementConstructor } from "react"
+import React, { useCallback, useState, CSSProperties, JSXElementConstructor, useEffect } from "react"
 
 import {
   Button,
@@ -20,6 +20,7 @@ import {
   List,
   WithHover,
 } from "./layout"
+import { LoadMoreFunctions } from "./state"
 
 const LIGHT_GRAY = "#fafafa"
 export const GRAY = "#EFEFEF"
@@ -192,7 +193,7 @@ export const usePagination = <T,>({ items, pageSize=DEFAULT_PAGE_SIZE, initialPa
   }
 }
 
-export interface TableFooterProps extends Styled, HorizontalPadded, ReturnType<typeof usePagination> {}
+export interface TableFooterProps extends Styled, HorizontalPadded, Partial<LoadMoreFunctions>, ReturnType<typeof usePagination> {}
 export const TableFooter = ({ horizontalPadding, style, previousDisabled, nextDisabled, selectedPage, numPages, goToNext, goToPrevious } : TableFooterProps) => {
   return (
     <Flex flex={1} alignItems="center"
@@ -232,7 +233,7 @@ const resolve_middle_page_numbers = (selectedPage: number, numPages: number): [u
 }
 
 const FOOTER_BUTTON_SIZE = 30
-export const TableFooterNumbered = ({ horizontalPadding, style, previousDisabled, nextDisabled, selectedPage, numPages, goToNext, goToPrevious, goToPage } : TableFooterProps) => {
+export const TableFooterNumbered = ({ horizontalPadding, loadMore, doneLoading, style, previousDisabled, nextDisabled, selectedPage, numPages, goToNext, goToPrevious, goToPage } : TableFooterProps) => {
   const [middleLeft, middle, middleRight] = resolve_middle_page_numbers(selectedPage, numPages)
 
   const buttonProps = { 
@@ -248,7 +249,16 @@ export const TableFooterNumbered = ({ horizontalPadding, style, previousDisabled
       marginRight: 1,
     } 
   }
-                    
+
+  useEffect(() => {
+    if (!(loadMore && doneLoading)) return 
+    if (doneLoading()) return
+    if (!nextDisabled) return // return if not on last page
+
+    loadMore()
+  }, [loadMore, nextDisabled, doneLoading])
+
+
   return (
     <Flex flex={1} alignItems="center"
       style={{ 
@@ -257,7 +267,7 @@ export const TableFooterNumbered = ({ horizontalPadding, style, previousDisabled
         ...style,
       }}
     >
-      {numPages > 1 && 
+      {((doneLoading && !doneLoading?.()) || numPages > 1) && 
         <>
         <Button disabled={previousDisabled} {...buttonProps} onClick={goToPrevious}>
           <NavigateBeforeIcon/>
@@ -267,35 +277,38 @@ export const TableFooterNumbered = ({ horizontalPadding, style, previousDisabled
         </Button>
 
         {/* index is 1 below display number */}
-        {middleLeft !== undefined && 
+        {middleLeft !== undefined &&
           <Button disabled={selectedPage === middleLeft - 1} {...buttonProps} onClick={() => goToPage(middleLeft - 1)}>
             {middleLeft}
           </Button> 
         }
-        {middle !== undefined && 
+        {middle !== undefined &&
           <Button disabled={selectedPage === middle - 1} {...buttonProps} onClick={() => goToPage(middle - 1)}>
             {middle}
           </Button> 
         }
-        {middleRight !== undefined && 
+        {middleRight !== undefined &&
           <Button disabled={selectedPage === middleRight - 1} {...buttonProps} onClick={() => goToPage(middleRight - 1)}> 
             {middleRight}
           </Button> 
         }
 
-        <Button disabled={nextDisabled} {...buttonProps} onClick={() => goToPage(numPages - 1)}>
-          {numPages}
-        </Button>
+        {numPages !== 1 &&
+          <Button disabled={nextDisabled} {...buttonProps} onClick={() => goToPage(numPages - 1)}>
+            {numPages}
+          </Button>
+        }
 
         <Button disabled={nextDisabled} {...buttonProps} onClick={goToNext}>
           <NavigateNextIcon/>
         </Button>
+
+
+        <Typography style={{ fontSize: 12, marginLeft: 'auto' }}>
+          Page {selectedPage + 1} of {numPages}
+        </Typography>
         </>
       }
-
-      <Typography style={{ fontSize: 12, marginLeft: 'auto' }}>
-        Page {selectedPage + 1} of {numPages}
-      </Typography>
     </Flex>
   )
 }
@@ -319,7 +332,7 @@ export type WithFooter = {
   FooterComponent?: JSXElementConstructor<TableFooterProps>;
 }
 export interface TableProps<T extends Item> extends WithTitle, WithHeader<T>, WithFooter, WithRows<T>, 
-  HorizontalPadded, Elevated, ItemClickable<T> 
+  HorizontalPadded, Elevated, ItemClickable<T>, Partial<LoadMoreFunctions>
 {
   items: T[],
   titleActionsComponent?: React.ReactNode,
@@ -347,6 +360,8 @@ export const Table = <T extends Item>({
   rowFontSize,
   onClick,
   onPress,
+  loadMore,
+  doneLoading,
 
   title,
   titleActionsComponent,
@@ -403,8 +418,8 @@ export const Table = <T extends Item>({
           />
         )
       } />
-      {paginated && paginationProps.numPages > 1 && FooterComponent && 
-        <FooterComponent {...paginationProps } {...pageOptions} horizontalPadding={horizontalPadding}/>
+      {paginated && FooterComponent && 
+        <FooterComponent doneLoading={doneLoading} loadMore={loadMore} {...paginationProps } {...pageOptions} horizontalPadding={horizontalPadding}/>
       }
     </Flex>
   )

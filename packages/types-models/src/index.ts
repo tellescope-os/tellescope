@@ -1,5 +1,9 @@
 import { CUD, Indexable, UserIdentity } from "@tellescope/types-utilities"
 
+export interface SearchOptions {
+  query: string,
+}
+
 export type AccessType = "All" | "Assigned" | null
 export type AccessAction = "create" | "read" | "update" | "delete"
 export type AccessResources = ModelName

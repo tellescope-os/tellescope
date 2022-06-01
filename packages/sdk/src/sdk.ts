@@ -12,6 +12,7 @@ import {
   ReadFilter,
   WebhookSubscriptionsType,
   Attendee,
+  SearchOptions,
 } from "@tellescope/types-models"
 
 import {
@@ -39,6 +40,7 @@ export type LoadFunction<T> = (o?: {
     sort?: SortOption, 
     threadKey?: string, 
     filter?: ReadFilter<T>,
+    search?: SearchOptions,
   }) => Promise<T[]>
 
 export interface APIQuery<
