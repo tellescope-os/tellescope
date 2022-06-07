@@ -110,9 +110,11 @@ export const Card = ({ children, style, flex, ...props } : CardProps) => (
   <MuiCard {...props} style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...style }}>{children}</MuiCard>
 )
 
-export interface PaperProps extends Styled, Parent, Elevated, CanFlex {}
-export const Paper = ({ children, style, flex, ...props } : PaperProps) => (
-  <MuiPaper {...props} style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...style }}>{children}</MuiPaper>
+export interface PaperProps extends Styled, Parent, Elevated, CanFlex, ClickableWeb {}
+export const Paper = ({ children, style, flex, onClick, onPress, ...props } : PaperProps) => (
+  <MuiPaper {...props} style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...style }}>
+    {children}
+  </MuiPaper>
 )
 
 export interface IconProps extends Styled {

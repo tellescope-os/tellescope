@@ -64,7 +64,7 @@ export const objects_equivalent = (o1?: Indexable, o2?: Indexable) => {
   return true
 }
 
-export const user_display_name = (user?: { fname?: string, lname?: string, email?: string, phone?: string, id?: string }) => {
+export const user_display_name = (user?: { fname?: string, lname?: string, email?: string, phone?: string, id?: string } | null) => {
   if (!user) return ''
   const { fname, lname, email, phone, id } = user
 

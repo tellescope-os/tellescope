@@ -1602,6 +1602,32 @@ const search_tests = async () => {
   ])
 }
 
+const notifications_tests = async () => {
+  log_header("Notifications")
+
+  const room = await sdk.api.chat_rooms.createOne({ type: 'internal', userIds: [sdk.userInfo.id, sdkNonAdmin.userInfo.id ]})
+  const chat = await sdk.api.chats.createOne({ message: 'test', roomId: room.id, })
+  const ticket = await sdk.api.tickets.createOne({ title: 'Ticket for notification', owner: sdkNonAdmin.userInfo.id })
+  
+  await wait(undefined, 50) // notifications may be created in background
+
+  // neither should throw error
+  const ticketNotification = await sdk.api.user_notifications.getOne({ type: 'newTicket' }) 
+  const chatNotifications = await sdk.api.user_notifications.getSome({ filter: { type: 'newChatMessage' } }) 
+
+  assert(!!ticketNotification.relatedRecords?.find(r => r.id === ticket.id), 'No ticket notification', 'Got notification for new new ticket')
+  assert(!!chatNotifications.find(notification => notification.relatedRecords?.find(r => r.id === chat.id)), 'No chat notification', 'Got notification for new chat')
+
+  await Promise.all([
+    sdk.api.chat_rooms.deleteOne(room.id),
+    sdk.api.tickets.deleteOne(ticket.id),
+    sdk.api.user_notifications.deleteOne(ticketNotification.id),
+    ...chatNotifications.map(n => 
+      sdk.api.user_notifications.deleteOne(n.id),
+    ),
+  ])
+}
+
 const NO_TEST = () => {}
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
@@ -1627,7 +1653,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   sequence_automations: NO_TEST,
   automation_endusers: NO_TEST,
   user_logs: NO_TEST,
-  user_notifications: NO_TEST,
+  user_notifications: notifications_tests,
 };
 
 (async () => {
@@ -1637,7 +1663,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
     await Promise.all([
       sdk.authenticate(email, password),
       sdkNonAdmin.authenticate(nonAdminEmail, nonAdminPassword),
-    ])
+    ]) 
     await setup_tests()
     await multi_tenant_tests() // should come right after setup tests
     await search_tests()

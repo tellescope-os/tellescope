@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/react-components",
-  "version": "0.0.88",
+  "version": "0.0.89",
   "description": "",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -51,12 +51,12 @@
     "@mui/icons-material": "^5.0.1",
     "@mui/material": "^5.0.2",
     "@reduxjs/toolkit": "^1.6.2",
-    "@tellescope/constants": "^0.0.88",
-    "@tellescope/sdk": "^0.0.88",
-    "@tellescope/types-client": "^0.0.88",
-    "@tellescope/types-models": "^0.0.88",
-    "@tellescope/types-utilities": "^0.0.88",
-    "@tellescope/utilities": "^0.0.88",
+    "@tellescope/constants": "^0.0.89",
+    "@tellescope/sdk": "^0.0.89",
+    "@tellescope/types-client": "^0.0.89",
+    "@tellescope/types-models": "^0.0.89",
+    "@tellescope/types-utilities": "^0.0.89",
+    "@tellescope/utilities": "^0.0.89",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "css-to-react-native": "^3.0.0",
@@ -72,8 +72,8 @@
     "yup": "^0.32.10"
   },
   "peerDependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
+    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
   },
   "gitHead": "8093dbf4015d6196a234e4922564ddce3df0a9a7",
   "publishConfig": {

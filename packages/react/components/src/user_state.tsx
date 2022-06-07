@@ -106,6 +106,7 @@ export const useEndusers = (options={} as HookOptions<Enduser>) => {
     endusersSlice, 
     { 
       loadQuery: session.api.endusers.getSome,
+      findOne: session.api.endusers.getOne,
       addOne: session.api.endusers.createOne,
       addSome: session.api.endusers.createSome,
       deleteOne: session.api.endusers.deleteOne,
@@ -120,6 +121,7 @@ export const useTasks = (options={} as HookOptions<Task>) => {
     'tasks', useTypedSelector(s => s.tasks), session, tasksSlice, 
     { 
       loadQuery: session.api.tasks.getSome,
+      findOne: session.api.tasks.getOne,
       addOne: session.api.tasks.createOne,
       addSome: session.api.tasks.createSome,
       deleteOne: session.api.tasks.deleteOne,
@@ -134,6 +136,7 @@ export const useTickets = (options={} as HookOptions<Ticket>) => {
     'tickets', useTypedSelector(s => s.tickets), session, ticketsSlice, 
     { 
       loadQuery: session.api.tickets.getSome,
+      findOne: session.api.tickets.getOne,
       addOne: session.api.tickets.createOne,
       addSome: session.api.tickets.createSome,
       deleteOne: session.api.tickets.deleteOne,
@@ -148,6 +151,7 @@ export const useMeetings = (options={} as HookOptions<Meeting>) => {
     'meetings', useTypedSelector(s => s.meetings), session, meetingsSlice, 
     { 
       loadQuery: session.api.meetings.my_meetings,
+      findOne: session.api.meetings.getOne,
       addOne: session.api.meetings.createOne,
       addSome: session.api.meetings.createSome,
       deleteOne: session.api.meetings.deleteOne,
@@ -162,6 +166,7 @@ export const useFiles = (options={} as HookOptions<File>) => {
     'files', useTypedSelector(s => s.files), session, filesSlice, 
     { 
       loadQuery: session.api.files.getSome,
+      findOne: session.api.files.getOne,
       deleteOne: session.api.files.deleteOne,
       updateOne: session.api.files.updateOne,
     }, 
@@ -174,6 +179,7 @@ export const useJourneys = (options={} as HookOptions<Journey>) => {
     'journeys', useTypedSelector(s => s.journeys), session, journeysSlice, 
     { 
       loadQuery: session.api.journeys.getSome,
+      findOne: session.api.journeys.getOne,
       addOne: session.api.journeys.createOne,
       addSome: session.api.journeys.createSome,
       deleteOne: session.api.journeys.deleteOne,
@@ -188,6 +194,7 @@ export const useSequenceAutomations = (options={} as HookOptions<SequenceAutomat
     'sequence_automations', useTypedSelector(s => s.sequence_automations), session, sequenceAutomationsSlice, 
     { 
       loadQuery: session.api.sequence_automations.getSome,
+      findOne: session.api.sequence_automations.getOne,
       addOne: session.api.sequence_automations.createOne,
       addSome: session.api.sequence_automations.createSome,
       deleteOne: session.api.sequence_automations.deleteOne,
@@ -202,6 +209,7 @@ export const useUsers = (options={} as HookOptions<User>) => {
     'users', useTypedSelector(s => s.users), session, usersSlice, 
     { 
       loadQuery: session.api.users.getSome,
+      findOne: session.api.users.getOne,
       addOne: session.api.users.createOne,
       addSome: session.api.users.createSome,
       deleteOne: session.api.users.deleteOne,
@@ -216,6 +224,7 @@ export const useEventAutomations = (options={} as HookOptions<EventAutomation>) 
     'event_automations', useTypedSelector(s => s.event_automations), session, eventAutomationsSlice, 
     { 
       loadQuery: session.api.event_automations.getSome,
+      findOne: session.api.event_automations.getOne,
       addOne: session.api.event_automations.createOne,
       addSome: session.api.event_automations.createSome,
       deleteOne: session.api.event_automations.deleteOne,
@@ -230,6 +239,7 @@ export const useNotes = (options={} as HookOptions<Note>) => {
     'notes', useTypedSelector(s => s.notes), session, notesSlice, 
     { 
       loadQuery: session.api.notes.getSome,
+      findOne: session.api.notes.getOne,
       addOne: session.api.notes.createOne,
       addSome: session.api.notes.createSome,
       deleteOne: session.api.notes.deleteOne,
@@ -244,6 +254,7 @@ export const useTemplates = (options={} as HookOptions<Template>) => {
     'templates', useTypedSelector(s => s.templates), session, templatesSlice, 
     { 
       loadQuery: session.api.templates.getSome,
+      findOne: session.api.templates.getOne,
       addOne: session.api.templates.createOne,
       addSome: session.api.templates.createSome,
       deleteOne: session.api.templates.deleteOne,
@@ -258,6 +269,7 @@ export const useForms = (options={} as HookOptions<Form>) => {
     'forms', useTypedSelector(s => s.forms), session, formsSlice, 
     { 
       loadQuery: session.api.forms.getSome,
+      findOne: session.api.forms.getOne,
       addOne: session.api.forms.createOne,
       addSome: session.api.forms.createSome,
       deleteOne: session.api.forms.deleteOne,
@@ -273,6 +285,7 @@ export const useFormResponses = (options={} as HookOptions<FormResponse>) => {
     'forms_responses', useTypedSelector(s => s.form_responses), session, formResponsesSlice, 
     { 
       loadQuery: session.api.form_responses.getSome,
+      findOne: session.api.form_responses.getOne,
       addOne: session.api.form_responses.createOne,
       addSome: session.api.form_responses.createSome,
       deleteOne: session.api.form_responses.deleteOne,

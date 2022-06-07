@@ -288,7 +288,7 @@ export interface ListUpdateMethods <T, ADD> extends LoadMoreFunctions {
   replaceLocalElement: (id: string, e: T) => T,
   createElement: (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
-  findById: (id: string | number) => T | undefined,
+  findById: (id: string | number) => T | undefined | null,
   searchLocalElements: (query: string) => T[],
   updateElement: (id: string, e: Partial<T>, o?: CustomUpdateOptions) => Promise<T>,
   updateLocalElement: (id: string, e: Partial<T>) => void,
@@ -306,6 +306,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   slice: Slice<any, ListReducers<T>>,
   apiCalls: {
     loadQuery: LoadFunction<T>, 
+    findOne?: (idOrFilter: string | Partial<T>) => Promise<T>,
     addOne?: (value: ADD) => Promise<T>,
     addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
     updateOne?: (id: string, updates: Partial<T>, o?: CustomUpdateOptions) => Promise<T>,
@@ -319,7 +320,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   } & HookOptions<T>
 ): ListStateReturnType<T, ADD> => 
 {
-  const { loadQuery, addOne, addSome, updateOne, deleteOne } = apiCalls
+  const { loadQuery, findOne, addOne, addSome, updateOne, deleteOne } = apiCalls
   if (options?.refetchInMS !== undefined && options.refetchInMS < 5000) {
     throw new Error("refetchInMS must be greater than 5000")
   }
@@ -395,9 +396,25 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   const findById = useCallback((id: string | number) => {
     if (!id) return undefined
     if (state.status !== LoadingStatus.Loaded) return undefined
+    setFetched('findById' + id, true) // prevent multiple API calls
 
-    return state.value.find(v => v.id.toString() === id.toString())
-  }, [state])
+    if (didFetch('recordNotFound' + id)) { // return null if record not found for id
+      return null
+    }
+
+    const value = state.value.find(v => v.id.toString() === id.toString())
+
+    if (value === undefined && !didFetch('findById' + id)) {
+      findOne?.(id.toString())
+      .then(addLocalElement)
+      .catch(e => {
+        setFetched('recordNotFound' + id, true) // mark record not found for id
+        console.error(e) 
+      })
+    }
+
+    return value
+  }, [addLocalElement, state, setFetched, didFetch])
 
   // make consistent with search function in Webapp search.tsx
   const searchLocalElements: ListUpdateMethods<T, ADD>['searchLocalElements'] = useCallback(query => {
@@ -568,7 +585,7 @@ export interface MappedListUpdateMethods <T, ADD> extends LoadMoreFunctions {
   addLocalElements: (e: T[], o?: AddOptions) => void,
   createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
   createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
-  findById: (id: string | number) => T | undefined,
+  findById: (id: string | number) => T | undefined | null,
   reload: () => void;
 }
 export type MappedListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
@@ -584,6 +601,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
   slice: Slice<any, MappedListReducers<T>>,
   apiCalls: {
     loadQuery: LoadFunction<T>, 
+    findOne?: (idOrFilter: string | Partial<T>) => Promise<T>,
     addOne?: (value: ADD) => Promise<T>,
     addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
     updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
@@ -596,7 +614,7 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     onDelete?: (id: string[]) => void;
   } & HookOptions<T>
 ): MappedListStateReturnType<T, ADD>=> {
-  const { loadQuery, addOne, addSome, updateOne, deleteOne } = apiCalls
+  const { loadQuery,findOne, addOne, addSome, updateOne, deleteOne } = apiCalls
   if (options?.refetchInMS !== undefined && options.refetchInMS < 5000) {
     throw new Error("refetchInMS must be greater than 5000")
   }
@@ -656,8 +674,25 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
     const valuesForKey = state[key]
     if (valuesForKey.status !== LoadingStatus.Loaded) return
 
-    return valuesForKey.value?.find(v => v.id.toString() === id.toString())
-  }, [])
+    setFetched('findById' + id, true) // prevent multiple API calls
+  
+    if (didFetch('recordNotFound' + id)) { // return null if record not found for id
+      return null
+    }
+
+    const value = valuesForKey.value?.find(v => v.id.toString() === id.toString())
+
+    if (value === undefined && !didFetch('findById' + id)) {
+      findOne?.(id.toString())
+      .then(addLocalElement)
+      .catch(e => {
+        setFetched('recordNotFound' + id, true) // mark record not found for id
+        console.error(e) 
+      })
+    }
+
+    return value
+  }, [state, key, setFetched, didFetch, findOne, addLocalElement])
 
   const load = useCallback(async (force: boolean) => {
     if (options?.dontFetch) return
@@ -790,6 +825,7 @@ export const useMappedStateHook = <T extends { id: string | number }, ADD extend
   slice: Slice<any, MappedListReducers<T>>,
   apiCalls: {
     loadQuery: LoadFunction<T>, 
+    findOne?: (idOrFilter: string | Partial<T>) => Promise<T>;
     addOne?: (value: ADD) => Promise<T>,
     addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
     updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
@@ -859,6 +895,7 @@ export const useCalendarEvents = (type: SessionType, options={} as HookOptions<C
   return useListStateHook('calendar_events', useTypedSelector(s => s.calendar_events), session, calendarEventsSlice,
     { 
       loadQuery: session.api.calendar_events.getSome,
+      findOne: session.api.calendar_events.getOne,
       addOne: session.api.calendar_events.createOne,
       addSome: session.api.calendar_events.createSome,
       deleteOne: session.api.calendar_events.deleteOne,
@@ -877,6 +914,7 @@ export const useEngagementEvents = (type: SessionType, options={} as HookOptions
   return useListStateHook('engagement_events', useTypedSelector(s => s.engagement_events), session, engagementEventsSlice,
     { 
       loadQuery: session.api.engagement_events.getSome,
+      findOne: session.api.engagement_events.getOne,
       addOne: session.api.engagement_events.createOne,
       addSome: session.api.engagement_events.createSome,
       deleteOne: session.api.engagement_events.deleteOne,
@@ -894,6 +932,7 @@ export const useEmails = (options={} as HookOptions<Email>) => {
   return useListStateHook('emails', useTypedSelector(s => s.emails), session, emailsSlice,
     { 
       loadQuery: session.api.emails.getSome,
+      findOne: session.api.emails.getOne,
       addOne: session.api.emails.createOne,
       addSome: session.api.emails.createSome,
       deleteOne: session.api.emails.deleteOne,
@@ -911,6 +950,7 @@ export const useSmsMessages = (options={} as HookOptions<SMSMessage>) => {
   return useListStateHook('sms_messages', useTypedSelector(s => s.sms_messages), session, smsMessagesSlice,
     { 
       loadQuery: session.api.sms_messages.getSome,
+      findOne: session.api.sms_messages.getOne,
       addOne: session.api.sms_messages.createOne,
       addSome: session.api.sms_messages.createSome,
       deleteOne: session.api.sms_messages.deleteOne,
@@ -928,6 +968,7 @@ export const useNotifications = (options={} as HookOptions<UserNotification>) =>
   return useListStateHook('user_notifications', useTypedSelector(s => s.user_notifications), session, userNotifcationsSlice,
     { 
       loadQuery: session.api.user_notifications.getSome,
+      findOne: session.api.user_notifications.getOne,
       addOne: session.api.user_notifications.createOne,
       addSome: session.api.user_notifications.createSome,
       deleteOne: session.api.user_notifications.deleteOne,
@@ -964,6 +1005,7 @@ export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRo
   return useListStateHook('chat_rooms', rooms, session, chatRoomsSlice,
     { 
       loadQuery: session.api.chat_rooms.getSome,
+      findOne: session.api.chat_rooms.getOne,
       addOne: session.api.chat_rooms.createOne,
       addSome: session.api.chat_rooms.createSome,
       deleteOne: session.api.chat_rooms.deleteOne,
@@ -993,6 +1035,7 @@ export const useChats = (roomId: string, type: SessionType, options={} as HookOp
     chatsSlice,
     { 
       loadQuery: session.api.chats.getSome,
+      findOne: session.api.chats.getOne,
       addOne: session.api.chats.createOne,
       addSome: session.api.chats.createSome,
       deleteOne: session.api.chats.deleteOne,

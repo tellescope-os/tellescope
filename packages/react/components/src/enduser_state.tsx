@@ -83,6 +83,7 @@ export const useTickets = (options={} as HookOptions<Ticket>) => {
     { 
       loadQuery: session.api.tickets.getSome,
       addOne: session.api.tickets.createOne,
+      findOne: session.api.tickets.getOne,
     }, 
     { ...options }
   )

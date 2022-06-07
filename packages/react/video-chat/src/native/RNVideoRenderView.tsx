@@ -15,7 +15,7 @@ export class RNVideoRenderView extends React.Component<{ tileId: number, style?:
     // So we need to dispatch bindVideoView after this function complete
     setTimeout(() => {
       NativeFunction.bindVideoView(findNodeHandle(this), this.props.tileId);
-    });
+    }, 1000); // use explicit 1s timeout to avoid crashes on self-video toggle
   }
 
   componentWillUnmount() {

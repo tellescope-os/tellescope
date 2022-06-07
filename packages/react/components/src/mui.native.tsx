@@ -33,6 +33,7 @@ import {
   TypographyProps,
 } from "./mui.js"
 import { DEFAULT_ICON_SIZE } from "./constants"
+import { Flex } from './layout.js';
 
 export const convert_CSS_to_RNStyles = (style?: React.CSSProperties | ViewStyle): ViewStyle | undefined => {
   if (!style) return style as ViewStyle | undefined
@@ -84,9 +85,14 @@ export const Card = ({ style, flex, children, ...props } : CardProps) => (
     {children}
   </MuiCard>
 )
-export const Paper = ({ style, flex, children, elevation, ...props } : PaperProps) => (
+export const Paper = ({ style, flex, children, elevation, onClick, onPress, ...props } : PaperProps & ClickableNative) => (
   <MuiPaper style={{ ...flex ? { display: 'flex', flexGrow: 1 } : {}, ...convert_CSS_to_RNStyles(style), elevation }} {...props}>
-    {children}
+    {onPress 
+      ? <TouchableOpacity onPress={onPress} style={{ display: 'flex', flex: 1 }}>
+          {children}
+        </TouchableOpacity>
+      : children
+    }
   </MuiPaper>
 )
 
