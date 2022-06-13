@@ -363,6 +363,8 @@ interface SendMessage_T {
 
   // web only
   sendOnEnterPress?: boolean,
+  multiline?: boolean,
+  maxRows?: number,
 }
 export const SendMessage = ({ 
   roomId, 
@@ -372,6 +374,8 @@ export const SendMessage = ({
   placeholderText="Enter a message", 
   style={},
   sendOnEnterPress,
+  multiline,
+  maxRows,
 }: SendMessage_T) => {
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
@@ -408,6 +412,7 @@ export const SendMessage = ({
       <Flex column flex={1}>
         <TextField variant="outlined" value={message} onChange={setMessage} disabled={sending}
           aria-label="Enter a message" 
+          multiline={multiline} maxRows={maxRows}
           placeholder={placeholderText} 
           onFocus={() => setChatFocused(true)}
           onBlur={() => setChatFocused(false)}

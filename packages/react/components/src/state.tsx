@@ -395,16 +395,18 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
 
   const findById = useCallback((id: string | number) => {
     if (!id) return undefined
-    if (state.status !== LoadingStatus.Loaded) return undefined
-    setFetched('findById' + id, true) // prevent multiple API calls
 
     if (didFetch('recordNotFound' + id)) { // return null if record not found for id
       return null
     }
 
-    const value = state.value.find(v => v.id.toString() === id.toString())
+    const value = (state.status === LoadingStatus.Loaded)
+                ? state.value.find(v => v.id.toString() === id.toString())
+                : undefined
 
     if (value === undefined && !didFetch('findById' + id)) {
+      setFetched('findById' + id, true) // prevent multiple API calls
+
       findOne?.(id.toString())
       .then(addLocalElement)
       .catch(e => {
@@ -672,17 +674,18 @@ export const useMappedListStateHook = <T extends { id: string | number }, ADD ex
 
   const findById = useCallback((id: string | number) => {
     const valuesForKey = state[key]
-    if (valuesForKey.status !== LoadingStatus.Loaded) return
-
-    setFetched('findById' + id, true) // prevent multiple API calls
   
     if (didFetch('recordNotFound' + id)) { // return null if record not found for id
       return null
     }
 
-    const value = valuesForKey.value?.find(v => v.id.toString() === id.toString())
+    const value = valuesForKey.status === LoadingStatus.Loaded 
+                ? valuesForKey.value?.find(v => v.id.toString() === id.toString())
+                : undefined
 
     if (value === undefined && !didFetch('findById' + id)) {
+      setFetched('findById' + id, true) // prevent multiple API calls
+
       findOne?.(id.toString())
       .then(addLocalElement)
       .catch(e => {
@@ -1027,7 +1030,11 @@ export const useChats = (roomId: string, type: SessionType, options={} as HookOp
   // don't rely on socket update for new messages
   const onAdd = useCallback((ms: ChatMessage[]) => {
     const newest = ms[0]
-    updateLocalChatRoom(newest.roomId, { recentMessage: newest.message, recentSender: newest.senderId ?? '' })
+    updateLocalChatRoom(newest.roomId, { 
+      recentMessage: newest.message, 
+      recentSender: newest.senderId ?? '',
+      recentMessageSentAt: Date.now(),
+    })
   }, [updateLocalChatRoom])
 
   const toReturn = useMappedListStateHook(

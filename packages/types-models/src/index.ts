@@ -259,7 +259,6 @@ export interface SMSMessage extends SMSMessage_readonly, SMSMessage_required, SM
   // usingPublicNumber?: boolean, // flagged on outgoing messages from public number
   // sentAt: string, // only outgoing
 }
-
 export type ChatRoomType = 'internal' | 'external'
 
 export interface ChatRoom_readonly extends ClientRecord {
@@ -307,6 +306,7 @@ export interface ChatMessage_updatesDisabled {
   replyId?: string | null; // to support threaded replies to a specific root message
 }
 export interface ChatMessage extends ChatMessage_readonly, ChatMessage_required, ChatMessage_updatesDisabled {
+  html?: string,
   replyId?: string | null; // to support threaded replies to a specific root message
   readBy?: { [index: string] : Date };
   attachments?: ChatAttachment[]

@@ -217,17 +217,29 @@ export const FormikSubmitButton = ({ formik, disabledIfUnchanged=true, onClick, 
 interface LoadingButtonProps extends SubmitButtonOptions {
   disabled?: boolean,
   submitting?: boolean,
-  onClick?: () => void,
+  onClick?: (() => void) | (() => Promise<any>),
 }
-export const LoadingButton = ({ disabled, variant="contained", submitting, onClick, submitText="Submit", submittingText="Submitting", type, style={ marginTop: 5, width: '100%' } }: LoadingButtonProps & Styled & { type?: 'submit'}) => (
-  <Button color="primary" variant={variant} type={type} onClick={onClick}
-    style={style}
-    disabled={submitting || disabled}
-  >
-    <Typography component="span">{submitting ? submittingText : submitText}</Typography>
-    {submitting && <CircularProgress size={11} style={{ marginLeft: 5, marginBottom: 1 }}/>}
-  </Button>
-)
+export const LoadingButton = ({ disabled, variant="contained", submitting, onClick, submitText="Submit", submittingText="Submitting", type, style={ marginTop: 5, width: '100%' } }: LoadingButtonProps & Styled & { type?: 'submit'}) => {
+  const [handlingClick, setHandlingClick] = React.useState(false)
+  
+  return (
+    <Button color="primary" variant={variant} type={type} onClick={async () => {
+      if (!onClick) return
+      try {
+        setHandlingClick(true)
+        await onClick()
+      } finally {
+        setHandlingClick(false)
+      }
+    }}
+      style={style}
+      disabled={handlingClick || submitting || disabled}
+    >
+      <Typography component="span">{submitting ? submittingText : submitText}</Typography>
+      {(submitting || handlingClick) && <CircularProgress size={11} style={{ marginLeft: 5, marginBottom: 1 }}/>}
+    </Button>
+  )
+}
 
 // onClick conditionally disabled, should be child of Form in browser to ensure handleSubmit is used correctly
 export const SubmitButton = ({ onClick, ...props }: LoadingButtonProps & Styled) => (

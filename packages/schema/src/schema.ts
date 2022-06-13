@@ -820,6 +820,7 @@ export const schema: SchemaV1 = build_schema({
       },
       threadId: {
         validator: stringValidator,
+        initializer: s => s.replyTo ?? '',
         readonly: true,
       },
       source: {
@@ -1086,6 +1087,7 @@ export const schema: SchemaV1 = build_schema({
         required: true,
         examples: ["Message"]
       },
+      html: { validator: stringValidator5000 }, 
       replyId: {
         validator: mongoIdStringValidator,
         updatesDisabled: true,

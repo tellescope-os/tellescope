@@ -29,6 +29,7 @@ import MicrophoneOffIconMui from '@mui/icons-material/MicOff';
 import CallEndIconMui from '@mui/icons-material/CallEnd';
 import AccountIconMui from '@mui/icons-material/Person';
 import { Flex } from "./layout"
+import { defaultModalStyle } from "./controls"
 
 const Icon = ({ Component, size=DEFAULT_ICON_SIZE, style, ...props } : IconBuilderProps) => (
   <Component style={{ fontSize: size, ...style }}/>
@@ -165,6 +166,8 @@ export type TextFieldProps = {
 
   // web only
   autoComplete?: AutoComplete
+  multiline?: boolean,
+  maxRows?: number,
 
   // mixed
   variant?: 'filled' | 'outlined' | 'flat',
@@ -272,7 +275,7 @@ interface ModalProps extends Styled {
   open: boolean,
   setOpen: (b: boolean) => void,
 }
-export const Modal = ({ children, open, setOpen, style }: ModalProps) => (
+export const Modal = ({ children, open, setOpen, style=defaultModalStyle }: ModalProps) => (
   <MuiModal open={open} onClose={() => setOpen(false)}>
     <Flex flex={1} style={style}>
       {children}
