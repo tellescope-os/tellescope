@@ -1,3 +1,4 @@
+import { PublicActions, extractFields, schema } from "@tellescope/schema"
 import { Session } from "./session"
 
 export const PublicEndpoints = (o?: { host?: string }) => {

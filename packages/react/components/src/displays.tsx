@@ -5,6 +5,7 @@ import { useResolvedSession } from "./authentication"
 import { Image, ImageDimensions } from "./layout"
 import { APIErrorHandler } from "@tellescope/types-utilities"
 
+// supports actual secureName as well as URL values
 const useSecureImage = ({ 
   secureName, 
   onError,
@@ -16,6 +17,7 @@ const useSecureImage = ({
 
   useEffect(() => {
     if (!secureName) return
+    if (secureName.startsWith('http')) return // not actually a secureName
 
     if (loadedImage.cacheKey === cacheKey) return 
     if (fetchRef.current[cacheKey]) return // already fetching
@@ -30,7 +32,7 @@ const useSecureImage = ({
     
   }, [cacheKey, fetchRef, secureName, loadedImage, onError, session])
 
-  return loadedImage.uri
+  return secureName.startsWith('http') ? secureName : loadedImage.uri
 }
 
 
@@ -45,8 +47,8 @@ const loadedImage = useSecureImage({ secureName })
   )
 }
 
-interface DisplayPictureProps extends AvatarProps {
-  user?: { id: string, avatar?: string };
+export interface DisplayPictureProps extends AvatarProps {
+  user?: { id: string, avatar?: string } | null;
   onError?: APIErrorHandler;
   alt?: string,
 }

@@ -182,51 +182,12 @@ export const createSliceForList = <T extends { id: string | number }, N extends 
   },
 })
 
-interface MappedListReducers<T extends { id: string | number }> {
-  setForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string | number, data: LoadedData<T[]> }, AddOptions>) => void;
-  addElementsForKey: (state: Indexable<LoadedData<T[]>>, action: PayloadActionWithOptions<{ key: string, elements: T[] }, AddOptions>) => void; 
-  [index: string]: any
-}
-
-export const createSliceForMappedList = <T extends WithId, N extends string>(name: N) => createSlice<Indexable<LoadedData<T[]>>, MappedListReducers<T>, N>({
-  name,
-  initialState: {} as Indexable<LoadedData<T[]>>,
-  reducers: {
-    setForKey: (state, action) => {
-      state[action.payload.value.key] = action.payload.value.data
-    },
-    addElementsForKey: (state, action) => {
-      if (state[action.payload.value.key]?.status !== LoadingStatus.Loaded) {
-        state[action.payload.value.key] = { status: LoadingStatus.Loaded, value: action.payload.value.elements }
-      }
-
-      const toAdd: T[] = []
-      for (const e of action.payload.value.elements) {
-        if ((state[action.payload.value.key].value as T[]).find(v => v.id === e.id) !== undefined) continue
-        toAdd.push(e)
-      }
-
-      // default to start
-      if (action.payload.options?.addTo === 'end') {
-        (state[action.payload.value.key].value as T[]).push(...toAdd)
-      } else {
-        (state[action.payload.value.key].value as T[]).unshift(...toAdd)
-      }
-    }
-  },
-  extraReducers: (builder) => {
-    builder.addCase(resetStateAction, () => {
-      return {} as Indexable<LoadedData<T[]>> 
-    })
-  },
-})
-
 export type ChatRoomDisplayInfo = { id: string } & { [index: string]: UserDisplayInfo }
 
 const chatRoomsSlice = createSliceForList<ChatRoom, 'chat_rooms'>('chat_rooms')
 const calendarEventsSlice = createSliceForList<CalendarEvent, 'calendar_events'>('calendar_events')
-const chatsSlice = createSliceForMappedList<ChatMessage, 'chats'>('chats')
-const chatRoomDisplayInfoslice = createSliceForMappedList<ChatRoomDisplayInfo, 'chat-room-display-info'>('chat-room-display-info')
+const chatsSlice = createSliceForList<ChatMessage, 'chats'>('chats')
+const chatRoomDisplayInfoslice = createSliceForList<ChatRoomDisplayInfo, 'chat-room-display-info'>('chat-room-display-info')
 const engagementEventsSlice = createSliceForList<EngagementEvent, 'engagement_events'>('engagement_events')
 const emailsSlice = createSliceForList<Email, 'email'>('email')
 const smsMessagesSlice = createSliceForList<SMSMessage, 'sms_messages'>('sms_messages')
@@ -299,13 +260,14 @@ export interface ListUpdateMethods <T, ADD> extends LoadMoreFunctions {
   reload: () => void;
 }
 export type ListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [LoadedData<T[]>, ListUpdateMethods<T, ADD>]
+
 export const useListStateHook = <T extends { id: string | number }, ADD extends Partial<T>> (
   modelName: string,
   state: LoadedData<T[]>, 
   session: Session | EnduserSession,
   slice: Slice<any, ListReducers<T>>,
   apiCalls: {
-    loadQuery: LoadFunction<T>, 
+    loadQuery?: LoadFunction<T>, 
     findOne?: (idOrFilter: string | Partial<T>) => Promise<T>,
     addOne?: (value: ADD) => Promise<T>,
     addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
@@ -446,6 +408,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   }, [state])
 
   const load = useCallback((force: boolean) => {
+    if (!loadQuery) return
     if (options?.dontFetch) return
     const fetchKey = loadFilter ? JSON.stringify(loadFilter) + modelName : modelName
     if (didFetch(fetchKey, force, options?.refetchInMS)) return
@@ -527,6 +490,7 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   }, [session, socketConnection, didFetch, isModelName, options])
 
   const loadMore = useCallback(async (options?: LoadMoreOptions) => {
+    if (!loadQuery) return
     if (!value_is_loaded(state)) {
       console.warn("loadMore called before state is loaded. This is a no op")
       return
@@ -581,291 +545,6 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   ]
 }
 
-export interface MappedListUpdateMethods <T, ADD> extends LoadMoreFunctions {
-  setLocalElementForKey: (key: string | number, e: LoadedData<T[]>) => void;
-  addLocalElement: (e: T, o?: AddOptions) => void,
-  addLocalElements: (e: T[], o?: AddOptions) => void,
-  createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
-  createElements: (e: ADD[], o?: AddOptions) => Promise<T[]>,
-  findById: (id: string | number) => T | undefined | null,
-  reload: () => void;
-}
-export type MappedListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
-  LoadedData<T[]>,
-  MappedListUpdateMethods<T, ADD>
-]
-export const useMappedListStateHook = <T extends { id: string | number }, ADD extends Partial<T>>(
-  modelName: string,
-  filterKey: (keyof T) & string,
-  state:  Indexable<LoadedData<T[]>>, 
-  session: EnduserSession | Session,
-  key: string | number, 
-  slice: Slice<any, MappedListReducers<T>>,
-  apiCalls: {
-    loadQuery: LoadFunction<T>, 
-    findOne?: (idOrFilter: string | Partial<T>) => Promise<T>,
-    addOne?: (value: ADD) => Promise<T>,
-    addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
-    updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
-    deleteOne?: (id: string) => Promise<void>,
-  },
-  options?: {
-    socketConnection?: 'keys' | 'none',
-    onAdd?: (n: T[]) => void;
-    onUpdate?: (n: Partial<T>[]) => void;
-    onDelete?: (id: string[]) => void;
-  } & HookOptions<T>
-): MappedListStateReturnType<T, ADD>=> {
-  const { loadQuery,findOne, addOne, addSome, updateOne, deleteOne } = apiCalls
-  if (options?.refetchInMS !== undefined && options.refetchInMS < 5000) {
-    throw new Error("refetchInMS must be greater than 5000")
-  }
-
-  const loadFilter = options?.loadFilter
-  const returnFilter = options?.returnFilter
-  const socketConnection = options?.socketConnection ?? 'keys'
-
-  const dispatch = useTellescopeDispatch()
-  const { didFetch, setFetched } = useContext(FetchContext)
-
-  const setLocalElementForKey = useCallback<MappedListUpdateMethods<T,ADD>['setLocalElementForKey']>((key, e)=> {
-    dispatch(slice.actions.setForKey({ value: { key, data: e } }))
-  }, [dispatch, slice])
-  const addLocalElementForKey = useCallback((key: string, e: T, o?: AddOptions) => {
-    dispatch(slice.actions.addElementsForKey({ value: { key, elements: [e] }, options: o }))
-    options?.onAdd?.([e])
-    return e
-  }, [dispatch, slice, options]) 
-  const addLocalElementsForKey = useCallback((key: string | number, es: T[], o?: AddOptions) => {
-    dispatch(slice.actions.addElementsForKey({ value: { key: key.toString(), elements: es }, options: o }))
-    options?.onAdd?.(es) 
-    return es
-  }, [dispatch, slice, options]) 
-  const addLocalElement = useCallback((e: T, options?: AddOptions) => {
-    const key = e[filterKey]
-    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
-
-    addLocalElementForKey(key.toString(), e, options)
-  }, [filterKey, addLocalElementForKey])
-  const addLocalElements = useCallback((es: T[], options?: AddOptions) => {
-    const key = es[0]?.[filterKey]
-    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
-
-    addLocalElementsForKey(key, es, options)
-  }, [filterKey, addLocalElementsForKey])
-
-  const createElement = useCallback(async (e: ADD, options?: AddOptions) => {
-    if (!addOne) throw new Error(`Add element by API is not supported`)
-
-    const key = e[filterKey]
-    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
-
-    return addLocalElementForKey(key.toString(), await addOne(e), options)
-  }, [filterKey, addLocalElementForKey, addOne])
-
-  const createElements = useCallback(async (es: ADD[], options?: AddOptions) => {
-    if (!addSome) throw new Error(`Add elements by API is not supported`)
-
-    const key = es[0]?.[filterKey]
-    if (!(typeof key === 'string' || typeof key === 'number')) throw new Error(`value for filterKey ${filterKey} must be a string or number`)
-
-    return addLocalElementsForKey(key, (await addSome(es)).created, options)
-  }, [filterKey, addLocalElementsForKey, addSome])
-
-  const findById = useCallback((id: string | number) => {
-    const valuesForKey = state[key]
-  
-    if (didFetch('recordNotFound' + id)) { // return null if record not found for id
-      return null
-    }
-
-    const value = valuesForKey.status === LoadingStatus.Loaded 
-                ? valuesForKey.value?.find(v => v.id.toString() === id.toString())
-                : undefined
-
-    if (value === undefined && !didFetch('findById' + id)) {
-      setFetched('findById' + id, true) // prevent multiple API calls
-
-      findOne?.(id.toString())
-      .then(addLocalElement)
-      .catch(e => {
-        setFetched('recordNotFound' + id, true) // mark record not found for id
-        console.error(e) 
-      })
-    }
-
-    return value
-  }, [state, key, setFetched, didFetch, findOne, addLocalElement])
-
-  const load = useCallback(async (force: boolean) => {
-    if (options?.dontFetch) return
-    if (!key) return
-
-    // same key might be used across different models!
-    const fetchKey = loadFilter ? JSON.stringify(loadFilter) + key + modelName : key + modelName 
-    if (didFetch(fetchKey, force, options?.refetchInMS)) return
-    setFetched(fetchKey, true)
-
-    const filter: Partial<T> = { ...loadFilter, [filterKey]: key } as any // we know [filterKey] is a keyof T
-    const data = await toLoadedData(() => loadQuery({ filter, limit: DEFAULT_FETCH_LIMIT }))
-    if (!value_is_loaded(data)) return
-
-    if (data.value.length < DEFAULT_FETCH_LIMIT) {
-      setFetched('id' + modelName + DONE_LOADING_TOKEN, true) 
-    }
-
-    dispatch(slice.actions.addElementsForKey({ 
-      value: { key: key.toString(), elements: data.value }, 
-      options: { replaceIfMatch: true },
-    }))
-  }, [key, loadFilter, dispatch, didFetch, setFetched, loadQuery, options?.dontFetch])
-
-  useEffect(() => {
-    load(false)
-  }, [load])
-
-  useEffect(() => {
-    if (options?.dontFetch) return
-    if (!isModelName(modelName)) return // a custom extension without our socket support
-    if (!key) return
-    if (socketConnection === 'none') return
-    if (didFetch(key + 'socket')) return
-    setFetched(key + 'socket', true, false)
-
-    // TODO: Add update and delete subscriptions
-    session.subscribe({ [key]: modelName }, {
-      [`created-${modelName}`]: (cs: T[]) => addLocalElementsForKey(key, cs, {})
-    })
-
-    // not needed
-    return () => { 
-      // session.unsubscribe([key.toString()]) 
-      // setFetched(key + 'socket', false, false)
-    }
-  }, [modelName, options, isModelName, session, key, didFetch, socketConnection, addLocalElementForKey])
-
-  const reload = useCallback(() => load(true), [load])
-
-  const stateToReturn = state[key] ?? UNLOADED
-
-  const loadMore = useCallback(async (options?: LoadMoreOptions) => {
-    if (!value_is_loaded(stateToReturn)) {
-      console.warn("loadMore called before state is loaded. This is a no op")
-      return
-    }
-
-    // todo: support for updatedAt as well, and more?
-    const key = options?.key ?? 'id' 
-    if (key !== 'id') console.warn("Unrecognized key provided")
-
-    let oldestRecord = stateToReturn.value[0]
-    for (const record of stateToReturn.value) {
-      if (new Date((record as any).createdAt ?? 0).getTime() < new Date((oldestRecord as any).createdAt).getTime()) {
-        oldestRecord = record
-      }
-    }
-
-    const limit = options?.limit ?? DEFAULT_FETCH_LIMIT
-    return toLoadedData(() => loadQuery({ lastId: oldestRecord.id.toString(), limit })).then(
-      es => {
-        if (es.status === LoadingStatus.Loaded) {
-          dispatch(slice.actions.addElementsForKey({ value: { key, elements: es.value }, options: { replaceIfMatch: true, addTo: 'end' } }))
-
-          if (es.value.length < limit) {
-            setFetched(key + modelName + DONE_LOADING_TOKEN, true) 
-          }
-
-          if (!isModelName(modelName)) return // a custom extension without our socket support
-
-          if (socketConnection !== 'keys') return
-          const subscription = { } as Indexable         
-          for (const e of es.value) {
-            subscription[e.id] = modelName
-          }
-          session.subscribe(subscription)
-        } 
-      }
-    )
-  }, [state, socketConnection, modelName, isModelName, loadQuery])
-  const doneLoading = useCallback((key="id") => (
-    didFetch(key + modelName + DONE_LOADING_TOKEN)
-  ), [state])
-
-  return [
-    returnFilter && stateToReturn.status === LoadingStatus.Loaded
-      ? { status: LoadingStatus.Loaded, value: stateToReturn.value.filter(returnFilter) }
-      : stateToReturn,
-    {
-      setLocalElementForKey,
-      addLocalElement,
-      addLocalElements,
-      findById,
-      createElement,
-      createElements,
-      reload,
-      loadMore,
-      doneLoading,
-    }
-  ]
-}
-
-export interface MappedStateUpdateMethods <T, ADD>{
-  setLocalElementForKey: (key: string, e: LoadedData<T[]>) => void,
-  addLocalElement: (e: T, o?: AddOptions) => void,
-  createElement:  (e: ADD, o?: AddOptions) => Promise<T>,
-  reload: () => void;
-}
-export type MappedStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [
-  LoadedData<T>,
-  MappedStateUpdateMethods<T, ADD>
-]
-export const useMappedStateHook = <T extends { id: string | number }, ADD extends Partial<T>>(
-  modelName: string,
-  filterKey: (keyof T) & string,
-  state:  Indexable<LoadedData<T[]>>, 
-  session: EnduserSession | Session,
-  key: string, 
-  slice: Slice<any, MappedListReducers<T>>,
-  apiCalls: {
-    loadQuery: LoadFunction<T>, 
-    findOne?: (idOrFilter: string | Partial<T>) => Promise<T>;
-    addOne?: (value: ADD) => Promise<T>,
-    addSome?: (values: ADD[]) => Promise<{ created: T[], errors: any[] }>,
-    updateOne?: (id: string, updates: Partial<T>) => Promise<T>,
-    deleteOne?: (id: string) => Promise<void>,
-  },
-  options?: {
-    socketConnection?: 'keys' | 'none',
-    loadFilter?: Partial<T>,
-    onAdd?: (n: T[]) => void;
-    onUpdate?: (n: Partial<T>[]) => void;
-    onDelete?: (id: string[]) => void;
-  }
-): MappedStateReturnType<T, ADD>=> {
-  // rely on mappedList state, using singleton lists, to avoid code duplication (minor(?) perf hit)
-  const [data, { setLocalElementForKey, addLocalElement, createElement, reload }] = useMappedListStateHook<T, ADD>(modelName, filterKey, state, session, key, slice, apiCalls, options)
-
-  // convert back from singleton list to individual element
-  const parsedData = { status: data.status } as LoadedData<T>
-  if (data.status === LoadingStatus.Loaded) {
-    parsedData.value = data.value[0] // singleton list
-  } else {
-    parsedData.value = data.value // not a list anyway
-  }
-
-  return [
-    parsedData,
-    {
-      setLocalElementForKey,
-      addLocalElement,
-      createElement,
-      reload,
-    }
-  ]
-}
-
-// const useSocketConnectionForList = <T extends { id: string }>(session: Session | EnduserSession) => {}
-
 export type HookOptions<T> = {
   loadFilter?: Partial<T>,
   returnFilter?: (t: T) => boolean,
@@ -877,9 +556,8 @@ export type HookOptions<T> = {
 export const useChatRoomDisplayInfo = (roomId: string, type: SessionType, options={} as HookOptions<ChatRoomDisplayInfo>) => {
   const session = useResolvedSession(type)
   const state = useTypedSelector(s => s.chatRoomDisplayInfo)
-  const toReturn = useMappedStateHook(
-    'chat-room-display-info', 'id', state, session, roomId, 
-    chatRoomDisplayInfoslice,
+  const [lookup] = useListStateHook(
+    'chat-room-display-info', state, session, chatRoomDisplayInfoslice,
     { 
       loadQuery: async () => {
         const { id, display_info } = await session.api.chat_rooms.display_info({ id: roomId })
@@ -889,7 +567,11 @@ export const useChatRoomDisplayInfo = (roomId: string, type: SessionType, option
     { ...options }
   ) 
 
-  return toReturn
+  return (
+    value_is_loaded(lookup) 
+      ? [{ status: LoadingStatus.Loaded, value: lookup.value.find(v => v.id === roomId) ?? {} }] 
+      : [{ status: lookup.status, value: {} }]
+  ) as [LoadedData<{ [index: string]: UserDisplayInfo }>]
 }
 
 export const useCalendarEvents = (type: SessionType, options={} as HookOptions<CalendarEvent>) => {
@@ -984,7 +666,7 @@ export const useNotifications = (options={} as HookOptions<UserNotification>) =>
   )
 }
 
-export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRoom>) => {
+export const useChatRooms = (type?: SessionType, options={} as HookOptions<ChatRoom>) => {
   const session = useResolvedSession(type)
   const dispatch = useTellescopeDispatch()
   const rooms = useTypedSelector(s => s.chat_rooms)
@@ -995,10 +677,7 @@ export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRo
       if (!(value_is_loaded(rooms) && rooms.value.find(v => v.id === u.id && v.updatedAt === u.updatedAt))) {
         session.api.chat_rooms.display_info({ id: u.id })
         .then(({ id, display_info }) => {
-          dispatch(chatRoomDisplayInfoslice.actions.setForKey({ value: { 
-            key: u.id, 
-            data: { status: LoadingStatus.Loaded, value: [{ id, ...display_info }] as ChatRoomDisplayInfo[] } 
-          }}))
+          dispatch(chatRoomDisplayInfoslice.actions.update({ value: { id, updates: display_info }}))
         })
         .catch(e => console.error('Error fetching chatRoomDisplayInfo in useChatRooms onUpdate', e))
       }
@@ -1022,7 +701,7 @@ export const useChatRooms = (type: SessionType, options={} as HookOptions<ChatRo
   )
 }
 
-export const useChats = (roomId: string, type: SessionType, options={} as HookOptions<ChatMessage>) => {
+export const useChats = (roomId?: string, type?: SessionType, options={} as HookOptions<ChatMessage>) => {
   const session = useResolvedSession(type)
   const state = useTypedSelector(s => s.chats)
   const [_, { updateLocalElement: updateLocalChatRoom }] = useChatRooms(type)  
@@ -1037,11 +716,10 @@ export const useChats = (roomId: string, type: SessionType, options={} as HookOp
     })
   }, [updateLocalChatRoom])
 
-  const toReturn = useMappedListStateHook(
-    'chats', 'roomId', state, session, roomId, 
-    chatsSlice,
+  const toReturn = useListStateHook(
+    'chats', state, session, chatsSlice,
     { 
-      loadQuery: session.api.chats.getSome,
+      loadQuery: !roomId ? undefined : session.api.chats.getSome,
       findOne: session.api.chats.getOne,
       addOne: session.api.chats.createOne,
       addSome: session.api.chats.createSome,
@@ -1050,6 +728,10 @@ export const useChats = (roomId: string, type: SessionType, options={} as HookOp
     }, 
     {
       ...options,
+      loadFilter: { ...options.loadFilter, roomId },
+      returnFilter: v => (options.returnFilter ? options.returnFilter(v) : true)
+                      && (roomId ? v.roomId === roomId : true),
+      // returnFilter: v => (options.returnFilter ?? (v => true))(v) && v.roomId === roomId,
       onAdd,
     }
   ) 

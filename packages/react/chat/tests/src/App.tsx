@@ -81,7 +81,7 @@ const ChatsForUserWithProvider = () => {
 }
 
 const ChatsForEnduser = () => (
-  <WithEnduserSession sessionOptions={{ host: 'http://localhost:8080' }}>
+  <WithEnduserSession sessionOptions={{ host: 'http://localhost:8080', businessId: '60398b1131a295e64f084ff6' }}>
   <EnduserProvider>
     <ChatsForEnduserWithProvider/>
   </EnduserProvider>

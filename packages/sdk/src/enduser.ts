@@ -16,7 +16,7 @@ import {
   Meeting,
   UserDisplayInfo,
 } from "@tellescope/types-client"
-import { schema, CustomActions, extractFields } from '@tellescope/schema'
+import { schema, CustomActions, extractFields, PublicActions } from '@tellescope/schema'
 
 export interface EnduserSessionOptions extends SessionOptions { enduser?: Enduser, businessId: string }
 
@@ -167,6 +167,12 @@ export class EnduserSession extends Session {
       { email: string, password: string, businessId: string, durationInSeconds?: number }, 
       { authToken: string, enduser: Enduser }
     >('/v1/login-enduser', { email, password, businessId: this.businessId, ...o })
+  )
+
+  register = async (args: extractFields<PublicActions['endusers']['register']['parameters']>) => (
+    this.POST<typeof args & { businessId: string }, Promise<extractFields<PublicActions['endusers']['register']['returns']>>>(
+      `/v1${schema.endusers.publicActions.register.path}`, { ...args, businessId: this.businessId }
+    )
   )
 
   refresh_session = async () => {

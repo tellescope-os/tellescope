@@ -108,7 +108,7 @@ import {
 
 export type RelationshipConstraint<T> = {
   explanation: string; // human readable, for documentation purposes
-  evaluate: (v: T, dependencies: Indexable<Partial<DatabaseModel>>, session: UserSession | EnduserSession) => string | void;
+  evaluate: (v: T, dependencies: Indexable<Partial<DatabaseModel>>, session: UserSession | EnduserSession, method: 'create' | 'update') => string | void;
 }
 
 export type DependencyAccessConstraint <T> = { type: 'dependency', foreignModel: ModelName, foreignField: string, accessField: keyof T  }
@@ -291,7 +291,7 @@ export type CustomActions = {
     refresh_session: CustomAction<{}, { enduser: Enduser, authToken: string }>,
     generate_auth_token: CustomAction<{ id?: string, phone?: string, email?: string, externalId?: string, durationInSeconds?: number }, { authToken: string, enduser: Enduser }>,
     logout: CustomAction<{ }, { }>,
-    current_session_info: CustomAction<{ }, { enduser: Enduser }> 
+    current_session_info: CustomAction<{ }, { enduser: Enduser }>,
   },
   users: {
     display_info: CustomAction<{ }, { fname: string, lname: string, id: string }[]>,
@@ -327,6 +327,7 @@ export type PublicActions = {
       { id?: string, email?: string, phone?: string, password: string, durationInSeconds: number }, 
       { authToken: string }
     >,
+    register: CustomAction<{ emailConsent?: boolean, fname?: string, lname?: string, email: string, password: string }, {  }>,
   },
   users: {
     request_password_reset: CustomAction<{ email: string }, { }>,
@@ -558,6 +559,21 @@ export const schema: SchemaV1 = build_schema({
         },
         returns: { authToken: { validator: stringValidator5000 } },
       },
+      register: {
+        op: "custom", access: 'create', method: "post",
+        name: 'Register as Enduser',
+        path: '/register-as-enduser',
+        description: "Allows and enduser to register directly with an email and password",
+        parameters: { 
+          fname: { validator: nameValidator },
+          lname: { validator: nameValidator },
+          emailConsent: { validator: booleanValidator },
+          email: { validator: emailValidator, required: true }, 
+          password: { validator: stringValidator100, required: true },
+        },
+        returns: { } //authToken: { validator: stringValidator5000 } },
+
+      },
     },
   },
   api_keys: {
@@ -753,13 +769,22 @@ export const schema: SchemaV1 = build_schema({
     info: {
       sideEffects: { create: [sideEffects.sendEmails] },
     },
+    defaultActions: { 
+      create: {
+        description: "Sends or logs an email"
+      }, createMany: {
+        description: "Sends or logs multiple emails"
+      },
+      update: {}, read: {}, readMany: {}, delete: {} 
+    },
     constraints: {
       unique: [], 
       relationship: [
         {
           explanation: "Email and email consent must be set for enduser",
-          evaluate: ({ enduserId, logOnly }, deps) => {
+          evaluate: ({ enduserId, logOnly }, deps, _, method) => {
             if (logOnly === true) return
+            if (method === 'update') return
 
             const e = deps[enduserId ?? ''] as Enduser
             if (!e?.email) return "Missing email"
@@ -786,7 +811,7 @@ export const schema: SchemaV1 = build_schema({
           onDependencyDelete: 'delete',
         }]
       },
-      businessUserId: {
+      userId: {
         validator: mongoIdStringValidator,
         examples: [PLACEHOLDER_ID],
         readonly: true, 
@@ -850,32 +875,38 @@ export const schema: SchemaV1 = build_schema({
       },
       htmlEncoding: {
         validator: emailEncodingValidator,
-        readonly: true
+        readonly: true,
       },
       s3id: {
         validator: stringValidator250,
-      }
+        readonly: true,
+      },
+      readBy: {
+        validator: idStringToDateValidator,
+      },
     }, 
-    defaultActions: { 
-      create: {
-        description: "Sends or logs an email"
-      }, createMany: {
-        description: "Sends or logs multiple emails"
-      }, read: {}, readMany: {}, delete: {} 
-    },
     customActions: {},
   },
   sms_messages: {
     info: {
       sideEffects: { create: [sideEffects.sendSMSMessages] },
     },
+    defaultActions: { 
+      create: {
+        description: "Sends or logs an SMS message"
+      }, createMany: {
+        description: "Sends or logs multiple SMS message"
+      }, 
+      update: {}, read: {}, readMany: {}, delete: {} 
+    },
     constraints: {
       unique: [],
       relationship: [
         {
           explanation: "Phone number and phone consent must be set for enduser",
-          evaluate: ({ enduserId, logOnly }, deps) => {
+          evaluate: ({ enduserId, logOnly }, deps, _, method) => {
             if (logOnly === true) return
+            if (method === 'update') return
 
             const e = deps[enduserId ?? ''] as Enduser
             if (!e?.phone) return "Missing phone"
@@ -894,12 +925,19 @@ export const schema: SchemaV1 = build_schema({
       message: {
         validator: SMSMessageValidator,
         required: true,
+        updatesDisabled: true,
         examples: ["Test message"],
+      },
+      linkOpens: {
+        validator: numberToDateValidator,
+        readonly: true,
+        examples: [{ 0: new Date() }]
       },
       enduserId: {
         validator: mongoIdStringValidator,
         required: true,
         examples: [PLACEHOLDER_ID],
+        updatesDisabled: true,
         dependencies: [{
           dependsOn: ['endusers'],
           dependencyField: '_id',
@@ -911,6 +949,7 @@ export const schema: SchemaV1 = build_schema({
         validator: mongoIdStringValidator,
         readonly: true, // default to only self-sending, for now
         initializer: (a, s) => s.id,
+        updatesDisabled: true,
         dependencies: [{
           dependsOn: ['users'],
           dependencyField: '_id',
@@ -921,9 +960,11 @@ export const schema: SchemaV1 = build_schema({
       inbound: {
         validator: booleanValidator,
         initializer: () => false,
+        readOnly: true,
       },
       newThread: {
         validator: booleanValidator,
+        updatesDisabled: true,
       },
       delivered: {
         validator: booleanValidator,
@@ -932,15 +973,12 @@ export const schema: SchemaV1 = build_schema({
       },
       internalMessageId: {
         validator: stringValidator250,
-      }
+        readonly:  true,
+      },
+      readBy: {
+        validator: idStringToDateValidator,
+      },
     }, 
-    defaultActions: { 
-      create: {
-        description: "Sends or logs an SMS message"
-      }, createMany: {
-        description: "Sends or logs multiple SMS message"
-      }, read: {}, readMany: {}, delete: {} 
-    },
     customActions: {},
   },
   chat_rooms: {
@@ -1069,6 +1107,11 @@ export const schema: SchemaV1 = build_schema({
           relationship: 'foreignKey',
           onDependencyDelete: 'delete',
         }]
+      },
+      linkOpens: {
+        validator: numberToDateValidator,
+        readonly: true,
+        examples: [{ 0: new Date() }]
       },
       senderId: { 
         validator: mongoIdStringValidator,

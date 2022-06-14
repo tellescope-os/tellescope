@@ -531,8 +531,22 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
 }
 
 const enduser_tests = async (queries=sdk.api.endusers) => {
+  log_header("Enduser")
+  
   const e1 = await queries.createOne({ email: 'test1@gmail.com', phone: '+14155555500' })
   const e2 = await queries.createOne({ email: 'test2@gmail.com', phone: '+14155555501' })
+
+  await enduserSDK.register({ email: 'test3@gmail.com', password: "testenduserpassword" })
+  await async_test(
+    `get-enduser registered`,
+    () => queries.getOne({ email: 'test3@gmail.com' }), 
+    { onResult: e => !!e },
+  )
+  await async_test(
+    `enduser registered can log in`,
+    () => enduserSDK.authenticate('test3@gmail.com', 'testenduserpassword'), 
+    { onResult: e => !!e.authToken && e.enduser.email === 'test3@gmail.com' },
+  )
 
   await async_test(
     `update-enduser email conflict`, 

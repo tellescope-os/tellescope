@@ -331,20 +331,18 @@ const PreviewWithData = ({ PreviewComponent=ConversationPreview, ...props }: Omi
 interface ConversationsProps extends SidebarInfo {
   rooms: LoadedData<ChatRoom[]>;
 }
-export const Conversations = ({ rooms, selectedRoom, onRoomSelect, PreviewComponent=ConversationPreview, style, selectedItemStyle, itemStyle } : ConversationsProps) => {
-  return ( 
-    <LoadingLinear data={rooms} render={rooms =>
-      <List items={rooms.sort((r1, r2) => new Date(r2.updatedAt).getTime() - new Date(r1.updatedAt).getTime() )} 
-        style={style ?? defaultSidebarStyle} onClick={r => onRoomSelect(r.id)} 
-        render={(room, { onClick, index }) => 
-          <PreviewWithData key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
-            selectedStyle={selectedItemStyle} style={itemStyle} PreviewComponent={PreviewComponent}
-          />
-        }  
-      />    
-    }/>
-  )
-}
+export const Conversations = ({ rooms, selectedRoom, onRoomSelect, PreviewComponent=ConversationPreview, style, selectedItemStyle, itemStyle } : ConversationsProps) => ( 
+  <LoadingLinear data={rooms} render={rooms =>
+    <List items={[...rooms].sort((r1, r2) => new Date(r2.updatedAt).getTime() - new Date(r1.updatedAt).getTime() )} 
+      style={style ?? defaultSidebarStyle} onClick={r => onRoomSelect(r.id)} 
+      render={(room, { onClick, index }) => 
+        <PreviewWithData key={room.id} room={room} onClick={onClick} selected={selectedRoom === room.id} 
+          selectedStyle={selectedItemStyle} style={itemStyle} PreviewComponent={PreviewComponent}
+        />
+      }  
+    />    
+  }/>
+)
 
 
 // deprecated while Conversations relies on useResolvedSession
@@ -446,8 +444,8 @@ export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : Split
     <Flex row style={style} flex={1}>
       <Flex column flex={1}>
         {type === 'user'
-          ? <UsersConversations userId={session.userInfo.id} selectedRoom={selectedRoom} onRoomSelect={setSelectedRoom}/>
-          : <EndusersConversations selectedRoom={selectedRoom} enduserId={session.userInfo.id} onRoomSelect={setSelectedRoom}/>
+          ? <UsersConversations userId={session.userInfo.id} selectedRoom={selectedRoom} onRoomSelect={setSelectedRoom} />
+          : <EndusersConversations selectedRoom={selectedRoom} enduserId={session.userInfo.id} onRoomSelect={setSelectedRoom} />
         }
       </Flex>
 

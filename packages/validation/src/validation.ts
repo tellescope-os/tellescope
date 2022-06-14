@@ -752,17 +752,19 @@ export const journeyStatesValidator = listValidator(journeyStateValidator())
 export const emailEncodingValidator = exactMatchValidator<EmailEncoding>(['', 'base64'])
 
 export const validateIndexable = <V>(keyValidator: EscapeFunction<string | number>, valueValidator: EscapeFunction<V>): EscapeBuilder<{ [index: string | number]: V }> => o => build_validator(
-    v => {
-      if (!is_object(v)) throw new Error("Expecting an object")
+  v => {
+    if (!is_object(v)) throw new Error("Expecting an object")
 
-      const validated = {} as Indexable
+    const validated = {} as Indexable
 
-      for (const k in v) {
-        validated[keyValidator(k)] = valueValidator(v[k as keyof typeof v])
-      }
-    },
-    { ...o, isObject: true, listOf: false }
-  )
+    for (const k in v) {
+      validated[keyValidator(k)] = valueValidator(v[k as keyof typeof v])
+    }
+
+    return validated
+  },
+  { ...o, isObject: true, listOf: false }
+)
 export const indexableValidator = <V>(keyValidator: EscapeFunction<string>, valueValidator: EscapeFunction<V>): EscapeBuilder<{ [index: string]: V }> => (
   validateIndexable(keyValidator, valueValidator)
 )

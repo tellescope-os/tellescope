@@ -216,7 +216,7 @@ export interface Task extends Task_required, Task_readonly, Task_updatesDisabled
 export type EmailEncoding = '' | 'base64'
 
 export interface Email_readonly extends ClientRecord {
-  businessUserId: string;
+  userId: string;
   delivered: boolean; 
   threadId: string; 
   source: string; // email address of sender
@@ -231,31 +231,35 @@ export interface Email_required {
   subject: string; 
   textContent: string; 
 }
-export interface Email_updatesDisabled {}
-export interface Email extends Email_required, Email_readonly, Email_updatesDisabled {
-  logOnly?: boolean,
+export interface Email_updatesDisabled {
   HTMLContent?: string;
-  timestamp: Date;
-  replyTo?: string | null;  
   messageId?: string;
   inbound?: boolean;
+  logOnly?: boolean,
+}
+export interface Email extends Email_required, Email_readonly, Email_updatesDisabled {
+  replyTo?: string | null;  
+  readBy?: { [index: string] : Date };
   // sentAt: string, // only outgoing
 }
 
 export interface SMSMessage_readonly extends ClientRecord {
   delivered: boolean, 
   internalMessageId?: string,
+  linkOpens?: { [index: number]: Date };
 }
 export interface SMSMessage_required {
   enduserId: string, 
   message: string, 
 }
-export interface SMSMessage_updatesDisabled {}
-export interface SMSMessage extends SMSMessage_readonly, SMSMessage_required, SMSMessage_updatesDisabled {
-  userId?: string, // defaults to self, but should allow future options to send as other user
-  logOnly?: boolean,
+export interface SMSMessage_updatesDisabled {
   inbound: boolean, 
   newThread: boolean, 
+  logOnly?: boolean,
+}
+export interface SMSMessage extends SMSMessage_readonly, SMSMessage_required, SMSMessage_updatesDisabled {
+  userId?: string, // defaults to self, but should allow future options to send as other user
+  readBy?: { [index: string] : Date };
   // usingPublicNumber?: boolean, // flagged on outgoing messages from public number
   // sentAt: string, // only outgoing
 }
@@ -296,6 +300,7 @@ export type ChatAttachment = {
 
 export interface ChatMessage_readonly extends ClientRecord {
   senderId: string | null;
+  linkOpens?: { [index: number]: Date };
 }
 export interface ChatMessage_required {
   roomId: string; 
@@ -307,7 +312,6 @@ export interface ChatMessage_updatesDisabled {
 }
 export interface ChatMessage extends ChatMessage_readonly, ChatMessage_required, ChatMessage_updatesDisabled {
   html?: string,
-  replyId?: string | null; // to support threaded replies to a specific root message
   readBy?: { [index: string] : Date };
   attachments?: ChatAttachment[]
 }
