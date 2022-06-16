@@ -360,10 +360,13 @@ export const schema: SchemaV1 = build_schema({
       relationship: [
         {
           explanation: 'One of email or phone is required',
-          evaluate: ({ email, phone }) => {
-          if (!(email || phone))
-            return 'One of email or phone is required'
-          } 
+          evaluate: ({ email, phone }, s, _, method) => {
+            // while endusers can be created by Worker without email or phone number, relax this restriction on updates
+            if (method === 'update') return
+
+            if (!(email || phone))
+              return 'One of email or phone is required'
+            } 
         },
         {
           explanation: 'Endusers can only access and modify their own profile',
@@ -439,7 +442,7 @@ export const schema: SchemaV1 = build_schema({
         validator: preferenceValidator,
       },
       assignedTo: { 
-        validator: mongoIdStringValidator,
+        validator: listOfStringsValidatorEmptyOk,
       },
       unread: { 
         validator: booleanValidator,

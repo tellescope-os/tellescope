@@ -152,7 +152,7 @@ export interface Enduser extends Enduser_readonly, Enduser_required, Enduser_upd
   tags? : string[];
   fields? : CustomFields;
   preference? : Preference;
-  assignedTo? : string;
+  assignedTo? : string[];
   avatar?: string,
   unread?: boolean,
 }
