@@ -4,7 +4,7 @@ export interface SearchOptions {
   query: string,
 }
 
-export type AccessType = "All" | "Assigned" | null
+export type AccessType = "All" | "Default" | "Assigned" | null
 export type AccessAction = "create" | "read" | "update" | "delete"
 export type AccessResources = ModelName
   | 'apiKeys'

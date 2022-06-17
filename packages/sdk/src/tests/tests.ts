@@ -46,7 +46,6 @@ import {
   url_safe_path,
 } from "@tellescope/utilities"
 
-
 const UniquenessViolationMessage = 'Uniqueness Violation'
 
 const host = process.env.TEST_URL || 'http://localhost:8080'
@@ -399,7 +398,7 @@ const verify_missing_defaults = async <N extends ModelName>({ queries, model, na
     await async_test(
       `${o} unavailable for ${name}`,
       () => queryForOperation[o](), 
-      { shouldError: true, onError: e => e.message === 'This action is not allowed' },
+      { shouldError: true, onError: e => e.message === 'This action is not allowed' || e.message === 'Inaccessible' },
     )
   }
 }
@@ -1642,6 +1641,163 @@ const notifications_tests = async () => {
   ])
 }
 
+const handleAnyError = { shouldError: true, onError: () => true }
+const passOnAnyResult = { onResult: () => true }
+
+const role_based_access_tests = async () => {
+  log_header("Role Based Access Tests")
+  const adminId = sdk.userInfo.id
+  const nonAdminId = sdkNonAdmin.userInfo.id
+
+  const e = await sdk.api.endusers.createOne({ email: 'roletest@gmail.com' })
+
+  const adminTicket = await sdk.api.tickets.createOne({ title: 'ticket', enduserId: e.id, owner: adminId })
+  const nonAdminTicket = await sdk.api.tickets.createOne({ title: 'ticket', enduserId: e.id, owner: nonAdminId })
+  const nonAdminTicketNoEnduser = await sdk.api.tickets.createOne({ title: 'ticket', owner: nonAdminId })
+  const ticketCreatedByNonAdmin = await sdkNonAdmin.api.tickets.createOne({ title: 'ticket' })
+
+  const email = await sdk.api.emails.createOne({ enduserId: e.id, logOnly: true, subject: 'blah', textContent: 'blah blah' })
+  const sms = await sdk.api.sms_messages.createOne({ enduserId: e.id, logOnly: true, message: 'blah blah' })
+  const calendarEvent = await sdk.api.calendar_events.createOne({ 
+    attendees: [{ id: e.id, type: 'enduser' }],
+    durationInMinutes: 50,
+    startTimeInMS: 2000000,
+    title: 'Access Test'
+  })
+
+  const chatRoom = await sdk.api.chat_rooms.createOne({ enduserIds: [e.id ]})
+  const chatMessage = await sdk.api.chats.createOne({ roomId: chatRoom.id, message: 'test chat access' })
+  const chatMessage2 = await sdk.api.chats.createOne({ roomId: chatRoom.id, message: 'test chat access 2' })
+
+  // unassigned to enduser access tests
+  await async_test(
+    `Admin / creator can access enduser without being assigned`,
+    () => sdk.api.endusers.getOne(e.id),
+    { onResult: e => !!e },
+  )  
+  await async_test(
+    `Unassigned non-admin can't access enduser without being assigned`,
+    () => sdkNonAdmin.api.endusers.getOne(e.id), handleAnyError,
+  )  
+  await async_test(
+    `non-admin for enduser ticket bad`,
+    () => sdkNonAdmin.api.tickets.getOne(adminTicket.id), handleAnyError,
+  )  
+  await async_test(
+    `Non-admin for ticket`, () => sdkNonAdmin.api.tickets.getOne(nonAdminTicketNoEnduser.id), passOnAnyResult
+  )  
+  await async_test(
+    `Non-admin for enduser ticket`, () => sdkNonAdmin.api.tickets.getOne(nonAdminTicket.id), passOnAnyResult
+  )  
+  await async_test(
+    `Non-admin for own ticket`, () => sdkNonAdmin.api.tickets.getOne(ticketCreatedByNonAdmin.id), passOnAnyResult
+  )  
+  await async_test(
+    `Non-admin for tickets`, () => sdkNonAdmin.api.tickets.getSome(), { onResult: ts => ts.length === 3 }
+  )  
+  await async_test(
+    `non-admin for email bad`, () => sdkNonAdmin.api.emails.getOne(email.id), handleAnyError,
+  )  
+  await async_test(
+    `non-admin for sms bad`, () => sdkNonAdmin.api.sms_messages.getOne(sms.id), handleAnyError,
+  )  
+  await async_test(
+    `admin for calendar`, () => sdk.api.calendar_events.getOne(calendarEvent.id), passOnAnyResult,
+  )  
+  await async_test(
+    `non-admin for calendar bad`, () => sdkNonAdmin.api.calendar_events.getOne(calendarEvent.id), handleAnyError,
+  )  
+  await async_test(
+    `non-admin for chat room bad`, () => sdkNonAdmin.api.chat_rooms.getOne(chatRoom.id), handleAnyError,
+  )  
+  await async_test(
+    `non-admin for chat message bad`, () => sdkNonAdmin.api.chats.getOne(chatMessage.id), handleAnyError,
+  )  
+  await async_test(
+    `Non-admin for chats`, () => sdkNonAdmin.api.chats.getSome({ filter: { roomId: chatRoom.id } }), handleAnyError,
+  )  
+
+  // unassigned update / delete coverage
+  await async_test(
+    `non-admin for enduser ticket update bad`,
+    () => sdkNonAdmin.api.tickets.updateOne(adminTicket.id, { title: 'updated' }), handleAnyError,
+  )  
+  await async_test(
+    `non-admin for enduser ticket delete bad`, () => sdkNonAdmin.api.tickets.deleteOne(adminTicket.id), handleAnyError,
+  )  
+  await async_test(
+    `non-admin can't delete tickets by default (even with access)`, 
+    () => sdkNonAdmin.api.tickets.deleteOne(nonAdminTicket.id), handleAnyError,
+  )  
+
+  // set assignees
+  await sdk.api.endusers.updateOne(e.id, { assignedTo: [sdk.userInfo.id, sdkNonAdmin.userInfo.id]})
+
+  // assigned access tests
+  await async_test(
+    `Admin / creator can access enduser while assigned`, () => sdk.api.endusers.getOne(e.id), passOnAnyResult
+  )  
+  await async_test(
+    `Unassigned non-admin can access enduser while assigned`, () => sdkNonAdmin.api.endusers.getOne(e.id), passOnAnyResult
+  )  
+  await async_test(
+    `non-admin for enduser ticket`, () => sdkNonAdmin.api.tickets.getOne(adminTicket.id), passOnAnyResult,
+  )  
+  await async_test(
+    `Non-admin for ticket`, () => sdkNonAdmin.api.tickets.getOne(nonAdminTicketNoEnduser.id), passOnAnyResult
+  )  
+  await async_test(
+    `Non-admin for enduser ticket`, () => sdkNonAdmin.api.tickets.getOne(nonAdminTicket.id), passOnAnyResult
+  )  
+  await async_test(
+    `Non-admin for tickets`, () => sdkNonAdmin.api.tickets.getSome(), { onResult: ts => ts.length === 4 }
+  )  
+  await async_test(
+    `non-admin for email`, () => sdkNonAdmin.api.emails.getOne(email.id), passOnAnyResult,
+  )  
+  await async_test(
+    `non-admin for sms`, () => sdkNonAdmin.api.sms_messages.getOne(sms.id), passOnAnyResult,
+  )  
+  await async_test(
+    `non-admin for calendar`, () => sdkNonAdmin.api.calendar_events.getOne(calendarEvent.id), passOnAnyResult,
+  )  
+  await async_test(
+    `non-admin for chat room`, () => sdkNonAdmin.api.chat_rooms.getOne(chatRoom.id), passOnAnyResult,
+  )  
+  await async_test(
+    `non-admin for chat message`, () => sdkNonAdmin.api.chats.getOne(chatMessage.id), passOnAnyResult,
+  )  
+  await async_test(
+    `Non-admin for chats`, () => sdkNonAdmin.api.chats.getSome({ filter: { roomId: chatRoom.id } }), 
+    { onResult: cs => cs.length === 2 },
+  )  
+
+
+  // update / delete coverage for assigned tickets
+  await async_test(
+    `non-admin assigned enduser ticket update find`,
+    () => sdkNonAdmin.api.tickets.updateOne(adminTicket.id, { title: 'updated' }), passOnAnyResult,
+  )  
+  await async_test(
+    `non-admin for enduser ticket delete still bad`, () => sdkNonAdmin.api.tickets.deleteOne(adminTicket.id), handleAnyError,
+  )  
+
+  // cleanup
+  await Promise.all([
+    sdk.api.endusers.deleteOne(e.id),
+    sdk.api.tickets.deleteOne(adminTicket.id),
+    sdk.api.tickets.deleteOne(nonAdminTicket.id),
+    sdk.api.tickets.deleteOne(nonAdminTicketNoEnduser.id),
+    sdk.api.tickets.deleteOne(ticketCreatedByNonAdmin.id),
+    sdk.api.emails.deleteOne(email.id),
+    sdk.api.sms_messages.deleteOne(sms.id),
+    sdk.api.calendar_events.deleteOne(calendarEvent.id),
+    sdk.api.chat_rooms.deleteOne(chatRoom.id),
+    sdk.api.chats.deleteOne(chatMessage.id),
+    sdk.api.chats.deleteOne(chatMessage2.id),
+  ])
+}
+
 const NO_TEST = () => {}
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
@@ -1688,6 +1844,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
     await enduserAccessTests()
     await generateEnduserAuthTests()
     await enduser_session_tests()
+    await role_based_access_tests()
   } catch(err) {
     console.error("Failed during custom test")
     console.error(err)

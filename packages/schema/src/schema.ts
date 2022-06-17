@@ -114,7 +114,7 @@ export type RelationshipConstraint<T> = {
 export type DependencyAccessConstraint <T> = { type: 'dependency', foreignModel: ModelName, foreignField: string, accessField: keyof T  }
 
 export type AccessConstraint <T> = { type: 'creatorOnly' } 
-  | { type: 'filter', field: string }
+  | { type: 'filter', field: keyof T | `${(keyof T) & string}.${string}` }
   | DependencyAccessConstraint<T>
 
 export type UniqueArrayConstraint <T> = { array: keyof T, itemKey?: string }
@@ -376,6 +376,9 @@ export const schema: SchemaV1 = build_schema({
           } 
         }
       ],
+      access: [ // for non-admins, limit access to endusers the user is assigned to, by default
+        { type: 'filter', field: 'assignedTo' }, 
+      ]
     },
     defaultActions: DEFAULT_OPERATIONS,
     enduserActions: { logout: {}, refresh_session: {}, update: {}, current_session_info: {} },
@@ -795,6 +798,9 @@ export const schema: SchemaV1 = build_schema({
           }
         }
       ],
+      access: [
+        { type: 'filter', field: 'userId' }, 
+      ]
     },
     fields: {
       ...BuiltInFields,   
@@ -916,6 +922,9 @@ export const schema: SchemaV1 = build_schema({
             if (!e?.phoneConsent) return "Missing phone consent"
           }
         }
+      ],
+      access: [
+        { type: 'filter', field: 'userId' }, 
       ]
     },
     fields: {
@@ -1407,6 +1416,9 @@ export const schema: SchemaV1 = build_schema({
           } 
         },
       ],
+      access: [
+        { type: 'filter', field: 'owner' }, 
+      ]
     },
     defaultActions: DEFAULT_OPERATIONS,
     customActions: {},
