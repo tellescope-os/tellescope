@@ -3,19 +3,7 @@
     "composite": true
   },
   "files": [],
-  "references": [
-    { "path": "constants" },
-    { "path": "react" },
-    { "path": "schema" },
-    { "path": "sdk" },
-    { "path": "testing" },
-    { "path": "types-client" },
-    { "path": "types-server" },
-    { "path": "types-models" },
-    { "path": "types-utilities" },
-    { "path": "utilities" },
-    { "path": "validation" }
-  ],
+  "references": [],
   "exclude": [
     "**/lib",
     "**/NativeTests",

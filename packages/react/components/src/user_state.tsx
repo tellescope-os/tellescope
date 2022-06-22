@@ -40,7 +40,7 @@ import {
   CalendarEvent,
   EngagementEvent,
   Journey,
-  EventAutomation,
+  AutomationStep,
   SequenceAutomation,
   User,
 } from "@tellescope/types-client"
@@ -56,7 +56,7 @@ const formsSlice = createSliceForList<Form, 'forms'>('forms')
 const formResponsesSlice = createSliceForList<FormResponse, 'form_response'>('form_response')
 const journeysSlice = createSliceForList<Journey, 'journeys'>('journeys')
 const usersSlice = createSliceForList<User, 'users'>('users')
-const eventAutomationsSlice = createSliceForList<EventAutomation, 'event_automations'>('event_automations')
+const automationStepsSlice = createSliceForList<AutomationStep, 'automations_steps'>('automations_steps')
 const sequenceAutomationsSlice = createSliceForList<SequenceAutomation, 'sequence_automations'>('sequence_automations')
 
 export const userConfig = {
@@ -72,7 +72,7 @@ export const userConfig = {
     form_responses: formResponsesSlice.reducer,
     journeys: journeysSlice.reducer,
     users: usersSlice.reducer,
-    event_automations: eventAutomationsSlice.reducer,
+    automation_steps: automationStepsSlice.reducer,
     sequence_automations: sequenceAutomationsSlice.reducer,
     ...sharedConfig.reducer,
   }
@@ -218,17 +218,17 @@ export const useUsers = (options={} as HookOptions<User>) => {
     {...options}
   )
 }
-export const useEventAutomations = (options={} as HookOptions<EventAutomation>) => {
+export const useAutomationSteps = (options={} as HookOptions<AutomationStep>) => {
   const session = useSession()
   return useListStateHook(
-    'event_automations', useTypedSelector(s => s.event_automations), session, eventAutomationsSlice, 
+    'automation_steps', useTypedSelector(s => s.automation_steps), session, automationStepsSlice, 
     { 
-      loadQuery: session.api.event_automations.getSome,
-      findOne: session.api.event_automations.getOne,
-      addOne: session.api.event_automations.createOne,
-      addSome: session.api.event_automations.createSome,
-      deleteOne: session.api.event_automations.deleteOne,
-      updateOne: session.api.event_automations.updateOne,
+      loadQuery: session.api.automation_steps.getSome,
+      findOne: session.api.automation_steps.getOne,
+      addOne: session.api.automation_steps.createOne,
+      addSome: session.api.automation_steps.createSome,
+      deleteOne: session.api.automation_steps.deleteOne,
+      updateOne: session.api.automation_steps.updateOne,
     }, 
     {...options}
   )

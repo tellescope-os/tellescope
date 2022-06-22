@@ -6,4 +6,7 @@
   },
   "exclude": ["node_modules", "lib"],
   "include": ["src"],
+  "references": [
+    { "path": "../types-utilities" }
+  ] 
 }

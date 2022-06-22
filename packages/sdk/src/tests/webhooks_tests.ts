@@ -198,22 +198,15 @@ const test_automation_webhooks = async () => {
   const journey = await sdk.api.journeys.createOne({ 
     title: "Automations Test", 
     defaultState: state1,
-    states: [
-      { name: state1, priority: 'N/A' },
-      { name: state2, priority: 'N/A' },
-    ]
   })
 
   const testAction: AutomationAction = {
     type: 'sendWebhook',
     info: { message: testMessage }
   }
-  await sdk.api.event_automations.createOne({
+  await sdk.api.automation_steps.createOne({
     journeyId: journey.id,
-    event: {
-      type: "enterState",
-      info: { state: state1, journeyId: journey.id }
-    },
+    event: { type: "onJourneyStart", info: {} },
     action: testAction,
   })
 

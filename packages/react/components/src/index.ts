@@ -31,7 +31,7 @@ export {
   useCalendarEvents as useCalendarEventsForUser,
   useEngagementEvents as useEngagementEventsForUser,
   useJourneys as useJourneysForUser,
-  useEventAutomations as useEventAutomationsForUser,
+  useAutomationSteps,
   useSequenceAutomations as useSequenceAutomationsUser,
   useUsers as useUsersForUser,
 } from "./user_state"

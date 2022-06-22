@@ -86,7 +86,7 @@ import {
   stringValidator25000,
   automationActionValidator,
   automationEventValidator,
-  automationEnduserStatusValidator,
+  automatedActionStatusValidator,
   listOfStringsValidatorEmptyOk,
   listOfChatAttachmentsValidator,
   listOfCalendarEventRemindersValidator,
@@ -96,6 +96,7 @@ import {
   chatRoomUserInfoValidator,
   CUDStringValidator,
   listOfRelatedRecordsValidator,
+  cancelConditionsValidator,
 } from "@tellescope/validation"
 
 import {
@@ -275,7 +276,7 @@ export type CustomActions = {
     file_download_URL: CustomAction<{ secureName: string }, { downloadURL: string }>,
   },
   form_responses: {
-    prepare_form_response: CustomAction<{ formId: string, enduserId: string }, { accessCode: string, url: string }>,
+    prepare_form_response: CustomAction<{ formId: string, enduserId: string, automationStepId?: string }, { accessCode: string, url: string }>,
     submit_form_response: CustomAction<{ accessCode: string, responses: FormResponseValue  }, { }>,
   },
   journeys: {
@@ -823,7 +824,7 @@ export const schema: SchemaV1 = build_schema({
       userId: {
         validator: mongoIdStringValidator,
         examples: [PLACEHOLDER_ID],
-        readonly: true, 
+        updatesDisabled: true, 
         initializer: (a, s) => (s as UserSession).id,
       },
       subject: {
@@ -959,7 +960,6 @@ export const schema: SchemaV1 = build_schema({
       },
       userId: {
         validator: mongoIdStringValidator,
-        readonly: true, // default to only self-sending, for now
         initializer: (a, s) => s.id,
         updatesDisabled: true,
         dependencies: [{
@@ -1647,6 +1647,7 @@ export const schema: SchemaV1 = build_schema({
         parameters: { 
           formId: { validator: mongoIdStringValidator, required: true },
           enduserId: { validator: mongoIdStringValidator, required: true },
+          automationStepId: { validator: mongoIdStringValidator },
         },
         returns: {
           accessCode: { validator: stringValidator250, required: true },
@@ -1888,8 +1889,8 @@ export const schema: SchemaV1 = build_schema({
         examples: ['Automation Title']
       }
     }
-  },
-  event_automations: {
+  }, 
+  automation_steps: {
     info: {},
     constraints: {
       unique: [], 
@@ -1927,20 +1928,10 @@ export const schema: SchemaV1 = build_schema({
       journeyId: { 
         validator: mongoIdStringValidator,
         examples: [PLACEHOLDER_ID],
+        required: true,
         initializer: ({ event }) => (event?.info as any)?.journeyId,
         dependencies: [{
           dependsOn: ['journeys'],
-          dependencyField: '_id',
-          relationship: 'foreignKey',
-          onDependencyDelete: 'delete',
-        }]
-      },
-      formId: { 
-        validator: mongoIdStringValidator,
-        examples: [PLACEHOLDER_ID],
-        initializer: ({ event }) => (event?.info as any)?.formId,
-        dependencies: [{
-          dependsOn: ['forms'],
           dependencyField: '_id',
           relationship: 'foreignKey',
           onDependencyDelete: 'delete',
@@ -1971,7 +1962,7 @@ export const schema: SchemaV1 = build_schema({
       conditions: { validator: listOfAutomationConditionsValidator }
     }
   },
-  automation_endusers: {
+  automated_actions: {
     info: {},
     constraints: {
       unique: ['enduserId'], 
@@ -1983,14 +1974,17 @@ export const schema: SchemaV1 = build_schema({
     enduserActions: { },
     fields: {
       ...BuiltInFields, 
-      automationId: { 
+      cancelConditions: {
+        validator: cancelConditionsValidator,
+      },
+      automationStepId: { 
         validator: mongoIdStringValidator,
         required: true,
         examples: [PLACEHOLDER_ID],
 
         // todo: add or replace with separate depency, when automations model migrated to this schema
         dependencies: [{
-          dependsOn: ['event_automations'], 
+          dependsOn: ['automation_steps'], 
           dependencyField: '_id',
           relationship: 'foreignKey',
           onDependencyDelete: 'delete',
@@ -2030,11 +2024,15 @@ export const schema: SchemaV1 = build_schema({
         }]
       },
       status: { 
-        validator: automationEnduserStatusValidator, 
+        validator: automatedActionStatusValidator, 
         required: true,  
         examples: ['active']
       },
-      stepNumber: { validator: nonNegNumberValidator },
+      processAfter: {
+        validator: nonNegNumberValidator,
+        required: true,
+        examples: [Date.now()],
+      }
     }
   },
   user_logs: {

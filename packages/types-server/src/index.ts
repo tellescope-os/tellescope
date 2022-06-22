@@ -32,14 +32,15 @@ export type Note = ServerModelForName['notes']
 export type Form = ServerModelForName['forms']
 export type FormResponse = ServerModelForName['form_responses']
 export type CalendarEvent = ServerModelForName['calendar_events']
-export type EventAutomation = ServerModelForName['event_automations']
-export type AutomationEnduser = ServerModelForName['automation_endusers']
+export type AutomationStep = ServerModelForName['automation_steps']
+export type AutomatedAction = ServerModelForName['automated_actions']
 export type SequenceAutomation = ServerModelForName['sequence_automations']
 export type UserLog = ServerModelForName['user_logs']
 export type UserNotification = ServerModelForName['user_notifications']
 export type WebHook = ServerModelForName['webhooks']
 
 export type Organization = ToServerModel<BaseOrganization>
+
 export type DatabaseModel = ServerModelForName[keyof ModelForName]
 export type DatabaseRecord = ToServerModel<RecordInfo>
 export { ModelName } from "@tellescope/types-models"

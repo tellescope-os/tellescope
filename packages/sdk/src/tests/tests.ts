@@ -1405,7 +1405,7 @@ const automation_events_tests = async () => {
 
   await async_test(
     `enterState cannot match updateStateForJourney`,
-    () => sdk.api.event_automations.createOne({
+    () => sdk.api.automation_steps.createOne({
       journeyId: journey.id,
       event: {
         type: "enterState",
@@ -1420,7 +1420,7 @@ const automation_events_tests = async () => {
   ) 
   await async_test(
     `leaveState cannot match updateStateForJourney`,
-    () => sdk.api.event_automations.createOne({
+    () => sdk.api.automation_steps.createOne({
       journeyId: journey.id,
       event: {
         type: "leaveState",
@@ -1438,7 +1438,7 @@ const automation_events_tests = async () => {
     type: 'sendWebhook',
     info: { message: 'test' }
   }
-  await sdk.api.event_automations.createOne({
+  await sdk.api.automation_steps.createOne({
     journeyId: journey.id,
     event: {
       type: "enterState",
@@ -1446,7 +1446,7 @@ const automation_events_tests = async () => {
     },
     action: testAction,
   })
-  await sdk.api.event_automations.createOne({
+  await sdk.api.automation_steps.createOne({
     journeyId: journey.id,
     event: {
       type: "leaveState",
@@ -1454,7 +1454,7 @@ const automation_events_tests = async () => {
     },
     action: testAction,
   })
-  await sdk.api.event_automations.createOne({
+  await sdk.api.automation_steps.createOne({
     journeyId: journey.id,
     event: {
       type: "enterState",
@@ -1463,7 +1463,7 @@ const automation_events_tests = async () => {
     action: testAction,
   })
 
-  await sdk.api.event_automations.createOne({
+  await sdk.api.automation_steps.createOne({
     journeyId: journey.id,
     event: {
       type: "formResponse",
@@ -1480,7 +1480,7 @@ const automation_events_tests = async () => {
 
   await async_test(
     `Cannot insert duplicate event/action pair`,
-    () => sdk.api.event_automations.createOne({
+    () => sdk.api.automation_steps.createOne({
       journeyId: journey.id,
       event: {
         type: "enterState",
@@ -1514,8 +1514,8 @@ const automation_events_tests = async () => {
 
   await async_test(
     `Automation events triggered correctly`,
-    () => sdk.api.automation_endusers.getSome({ filter: { enduserId: enduser.id }}),
-    { onResult: es => es && es.length === 4 && es.filter(a => a.automationId === "ONE_TIME").length === 4 }
+    () => sdk.api.automated_actions.getSome({ filter: { enduserId: enduser.id }}),
+    { onResult: es => es && es.length === 4 && es.filter(a => a.automationStepId === "ONE_TIME").length === 4 }
   )  
 
   // cleanup
@@ -1543,7 +1543,7 @@ const form_response_tests = async () => {
       intakeField: stringIntakeField
     }]
   })
-  await sdk.api.event_automations.createOne({
+  await sdk.api.automation_steps.createOne({
     event: { type: "formResponse", info: { formId: form.id } },
     action: { type: 'sendWebhook', info: { message: 'test' } },
   })
@@ -1551,7 +1551,7 @@ const form_response_tests = async () => {
   const { accessCode } = await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })
   await sdk.api.form_responses.submit_form_response({ accessCode, responses: [stringResponse]  })
 
-  const [triggeredAutomation] = await sdk.api.automation_endusers.getSome()
+  const [triggeredAutomation] = await sdk.api.automated_actions.getSome()
   const enduserWithUpdate = await sdk.api.endusers.getOne(enduser.id)
   const recordedResponse = await sdk.api.form_responses.getOne({ accessCode })
 
@@ -1818,10 +1818,10 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   forms: NO_TEST,
   form_responses: form_response_tests,
   calendar_events: calendar_events_tests,
-  webhooks: NO_TEST, // tested separately
-  event_automations: automation_events_tests,
+  webhooks: NO_TEST, // tested separately,
+  automation_steps: automation_events_tests,
   sequence_automations: NO_TEST,
-  automation_endusers: NO_TEST,
+  automated_actions: NO_TEST,
   user_logs: NO_TEST,
   user_notifications: notifications_tests,
 };

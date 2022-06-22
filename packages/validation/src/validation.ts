@@ -50,9 +50,8 @@ import {
   UpdateStateForJourneyAutomationAction,
   RemoveFromSequenceAutomationAction,
   AddToSequenceAutomationAction,
-  AutomationEnduserStatus,
+  AutomatedActionStatus,
   AutomationForTemplate,
-  CreateTaskAutomationAction,
   ChatAttachment,
   FormFieldType,
   FormResponseValue,
@@ -66,6 +65,16 @@ import {
   ChatRoomUserInfo,
   RelatedRecord,
   SearchOptions,
+  WithAutomationStepId,
+  AfterActionEventInfo,
+  AfterActionAutomationEvent,
+  OnJourneyStartAutomationEvent,
+  UnitOfTime,
+  CreateTicketAutomationAction,
+  FormUnsubmittedEvent,
+  FormUnsubmittedEventInfo,
+  CancelCondition,
+  FormSubmitCancellationConditionInfo,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -263,7 +272,7 @@ export const orValidator = <T>(escapeFunctions: { [K in keyof T]: EscapeFunction
         return escape(value)
       } catch(err) { continue }
     }
-    throw 'Value does not match any of the expected options'
+    throw `Value does not match any of the expected options`
   },
   { ...o, listOf: false }
 )
@@ -278,7 +287,11 @@ export const filterCommandsValidator: EscapeBuilder<FilterType> = (o={}) => buil
   }, { ...o, isObject: true, listOf: false }
 )
 
-export const objectValidator = <T extends object>(i: InputValidation<Required<T>>, objectOptions={ emptyOk: true }): EscapeBuilder<T>  => (o={}) => build_validator(
+interface ObjectOptions {
+  emptyOk?: boolean,
+  throwOnUnrecognizedField?: boolean,
+}
+export const objectValidator = <T extends object>(i: InputValidation<Required<T>>, objectOptions={ emptyOk: true } as ObjectOptions): EscapeBuilder<T>  => (o={}) => build_validator(
   (object: any) => {
     const emptyOk = objectOptions.emptyOk ?? true
     const validated = {} as T
@@ -290,14 +303,17 @@ export const objectValidator = <T extends object>(i: InputValidation<Required<T>
       throw new Error(`Expected a non-empty object`)
     }
 
-    const unrecognizedFields = []
-    for (const field in object) {
-      if (!(i as Indexable)[field]) {
-        unrecognizedFields.push(field)
-      } 
-    }
-    if (unrecognizedFields.length > 0) {
-      throw new Error(`Got unexpected field(s) [${unrecognizedFields.join(', ')}]`)
+    // don't throw on unrecognized fields, just ignore/don't validate them
+    if (objectOptions.throwOnUnrecognizedField) {
+      const unrecognizedFields = []
+      for (const field in object) {
+        if (!(i as Indexable)[field]) {
+          unrecognizedFields.push(field)
+        } 
+      }
+      if (unrecognizedFields.length > 0) {
+        throw new Error(`Got unexpected field(s) [${unrecognizedFields.join(', ')}]`)
+      }
     }
 
     for (const field in i) {
@@ -310,6 +326,41 @@ export const objectValidator = <T extends object>(i: InputValidation<Required<T>
 
     return validated
   }, { ...o, isObject: true, listOf: false }
+)
+export const listOfObjectsValidator = <T extends object>(i: InputValidation<Required<T>>, objectOptions={ emptyOk: true }): EscapeBuilder<T[]>  => (o={}) => build_validator(
+  (object: any) => {
+    const emptyOk = !!objectOptions.emptyOk
+    const validated = {} as T
+
+    if (!is_object(object)) {
+      throw new Error(`Expected a non-null object by got ${object}`)
+    }
+    if (!emptyOk && object_is_empty(object)) {
+      throw new Error(`Expected a non-empty object`)
+    }
+
+    // don't throw on unrecognized fields, just ignore/don't validate them
+    // const unrecognizedFields = []
+    // for (const field in object) {
+    //   if (!(i as Indexable)[field]) {
+    //     unrecognizedFields.push(field)
+    //   } 
+    // }
+    // if (unrecognizedFields.length > 0) {
+    //   throw new Error(`Got unexpected field(s) [${unrecognizedFields.join(', ')}]`)
+    // }
+
+    for (const field in i) {
+      const value = (object as Indexable)[field] 
+
+      const escaped = i[field](value) // may be required
+      if (escaped === undefined) continue
+
+      validated[field] = escaped
+    }
+
+    return validated
+  }, { ...o, isObject: true, listOf: true }
 )
 
 export const objectAnyFieldsValidator = <T=string | number>(valueValidator?: EscapeFunction<T>): EscapeBuilder<Indexable<T>> => (o={}) => build_validator(
@@ -498,7 +549,7 @@ export const journeysValidator: EscapeBuilder<Indexable> = (options={}) => build
     }
 
     const mIdValidator = mongoIdValidator()
-    const stateValidator   = stringValidator({ maxLength: 75, errorMessage: "Journey state names may not exceed 75 characters" })
+    const stateValidator   = stringValidator({ isOptional: true, maxLength: 75, errorMessage: "Journey state names may not exceed 75 characters" })
     for (const j in journeys) {
       mIdValidator(j);
       (journeys as Indexable)[j] = stateValidator(journeys[j as keyof typeof journeys]);
@@ -955,12 +1006,23 @@ export const CUDValidator = objectValidator<CUDSubscription>({
   delete: booleanValidator({ isOptional: true }),
 })
 
+const _UNIT_OF_TIME: { [K in UnitOfTime]: any } = {
+  Days: '',
+  Hours: '',
+  Minutes: '',
+  Seconds: '',
+}
+export const UNITS_OF_TIME = Object.keys(_UNIT_OF_TIME) as UnitOfTime[]
+
+export const UnitOfTimeValidator = exactMatchValidator<UnitOfTime>(UNITS_OF_TIME)
+
 const WebhookSubscriptionValidatorObject = {} as { [K in WebhookSupportedModel]: EscapeFunction<CUDSubscription> } 
 for (const model in WEBHOOK_MODELS) {
   WebhookSubscriptionValidatorObject[model as WebhookSupportedModel] = CUDValidator({ listOf: false, isOptional: true })
 }
 export const WebhookSubscriptionValidator = objectValidator<{ [K in WebhookSupportedModel]: CUDSubscription}>(
-  WebhookSubscriptionValidatorObject
+  WebhookSubscriptionValidatorObject,
+  { throwOnUnrecognizedField: true }
 )
 
 export const sessionTypeValidator = exactMatchValidator<SessionType>(['user', 'enduser'])
@@ -1032,18 +1094,22 @@ export const chatRoomUserInfoValidator = objectAnyFieldsValidator(objectValidato
   unreadCount: nonNegNumberValidator(),
 })())
 
-const _AUTOMATION_ENDUSER_STATUS: { [K in AutomationEnduserStatus]: any } = {
+const _AUTOMATION_ENDUSER_STATUS: { [K in AutomatedActionStatus]: any } = {
   active: '',
-  paused: '',
   finished: '',
+  cancelled: '',
+  error: '',
 }
-export const AUTOMATION_ENDUSER_STATUS = Object.keys(_AUTOMATION_ENDUSER_STATUS) as AutomationEnduserStatus[]
-export const automationEnduserStatusValidator = exactMatchValidator<AutomationEnduserStatus>(AUTOMATION_ENDUSER_STATUS)
+export const AUTOMATION_ENDUSER_STATUS = Object.keys(_AUTOMATION_ENDUSER_STATUS) as AutomatedActionStatus[]
+export const automatedActionStatusValidator = exactMatchValidator<AutomatedActionStatus>(AUTOMATION_ENDUSER_STATUS)
 
 const _AUTOMATION_EVENTS: { [K in AutomationEventType]: any } = {
   enterState: '',
   formResponse: '',
   leaveState: '',
+  afterAction: '',
+  onJourneyStart: '',
+  formUnsubmitted: '',
 }
 export const AUTOMATION_EVENTS = Object.keys(_AUTOMATION_EVENTS) as AutomationEventType[]
 export const automationEventTypeValidator = exactMatchValidator<AutomationEventType>(AUTOMATION_EVENTS)
@@ -1051,7 +1117,7 @@ export const automationEventTypeValidator = exactMatchValidator<AutomationEventT
 const _AUTOMATION_ACTIONS: { [K in AutomationActionType]: any } = {
   addToSequence: '',
   removeFromSequence: '',
-  createTask: '',
+  createTicket: '',
   sendEmail: '',
   sendSMS: '',
   sendForm: '',
@@ -1070,6 +1136,22 @@ const _MESSAGE_TEMPLATE_MODES: { [K in MessageTemplateMode]: any } = {
 export const MESSAGE_TEMPLATE_MODES = Object.keys(_MESSAGE_TEMPLATE_MODES) as MessageTemplateMode[]
 export const messageTemplateModeValidator = exactMatchValidator<MessageTemplateMode>(MESSAGE_TEMPLATE_MODES)
 
+export const cancelConditionsValidator = listOfObjectsValidator<CancelCondition>({
+  type: exactMatchValidator(['formResponse'])(),
+  info: objectValidator<FormSubmitCancellationConditionInfo>({
+    automationStepId: mongoIdStringRequired,
+    formId: mongoIdStringRequired,
+  }, { emptyOk: false })(),
+})
+
+const delayValidation = { 
+  automationStepId: mongoIdStringRequired, 
+  delayInMS: nonNegNumberValidator(), // use 0 when no delay
+  delay: nonNegNumberValidator(), // for UI only
+  unit: UnitOfTimeValidator(), // for UI only
+  cancelConditions: cancelConditionsValidator({ isOptional: true, emptyListOk: true })
+}
+
 export const calendarEventReminderValidator = objectValidator<CalendarEventReminder>({
   type: exactMatchValidator<CalendarEventReminderType>(['webhook'])(),
   remindAt: nonNegNumberValidator(),
@@ -1080,22 +1162,41 @@ export const listOfCalendarEventRemindersValidator = listValidator(calendarEvent
 export const automationEventValidator = orValidator<{ [K in AutomationEventType]: AutomationEvent & { type: K } } >({
   enterState: objectValidator<EnterStateAutomationEvent>({
     type: exactMatchValidator(['enterState'])(),
-    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired })(),
+    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired }, { emptyOk: false })(),
   })(),
   leaveState: objectValidator<LeaveStateAutomationEvent>({
     type: exactMatchValidator(['leaveState'])(),
-    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired })(),
+    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired }, { emptyOk: false })(),
   })(),
   formResponse: objectValidator<FormResponseAutomationEvent>({
     type: exactMatchValidator(['formResponse'])(),
-    info: objectValidator<AutomationForForm>({ formId: mongoIdStringValidator() })(),
+    info: objectValidator<AutomationForForm & WithAutomationStepId>({ 
+      formId: mongoIdStringValidator(),
+      automationStepId: mongoIdStringValidator(),
+    }, { emptyOk: false })(),
+  })(),
+  afterAction: objectValidator<AfterActionAutomationEvent>({
+    type: exactMatchValidator(['afterAction'])(),
+    info: objectValidator<AfterActionEventInfo>(delayValidation, { emptyOk: false })(),
+  })(),
+  formUnsubmitted: objectValidator<FormUnsubmittedEvent>({
+    type: exactMatchValidator(['formUnsubmitted'])(),
+    info: objectValidator<FormUnsubmittedEventInfo>({ 
+      ...delayValidation,
+      automationStepId: mongoIdStringRequired, 
+      formId: mongoIdStringRequired,
+    }, { emptyOk: false })(),
+  })(),
+  onJourneyStart: objectValidator<OnJourneyStartAutomationEvent>({
+    type: exactMatchValidator(['onJourneyStart'])(),
+    info: objectValidator<{}>({ }, { emptyOk: true })(),
   })(),
 })
 
 export const automationConditionValidator = orValidator<{ [K in AutomationConditionType]: AutomationCondition & { type: K } } >({
   atJourneyState: objectValidator<AtJourneyStateAutomationCondition>({
     type: exactMatchValidator(['atJourneyState'])(),
-    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired })(),
+    info: objectValidator<AutomationForJourneyAndState>({ state: stringValidator100(), journeyId: mongoIdStringRequired }, { emptyOk: false })(),
   })(),
 })
 export const listOfAutomationConditionsValidator = listValidatorEmptyOk(automationConditionValidator())
@@ -1103,39 +1204,39 @@ export const listOfAutomationConditionsValidator = listValidatorEmptyOk(automati
 export const automationActionValidator = orValidator<{ [K in AutomationActionType]: AutomationAction & { type: K } } >({
   sendEmail: objectValidator<SendEmailAutomationAction>({
     type: exactMatchValidator(['sendEmail'])(),
-    info: objectValidator<AutomationForMessage>({ senderId: mongoIdStringValidator(), templateId: mongoIdStringValidator() })(),
+    info: objectValidator<AutomationForMessage>({ senderId: mongoIdStringValidator(), templateId: mongoIdStringValidator() }, { emptyOk: false })(),
   })(),
   sendSMS: objectValidator<SendSMSAutomationAction>({
     type: exactMatchValidator(['sendSMS'])(),
-    info: objectValidator<AutomationForMessage>({ senderId: mongoIdStringValidator(), templateId: mongoIdStringValidator() })(),
+    info: objectValidator<AutomationForMessage>({ senderId: mongoIdStringValidator(), templateId: mongoIdStringValidator() }, { emptyOk: false })(),
   })(),
   sendForm: objectValidator<SendFormAutomationAction>({
     type: exactMatchValidator(['sendForm'])(),
-    info: objectValidator<AutomationForFormRequest>({ senderId: mongoIdStringValidator(), formId: mongoIdStringValidator() })(),
+    info: objectValidator<AutomationForFormRequest>({ senderId: mongoIdStringValidator(), formId: mongoIdStringValidator() }, { emptyOk: false })(),
   })(),
-  createTask: objectValidator<CreateTaskAutomationAction>({
-    type: exactMatchValidator(['createTask'])(),
-    info: objectValidator<AutomationForTemplate>({ templateId: mongoIdStringValidator() })(),
+  createTicket: objectValidator<CreateTicketAutomationAction>({
+    type: exactMatchValidator(['createTicket'])(),
+    info: objectValidator<AutomationForTemplate>({ templateId: mongoIdStringValidator() }, { emptyOk: false })(),
   })(),
   sendNotification: objectValidator<SendNotificationAutomationAction>({
     type: exactMatchValidator(['sendNotification'])(),
-    info: objectValidator<AutomationForNotification>({ templateId: mongoIdStringRequired, destination: stringValidator5000() })(),
+    info: objectValidator<AutomationForNotification>({ templateId: mongoIdStringRequired, destination: stringValidator5000() }, { emptyOk: false })(),
   })(),
   sendWebhook: objectValidator<SendWebhookAutomationAction>({
     type: exactMatchValidator(['sendWebhook'])(),
-    info: objectValidator<AutomationForWebhook>({ message: stringValidator5000() })(),
+    info: objectValidator<AutomationForWebhook>({ message: stringValidator5000() }, { emptyOk: false })(),
   })(),
   updateStateForJourney: objectValidator<UpdateStateForJourneyAutomationAction>({
     type: exactMatchValidator(['updateStateForJourney'])(),
-    info: objectValidator<AutomationForJourneyAndState>({ journeyId: mongoIdStringRequired, state: stringValidator100() })(),
+    info: objectValidator<AutomationForJourneyAndState>({ journeyId: mongoIdStringRequired, state: stringValidator100() }, { emptyOk: false })(),
   })(),
   addToSequence: objectValidator<AddToSequenceAutomationAction>({
     type: exactMatchValidator(['addToSequence'])(),
-    info: objectValidator<AutomationForAutomation>({ automationId: mongoIdStringValidator() })(),
+    info: objectValidator<AutomationForAutomation>({ automationId: mongoIdStringValidator() }, { emptyOk: false })(),
   })(),
   removeFromSequence: objectValidator<RemoveFromSequenceAutomationAction>({
     type: exactMatchValidator(['removeFromSequence'])(),
-    info: objectValidator<AutomationForAutomation>({ automationId: mongoIdStringValidator() })(),
+    info: objectValidator<AutomationForAutomation>({ automationId: mongoIdStringValidator() }, { emptyOk: false })(),
   })(),
 })
 

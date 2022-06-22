@@ -9,12 +9,15 @@ import {
 import { 
   ClientModelForName,
 } from "@tellescope/types-client"
+import { Indexable } from "@tellescope/utilities"
 
 export const DEFAULT_HOST = 'https://api.tellescope.com'
 
 export interface SessionOptions {
   apiKey?: string;
   authToken?: string;
+  servicesSecret?: string,
+  businessId?: string,
   host?: string;
   cacheKey?: string;
   expirationInSeconds?: number,
@@ -54,6 +57,9 @@ export class Session {
   authToken: string;
   cacheKey: string;
   apiKey?: string;
+  servicesSecret?: string;
+  businessId?: string;
+  userSessionInfo?: { id: string } & Indexable;
   socket?: Socket;
   type?: string
   enableSocketLogging?: boolean;
@@ -67,8 +73,12 @@ export class Session {
   config: { headers: { Authorization: string }};
 
   constructor(o={} as SessionOptions & RequestOptions & { type: string }) {
+    if (o.servicesSecret && !o.businessId) throw new Error("Services secret provided without businessId")
+
     this.host= o.host ?? DEFAULT_HOST
     this.apiKey = o.apiKey ?? '';
+    this.servicesSecret = o.servicesSecret;
+    this.businessId = o.businessId;
     this.expirationInSeconds = o.expirationInSeconds
     this.socket = undefined as Socket | undefined
     this.socketAuthenticated = false
@@ -114,7 +124,18 @@ export class Session {
     this.clearCache()
   }
 
-  getAuthInfo = (requiresAuth?: boolean) => requiresAuth && this.apiKey ? { apiKey: this.apiKey } : { }
+  getAuthInfo = (requiresAuth?: boolean) => requiresAuth && (
+    this.apiKey ? { apiKey: this.apiKey }
+    : this.servicesSecret ? { 
+        servicesSecret: this.servicesSecret,
+        sessionInfo: { 
+          ...this.userSessionInfo,
+          businessId: this.businessId, 
+          organization: this.businessId,
+        }, 
+      }
+    : { }
+  )
   
   errorHandler = async (_err: any) => {
     const err = parseError(_err)
