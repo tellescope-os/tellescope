@@ -75,6 +75,8 @@ import {
   FormUnsubmittedEventInfo,
   CancelCondition,
   FormSubmitCancellationConditionInfo,
+  SetEnduserStatusAutomationAction,
+  SetEnduserStatusInfo,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -1124,6 +1126,7 @@ const _AUTOMATION_ACTIONS: { [K in AutomationActionType]: any } = {
   sendNotification: '',
   updateStateForJourney: '',
   sendWebhook: '',
+  setEnduserStatus: '',
 }
 export const AUTOMATION_ACTIONS = Object.keys(_AUTOMATION_ACTIONS) as AutomationActionType[]
 export const automationActionTypeValidator = exactMatchValidator<AutomationActionType>(AUTOMATION_ACTIONS)
@@ -1202,6 +1205,10 @@ export const automationConditionValidator = orValidator<{ [K in AutomationCondit
 export const listOfAutomationConditionsValidator = listValidatorEmptyOk(automationConditionValidator())
 
 export const automationActionValidator = orValidator<{ [K in AutomationActionType]: AutomationAction & { type: K } } >({
+  setEnduserStatus: objectValidator<SetEnduserStatusAutomationAction>({
+    type: exactMatchValidator(['setEnduserStatus'])(),
+    info: objectValidator<SetEnduserStatusInfo>({ status: stringValidator250() }, { emptyOk: false })(),
+  })(),
   sendEmail: objectValidator<SendEmailAutomationAction>({
     type: exactMatchValidator(['sendEmail'])(),
     info: objectValidator<AutomationForMessage>({ senderId: mongoIdStringValidator(), templateId: mongoIdStringValidator() }, { emptyOk: false })(),

@@ -205,6 +205,7 @@ export const defaultModalStyle: React.CSSProperties = {
   padding: 25,
   alignItems: 'center',
   justifyContent: 'center',
+  overflowY: 'auto',
 }
 
 export const IconModal = ({ open, setOpen, children, disabled, onClick, style=defaultModalStyle, ...props }: ReturnType<typeof useModalIconButton> & Styled & { children: React.ReactNode }) => (

@@ -241,6 +241,10 @@ const sideEffects = {
   updateChatroomCache: {
     name: "updateChatroomCache",
     description: "Updates the chatroom with a preview of the recent message and sender"
+  },
+  updateEnduserStatus: {
+    name: "updateEnduserStatus",
+    description: "Updates the journeys[journeyId] field in an enduser to reflect a new status update"
   }
 }
 export type SideEffectNames = keyof typeof sideEffects
@@ -583,6 +587,44 @@ export const schema: SchemaV1 = build_schema({
       },
     },
   },
+  enduser_status_updates: {
+    info: {
+      sideEffects: { create: [sideEffects.updateEnduserStatus], createMany: [sideEffects.updateEnduserStatus] },
+    },
+    fields: {
+      ...BuiltInFields,
+      journeyId: { 
+        validator: mongoIdStringValidator,
+        examples: [PLACEHOLDER_ID],
+        required: true,
+        dependencies: [{
+          dependsOn: ['journeys'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      enduserId: { 
+        validator: mongoIdStringValidator,
+        examples: [PLACEHOLDER_ID],
+        required: true,
+        dependencies: [{
+          dependsOn: ['endusers'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      status: { 
+        required: true,
+        validator: stringValidator250, 
+        examples: ["Status"]
+      }
+    },
+    constraints: { unique: [], relationship: [], access: [] },
+    defaultActions: { create: {}, createMany: {}, read: {}, readMany: {}, delete: {} },
+    customActions: {},
+  },
   api_keys: {
     info: {},
     fields: {
@@ -914,9 +956,8 @@ export const schema: SchemaV1 = build_schema({
       relationship: [
         {
           explanation: "Phone number and phone consent must be set for enduser",
-          evaluate: ({ enduserId, logOnly }, deps, _, method) => {
+          evaluate: ({ enduserId, logOnly }, deps, _) => {
             if (logOnly === true) return
-            if (method === 'update') return
 
             const e = deps[enduserId ?? ''] as Enduser
             if (!e?.phone) return "Missing phone"
@@ -1981,8 +2022,6 @@ export const schema: SchemaV1 = build_schema({
         validator: mongoIdStringValidator,
         required: true,
         examples: [PLACEHOLDER_ID],
-
-        // todo: add or replace with separate depency, when automations model migrated to this schema
         dependencies: [{
           dependsOn: ['automation_steps'], 
           dependencyField: '_id',
@@ -1996,6 +2035,17 @@ export const schema: SchemaV1 = build_schema({
         examples: [PLACEHOLDER_ID],
         dependencies: [{
           dependsOn: ['endusers'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      journeyId: { 
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['journeys'],
           dependencyField: '_id',
           relationship: 'foreignKey',
           onDependencyDelete: 'delete',

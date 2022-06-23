@@ -79,6 +79,7 @@ export const defaultQueries = <N extends keyof ClientModelForName>(
 
 const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : APIQuery<K> } => ({
   endusers: defaultQueries(s, 'endusers'),
+  enduser_status_updates: defaultQueries(s, 'enduser_status_updates'),
   engagement_events: defaultQueries(s, 'engagement_events'),
   journeys: defaultQueries(s, 'journeys'),
   api_keys: defaultQueries(s, 'api_keys'),

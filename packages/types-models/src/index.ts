@@ -156,6 +156,15 @@ export interface Enduser extends Enduser_readonly, Enduser_required, Enduser_upd
   unread?: boolean,
 }
 
+export interface EnduserStatusUpdate_readonly extends ClientRecord {} 
+export interface EnduserStatusUpdate_required {
+  enduserId: string,
+  journeyId: string,
+  status: string,
+}
+export interface EnduserStatusUpdate_updatesDisabled {}
+export interface EnduserStatusUpdate extends EnduserStatusUpdate_readonly, EnduserStatusUpdate_required, EnduserStatusUpdate_updatesDisabled {}
+
 export interface APIKey_readonly extends ClientRecord { 
   hashedKey: string, // stored as hash
 }
@@ -570,6 +579,8 @@ export type AutomationEventForType = {
   'formUnsubmitted': FormUnsubmittedEvent
 }
 
+export type SetEnduserStatusInfo = { status: string }
+
 interface AutomationActionBuilder <T extends AutomationActionType, V extends object> {
   type: T,
   info: V,
@@ -578,6 +589,7 @@ export type SendNotificationAutomationAction = AutomationActionBuilder<'sendNoti
 export type SendEmailAutomationAction = AutomationActionBuilder<'sendEmail', AutomationForMessage>
 export type SendSMSAutomationAction = AutomationActionBuilder<'sendSMS', AutomationForMessage>
 export type SendFormAutomationAction = AutomationActionBuilder<'sendForm', AutomationForFormRequest>
+export type SetEnduserStatusAutomationAction = AutomationActionBuilder<'setEnduserStatus', SetEnduserStatusInfo>
 export type UpdateStateForJourneyAutomationAction = AutomationActionBuilder<'updateStateForJourney', AutomationForJourneyAndState>
 export type CreateTicketAutomationAction = AutomationActionBuilder<'createTicket', AutomationForTemplate>
 export type AddToSequenceAutomationAction = AutomationActionBuilder<'addToSequence', AutomationForAutomation> // depreacted
@@ -602,6 +614,7 @@ export type AutomationActionForType = {
   'addToSequence': AddToSequenceAutomationAction, // deprecated
   'removeFromSequence': RemoveFromSequenceAutomationAction, // deprecated
   'sendWebhook': SendWebhookAutomationAction
+  'setEnduserStatus': SetEnduserStatusAutomationAction
 }
 export type AutomationActionType = keyof AutomationActionForType
 export type AutomationAction = AutomationActionForType[AutomationActionType]
@@ -635,6 +648,7 @@ export interface AutomatedAction_readonly extends ClientRecord {}
 export interface AutomatedAction_required {
   enduserId: string,
   automationStepId: string,
+  journeyId: string,
   event: AutomationEvent,
   action: AutomationAction,
   status: AutomatedActionStatus,
@@ -693,6 +707,7 @@ export type ModelForName_required = {
   webhooks: WebHook_required;
   user_logs: UserLog_required;
   user_notifications: UserNotification_required;
+  enduser_status_updates: EnduserStatusUpdate_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
 
@@ -721,6 +736,7 @@ export interface ModelForName_readonly {
   webhooks: WebHook_readonly;
   user_logs: UserLog_readonly;
   user_notifications: UserNotification_readonly;
+  enduser_status_updates: EnduserStatusUpdate_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
 
@@ -749,6 +765,7 @@ export interface ModelForName_updatesDisabled {
   webhooks: WebHook_updatesDisabled;
   user_logs: UserLog_updatesDisabled;
   user_notifications: UserNotification_updatesDisabled;
+  enduser_status_updates: EnduserStatusUpdate_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
 
@@ -777,6 +794,7 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   webhooks: WebHook;
   user_logs: UserLog;
   user_notifications: UserNotification;
+  enduser_status_updates: EnduserStatusUpdate;
 }
 export type ModelName = keyof ModelForName
 export type Model = ModelForName[keyof ModelForName]
@@ -792,6 +810,7 @@ export type UserActivityStatus = 'Active' | 'Away' | 'Unavailable'
 
 export const modelNameChecker: { [K in ModelName] : true } = {
   endusers: true,
+  enduser_status_updates: true,
   engagement_events: true,
   journeys: true,
   api_keys: true,

@@ -1798,6 +1798,27 @@ const role_based_access_tests = async () => {
   ])
 }
 
+const status_update_tests = async () => {
+  log_header("Enduser Status Updates")
+
+  const journey = await sdk.api.journeys.createOne({ title: 'test' })
+  const enduser = await sdk.api.endusers.createOne({ email: 'delete@tellescope.com'  })
+  const status  = await sdk.api.enduser_status_updates.createOne({ enduserId: enduser.id, journeyId: journey.id, status: "Working"})
+
+  // status update on enduser is a side effect
+  await wait(undefined, 100)
+  await async_test(
+    `status update`, () => sdk.api.endusers.getOne(enduser.id), {
+      onResult: e => e.journeys?.[journey.id] === status.status
+    },
+  )  
+
+  await Promise.all([
+    sdk.api.journeys.deleteOne(journey.id), // status deleted as side effect 
+    sdk.api.endusers.deleteOne(enduser.id), // status deleted as side effect
+  ])
+}
+
 const NO_TEST = () => {}
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
@@ -1822,6 +1843,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   automation_steps: automation_events_tests,
   sequence_automations: NO_TEST,
   automated_actions: NO_TEST,
+  enduser_status_updates: status_update_tests,
   user_logs: NO_TEST,
   user_notifications: notifications_tests,
 };
