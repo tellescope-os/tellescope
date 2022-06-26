@@ -1143,7 +1143,6 @@ export const cancelConditionsValidator = listOfObjectsValidator<CancelCondition>
   type: exactMatchValidator(['formResponse'])(),
   info: objectValidator<FormSubmitCancellationConditionInfo>({
     automationStepId: mongoIdStringRequired,
-    formId: mongoIdStringRequired,
   }, { emptyOk: false })(),
 })
 
@@ -1156,7 +1155,8 @@ const delayValidation = {
 }
 
 export const calendarEventReminderValidator = objectValidator<CalendarEventReminder>({
-  type: exactMatchValidator<CalendarEventReminderType>(['webhook'])(),
+  type: exactMatchValidator<CalendarEventReminderType>(['webhook'])(), // built-in calendar-specific reminder
+  // action: use this field for general pupose automation event actions
   remindAt: nonNegNumberValidator(),
   didRemind: booleanValidator({ isOptional: true }),
 })()
@@ -1173,8 +1173,7 @@ export const automationEventValidator = orValidator<{ [K in AutomationEventType]
   })(),
   formResponse: objectValidator<FormResponseAutomationEvent>({
     type: exactMatchValidator(['formResponse'])(),
-    info: objectValidator<AutomationForForm & WithAutomationStepId>({ 
-      formId: mongoIdStringValidator(),
+    info: objectValidator<WithAutomationStepId>({ 
       automationStepId: mongoIdStringValidator(),
     }, { emptyOk: false })(),
   })(),
@@ -1187,7 +1186,6 @@ export const automationEventValidator = orValidator<{ [K in AutomationEventType]
     info: objectValidator<FormUnsubmittedEventInfo>({ 
       ...delayValidation,
       automationStepId: mongoIdStringRequired, 
-      formId: mongoIdStringRequired,
     }, { emptyOk: false })(),
   })(),
   onJourneyStart: objectValidator<OnJourneyStartAutomationEvent>({

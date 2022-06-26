@@ -1463,21 +1463,6 @@ const automation_events_tests = async () => {
     action: testAction,
   })
 
-  await sdk.api.automation_steps.createOne({
-    journeyId: journey.id,
-    event: {
-      type: "formResponse",
-      info: { formId: form.id },
-    },
-    conditions: [
-      {
-        type: 'atJourneyState',
-        info: { state: state2, journeyId: journey.id }
-      } 
-    ],
-    action: testAction,
-  })
-
   await async_test(
     `Cannot insert duplicate event/action pair`,
     () => sdk.api.automation_steps.createOne({
@@ -1543,19 +1528,19 @@ const form_response_tests = async () => {
       intakeField: stringIntakeField
     }]
   })
-  await sdk.api.automation_steps.createOne({
-    event: { type: "formResponse", info: { formId: form.id } },
-    action: { type: 'sendWebhook', info: { message: 'test' } },
-  })
+  // await sdk.api.automation_steps.createOne({
+  //   event: { type: "formResponse", info: { formId: form.id } },
+  //   action: { type: 'sendWebhook', info: { message: 'test' } },
+  // })
 
   const { accessCode } = await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })
   await sdk.api.form_responses.submit_form_response({ accessCode, responses: [stringResponse]  })
 
-  const [triggeredAutomation] = await sdk.api.automated_actions.getSome()
+  // const [triggeredAutomation] = await sdk.api.automated_actions.getSome()
   const enduserWithUpdate = await sdk.api.endusers.getOne(enduser.id)
   const recordedResponse = await sdk.api.form_responses.getOne({ accessCode })
 
-  assert(triggeredAutomation?.event?.type === 'formResponse', 'no form response event', 'form response event triggered')
+  // assert(triggeredAutomation?.event?.type === 'formResponse', 'no form response event', 'form response event triggered')
   assert(enduserWithUpdate?.fields?.[stringIntakeField] === stringResponse, 'no enduser update', 'enduser updated')
   assert(
     recordedResponse?.responses?.length === 1 && recordedResponse.responses[0]?.[stringTitle] === stringResponse, 

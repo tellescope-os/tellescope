@@ -2026,7 +2026,7 @@ export const schema: SchemaV1 = build_schema({
           dependsOn: ['automation_steps'], 
           dependencyField: '_id',
           relationship: 'foreignKey',
-          onDependencyDelete: 'delete',
+          onDependencyDelete: 'nop', // worth keeping as a log of some automated action, even if the automation itself is no longer active
         }]
       },
       enduserId: { 
@@ -2048,7 +2048,7 @@ export const schema: SchemaV1 = build_schema({
           dependsOn: ['journeys'],
           dependencyField: '_id',
           relationship: 'foreignKey',
-          onDependencyDelete: 'delete',
+          onDependencyDelete: 'nop', // worth keeping as a log of some automated action, even if the automation itself is no longer active
         }]
       },
       event: { 

@@ -541,12 +541,11 @@ export interface AutomationForNotification extends AutomationForTemplate { desti
 export type EnterStateAutomationEvent = AutomationEventBuilder<'enterState', AutomationForJourneyAndState>
 export type LeaveStateAutomationEvent = AutomationEventBuilder<'leaveState', AutomationForJourneyAndState> 
 export type FormResponseAutomationEvent = AutomationEventBuilder<'formResponse', {
-  formId: string,
-  automationStepId?: string, // todo: make this required
+  automationStepId: string, 
 }> 
 export type UnitOfTime = "Seconds" | "Minutes" | "Hours" | "Days"
 
-export type FormSubmitCancellationConditionInfo = { formId: string, automationStepId: string }
+export type FormSubmitCancellationConditionInfo = { automationStepId: string }
 export type CancelCondition = { type: 'formResponse', info: FormSubmitCancellationConditionInfo }
 
 export type AfterActionEventInfo = {
@@ -556,9 +555,7 @@ export type AfterActionEventInfo = {
   unit: UnitOfTime, // for displaying in editor
   cancelConditions?: CancelCondition[]
 }
-export interface FormUnsubmittedEventInfo extends AfterActionEventInfo {
-  formId: string,
-}
+export interface FormUnsubmittedEventInfo extends AfterActionEventInfo {}
 export type AfterActionAutomationEvent = AutomationEventBuilder<'afterAction', AfterActionEventInfo> 
 export type FormUnsubmittedEvent = AutomationEventBuilder<'formUnsubmitted', FormUnsubmittedEventInfo> 
 export type OnJourneyStartAutomationEvent = AutomationEventBuilder<'onJourneyStart', {}> 
