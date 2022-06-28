@@ -113,9 +113,10 @@ export type RelationshipConstraint<T> = {
 }
 
 export type DependencyAccessConstraint <T> = { type: 'dependency', foreignModel: ModelName, foreignField: string, accessField: keyof T  }
+export type FilterAccessConstraint <T> = { type: 'filter', field: keyof T | `${(keyof T) & string}.${string}` }
 
 export type AccessConstraint <T> = { type: 'creatorOnly' } 
-  | { type: 'filter', field: keyof T | `${(keyof T) & string}.${string}` }
+  | FilterAccessConstraint<T>
   | DependencyAccessConstraint<T>
 
 export type UniqueArrayConstraint <T> = { array: keyof T, itemKey?: string }

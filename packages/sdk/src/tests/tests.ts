@@ -923,7 +923,7 @@ const chat_room_tests = async () => {
   let roomWithMessage = await sdk.api.chat_rooms.getOne(room.id)
   assert(roomWithMessage.numMessages === 1, 'num mesages no update', 'num messages on send message')
   assert((roomWithMessage?.recentMessageSentAt ?? 0) > Date.now() - 1000, 'recent message timestamp bad', 'recent message timestamp')
-  assert(roomWithMessage?.infoForUser?.[userId]?.unreadCount === 1, 'bad unread count for user', 'unread count for user')
+  assert(roomWithMessage?.infoForUser?.[userId]?.unreadCount === undefined, 'bad unread count for user', 'unread count for user')
   assert(roomWithMessage?.infoForUser?.[enduserSDK.userInfo.id]?.unreadCount === 1, 'bad unread count for enduser', 'unread count for enduser')
 
   roomWithMessage = await sdk.api.chat_rooms.updateOne(roomWithMessage.id, { infoForUser: { [userId]: { unreadCount: 0 }}})
@@ -1389,126 +1389,7 @@ const calendar_events_tests = async () => {
 
 const automation_events_tests = async () => {
   log_header("Automation Events")
-  const form = await sdk.api.forms.createOne({ 
-    title: 'Form', fields: [{ title: 'Question 1', type: 'string' }]
-  })
-
-  const state1 = "State 1", state2 = "State 2";
-  const journey = await sdk.api.journeys.createOne({ 
-    title: "Automations Test", 
-    defaultState: state1,
-    states: [
-      { name: state1, priority: 'N/A' },
-      { name: state2, priority: 'N/A' },
-    ]
-  })
-
-  await async_test(
-    `enterState cannot match updateStateForJourney`,
-    () => sdk.api.automation_steps.createOne({
-      journeyId: journey.id,
-      event: {
-        type: "enterState",
-        info: { state: state1, journeyId: journey.id }
-      },
-      action: {
-        type: 'updateStateForJourney',
-        info: { state: state1, journeyId: journey.id },
-      },
-    }),
-    { shouldError: true, onError: e => e.message === 'updateStateForJourney cannot have the same journey and state as the enterState event' }
-  ) 
-  await async_test(
-    `leaveState cannot match updateStateForJourney`,
-    () => sdk.api.automation_steps.createOne({
-      journeyId: journey.id,
-      event: {
-        type: "leaveState",
-        info: { state: state1, journeyId: journey.id }
-      },
-      action: {
-        type: 'updateStateForJourney',
-        info: { state: state1, journeyId: journey.id },
-      },
-    }),
-    { shouldError: true, onError: e => e.message === 'updateStateForJourney cannot have the same journey and state as the leaveState event' }
-  ) 
-
-  const testAction: AutomationAction = {
-    type: 'sendWebhook',
-    info: { message: 'test' }
-  }
-  await sdk.api.automation_steps.createOne({
-    journeyId: journey.id,
-    event: {
-      type: "enterState",
-      info: { state: state1, journeyId: journey.id }
-    },
-    action: testAction,
-  })
-  await sdk.api.automation_steps.createOne({
-    journeyId: journey.id,
-    event: {
-      type: "leaveState",
-      info: { state: state1, journeyId: journey.id }
-    },
-    action: testAction,
-  })
-  await sdk.api.automation_steps.createOne({
-    journeyId: journey.id,
-    event: {
-      type: "enterState",
-      info: { state: state2, journeyId: journey.id }
-    },
-    action: testAction,
-  })
-
-  await async_test(
-    `Cannot insert duplicate event/action pair`,
-    () => sdk.api.automation_steps.createOne({
-      journeyId: journey.id,
-      event: {
-        type: "enterState",
-        info: { state: state2, journeyId: journey.id }
-      },
-      action: testAction,
-    }),
-    { shouldError: true, onError: e => e.message === "You cannot create two identical event automations" }
-  ) 
-
-  // trigger a1 on create
-  const enduser = await sdk.api.endusers.createOne({ 
-    email: "automations@tellescope.com", 
-    journeys: { [journey.id]: journey.defaultState } 
-  })
-
-  // should NOT trigger while user not in state 2
-  await sdk.api.form_responses.submit_form_response({ 
-    accessCode: (await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })).accessCode,
-    responses: ['Answer'] 
-  })
-
-  // trigger a2 and a3 by leaving state 1 an going to state 2
-  await sdk.api.endusers.updateOne(enduser.id, { journeys: { [journey.id]: state2 } })
-
-  // SHOULD trigger now that user is in state 2
-  await sdk.api.form_responses.submit_form_response({ 
-    accessCode: (await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })).accessCode,
-    responses: ['Answer 2'] 
-  })
-
-  await async_test(
-    `Automation events triggered correctly`,
-    () => sdk.api.automated_actions.getSome({ filter: { enduserId: enduser.id }}),
-    { onResult: es => es && es.length === 4 && es.filter(a => a.automationStepId === "ONE_TIME").length === 4 }
-  )  
-
-  // cleanup
-  await Promise.all([
-    sdk.api.journeys.deleteOne(journey.id), // automation events deleted as side effect
-    sdk.api.endusers.deleteOne(enduser.id),
-    sdk.api.forms.deleteOne(form.id),
-  ])
+  console.warn("Need new test coverage for automation stemps")
 }
 
 const form_response_tests = async () => {
@@ -1607,19 +1488,19 @@ const notifications_tests = async () => {
   const chat = await sdk.api.chats.createOne({ message: 'test', roomId: room.id, })
   const ticket = await sdk.api.tickets.createOne({ title: 'Ticket for notification', owner: sdkNonAdmin.userInfo.id })
   
-  await wait(undefined, 50) // notifications may be created in background
+  await wait(undefined, 250) // notifications may be created in background
 
   // neither should throw error
-  const ticketNotification = await sdk.api.user_notifications.getOne({ type: 'newTicket' }) 
-  const chatNotifications = await sdk.api.user_notifications.getSome({ filter: { type: 'newChatMessage' } }) 
+  const ticketNotifications = await sdk.api.user_notifications.getSome({ filter: { type: 'newTicket' } }) 
+  const chatNotifications = await sdk.api.user_notifications.getSome({ filter: { type: 'newTeamChatMessage' } }) 
 
-  assert(!!ticketNotification.relatedRecords?.find(r => r.id === ticket.id), 'No ticket notification', 'Got notification for new new ticket')
+  assert(!!ticketNotifications.find(n => n.relatedRecords?.find(r => r.id === ticket.id)), 'No ticket notification', 'Got notification for new new ticket')
   assert(!!chatNotifications.find(notification => notification.relatedRecords?.find(r => r.id === chat.id)), 'No chat notification', 'Got notification for new chat')
 
   await Promise.all([
     sdk.api.chat_rooms.deleteOne(room.id),
     sdk.api.tickets.deleteOne(ticket.id),
-    sdk.api.user_notifications.deleteOne(ticketNotification.id),
+    sdk.api.user_notifications.deleteOne(ticketNotifications.find(n => n.relatedRecords?.find(r => r.id === ticket.id))!.id),
     ...chatNotifications.map(n => 
       sdk.api.user_notifications.deleteOne(n.id),
     ),
@@ -1778,8 +1659,6 @@ const role_based_access_tests = async () => {
     sdk.api.sms_messages.deleteOne(sms.id),
     sdk.api.calendar_events.deleteOne(calendarEvent.id),
     sdk.api.chat_rooms.deleteOne(chatRoom.id),
-    sdk.api.chats.deleteOne(chatMessage.id),
-    sdk.api.chats.deleteOne(chatMessage2.id),
   ])
 }
 

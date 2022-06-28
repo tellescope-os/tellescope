@@ -73,7 +73,7 @@ export const useUserDisplayInfo = (options={} as HookOptions<UserDisplayInfo>) =
     { 
       loadQuery: session.api.users.display_info,
     }, 
-    { socketConnection: 'none', ...options }
+    { ...options }
   )
 }
 export const useTickets = (options={} as HookOptions<Ticket>) => {

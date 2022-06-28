@@ -42,7 +42,7 @@ const app = express()
 app.use(bodyParser.urlencoded({ extended: true, limit: '25mb' }))
 app.use(bodyParser.json({ limit: "25mb" }))
 
-const PORT = 4000
+const PORT = 3999 
 const TEST_SECRET = "this is a test secret for verifying integrity of web hooks"
 const webhookEndpoint = '/handle-webhook'
 const webhookURL = `http://127.0.0.1:${PORT}${webhookEndpoint}`
@@ -98,7 +98,7 @@ const check_next_webhook = async (evaluate: (hook: WebhookCall) => boolean, name
   if (noHookExpected) {
     assert(!event, error, name)
   } else {
-    assert(!!event, 'did not get hook', 'got hook')
+    assert(!!event, error || 'did not get hook', name || 'got hook')
   }
   if (!event) return // ensure webhookIndex not incremented
 
@@ -190,7 +190,7 @@ const meetings_tests = async (isSubscribed: boolean) => {
   await sdk.api.endusers.deleteOne(enduser.id)
 }
 
-const AUTOMATION_POLLING_DELAY_MS = 2000 - CHECK_WEBHOOK_DELAY_MS
+const AUTOMATION_POLLING_DELAY_MS = 3000 - CHECK_WEBHOOK_DELAY_MS
 const test_automation_webhooks = async () => {
   log_header("Automation Events")
   const state1 = "State 1", state2 = "State 2";
@@ -221,11 +221,10 @@ const test_automation_webhooks = async () => {
   
   await check_next_webhook(
     ({ message }) => message === testMessage,
-    'Automation webhook error', 
     'Automation webhook received', 
+    'Automation webhook error', 
     true
   )
-
 
   // cleanup
   await sdk.api.journeys.deleteOne(journey.id) // automation events deleted as side effect

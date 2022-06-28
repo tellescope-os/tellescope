@@ -218,7 +218,11 @@ export class Session {
 
   ON = <T={}>(s: string, callback: (a: T) => void) => this.socket?.on(s, callback)
 
+  /**
+  * @deprecated Use handle_events, subscription is no longer necessary
+  */
   subscribe = (rooms: { [index: string]: keyof ClientModelForName }, handlers?: { [index: string]: (a: any) => void } ) => {
+    console.warn("subscribe is deprecated in favor of handle_events, as they are now functionally the same")
     if (this.enableSocketLogging) {
       console.log(`${this.type} ${this.userInfo.id} subscribing ${JSON.stringify(rooms)}, socket defined: ${!!this.socket}`)
     }
@@ -231,13 +235,13 @@ export class Session {
       this.handle_events(handlers) 
     }
     
-    this.EMIT(`join-rooms`, { rooms })
-    .then(() => {
-      if (this.enableSocketLogging) {
-        console.log(`${this.type} ${this.userInfo.id} emitted ${JSON.stringify(rooms)}`)
-      }
-    })
-    .catch(console.error)
+    // this.EMIT(`join-rooms`, { rooms })
+    // .then(() => {
+    //   if (this.enableSocketLogging) {
+    //     console.log(`${this.type} ${this.userInfo.id} emitted ${JSON.stringify(rooms)}`)
+    //   }
+    // })
+    // .catch(console.error)
   }
 
   handle_events = ( handlers: { [index: string]: (a: any) => void } ) => {

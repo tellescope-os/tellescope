@@ -67,6 +67,8 @@ export type TableField <T> = {
   render?: Renderer<T>,
   width?: CSSProperties['width'],
   textAlign?: CSSProperties['textAlign'],
+  style?: CSSProperties,
+  flex?: boolean,
 }
 export interface TableHeaderProps<T extends Item> extends Styled, HorizontalPadded {
   fields: TableField<T>[],
@@ -80,8 +82,13 @@ export const TableHeader = <T extends Item>({ fields, style, textStyle, horizont
     backgroundColor: DARK_GRAY,
     ...style 
   }}>
-    {fields.map(({ key, label, textAlign, width, hidden }) => hidden ? null : (
-      <Flex key={key} flex={width !== undefined ? 0 : 1}>
+    {fields.map(({ key, label, textAlign, width, hidden, style }) => hidden ? null : (
+      <Flex key={key} flex={width !== undefined ? 0 : 1} style={{ 
+        alignItems: 'center',
+        justifyContent: textAlign === 'right' ? 'flex-end' : 'flex-start',
+        ...style,
+      }}
+      >
         <Typography component="h5" style={{ 
           textAlign, fontSize,
           width: width ?? defaultWidthForFields(fields.length), 
@@ -130,11 +137,17 @@ export const TableRow = <T extends Item>({ item, indices, fields, onClick, onPre
         backgroundColor: undefined, // leave in parent component
       }}
     >
-      {fields.map(({ key, width, textAlign='left', render, hidden }) => hidden ? null : (
-        <Flex flex={width !== undefined ? 0 : 1} key={key}>
+      {fields.map(({ key, width, textAlign='left', render, hidden, flex, style }) => hidden ? null : (
+        <Flex flex={width !== undefined ? 0 : 1} key={key} style={{ 
+          alignItems: 'center',
+          justifyContent: textAlign === 'right' ? 'flex-end' : 'flex-start',
+          ...style,
+        }}>
           <Typography style={{ 
             textAlign, 
-            width: width ?? defaultWidthForFields(fields.length), 
+            width, 
+            display: flex ? 'flex' : undefined,
+            flex: flex ? 1 : undefined,
             color: DARKER_GRAY, fontSize, 
             ...textStyle
           }}>

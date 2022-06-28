@@ -23,7 +23,6 @@ import {
   SMSMessage,
   UserNotification,
 } from "@tellescope/types-client"
-import { isModelName } from "@tellescope/types-models"
 
 import {
   useResolvedSession, 
@@ -275,7 +274,6 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     deleteOne?: (id: string) => Promise<void>,
   },
   options?: {
-    socketConnection?: 'model' | 'keys' | 'self' | 'none'
     onAdd?: (n: T[]) => void;
     onUpdate?: (n: ({ id: string } & Partial<T>)[]) => void;
     onDelete?: (id: string[]) => void;
@@ -287,7 +285,6 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     throw new Error("refetchInMS must be greater than 5000")
   }
 
-  const socketConnection = options?.socketConnection ?? 'model'
   const loadFilter = options?.loadFilter
   const returnFilter = options?.returnFilter
 
@@ -421,31 +418,12 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
             setFetched('id' + modelName + DONE_LOADING_TOKEN, true) 
           }
           dispatch(slice.actions.addSome({ value: es.value, options: { replaceIfMatch: true } }))
-
-          if (!isModelName(modelName)) return // a custom extension without our socket support
-
-          if (socketConnection !== 'keys') return
-          const subscription = { } as Indexable         
-          for (const e of es.value) {
-            subscription[e.id] = modelName
-          }
-          session.subscribe(subscription)
         } else {
           dispatch(slice.actions.set({ value: es }))
         }
       }
     )
-
-    // unsubscribing from sockets doesn't matter too much, 
-    // and having load / reload depend on state can cause unexpected re-renders for client 
-    
-    // return () => {
-    //   if (state.status !== LoadingStatus.Loaded || socketConnection !== 'keys') return
-    //   if (!isModelName(modelName)) return // a custom extension without our socket support
-
-    //   session.unsubscribe(state.value.map(e => e.id.toString()))
-    // }
-  }, [socketConnection, setFetched, didFetch, modelName, isModelName, loadFilter, loadQuery, options?.dontFetch])
+  }, [setFetched, didFetch, modelName, loadFilter, loadQuery, options?.dontFetch])
 
   const reload = useCallback(() => load(true), [load])
 
@@ -455,8 +433,6 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
 
   useEffect(() => {
     if (options?.dontFetch) return
-    if (!isModelName(modelName)) return // a custom extension without our socket support
-    if (socketConnection === 'none') return 
     if (didFetch(modelName + 'socket')) return
     setFetched(modelName + 'socket', true, false)
 
@@ -472,22 +448,14 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
       [`deleted-${modelName}`]: removeLocalElements,
     })
 
-    if (socketConnection === 'model')  {
-      session.subscribe({ [modelName]: modelName }) // subscribe to model-wide updates
-    }
-
     // unneeded
     return () => { 
-      // if (socketConnection === 'model')  {
-      //   session.unsubscribe([modelName])
-      // }
-
       // setFetched(modelName + 'socket', false, false)
       // session.removeAllSocketListeners(`created-${modelName}`)
       // session.removeAllSocketListeners(`updated-${modelName}`)
       // session.removeAllSocketListeners(`deleted-${modelName}`)
     }
-  }, [session, socketConnection, didFetch, isModelName, options])
+  }, [session, didFetch, options])
 
   const loadMore = useCallback(async (options?: LoadMoreOptions) => {
     if (!loadQuery) return
@@ -516,19 +484,10 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
           }
 
           dispatch(slice.actions.addSome({ value: es.value, options: { replaceIfMatch: true, addTo: 'end' } }))
-
-          if (!isModelName(modelName)) return // a custom extension without our socket support
-
-          if (socketConnection !== 'keys') return
-          const subscription = { } as Indexable         
-          for (const e of es.value) {
-            subscription[e.id] = modelName
-          }
-          session.subscribe(subscription)
         } 
       }
     )
-  }, [state, socketConnection, modelName, isModelName, loadQuery])
+  }, [state, modelName, loadQuery])
   const doneLoading = useCallback((key="id") => (
     didFetch(key + modelName + DONE_LOADING_TOKEN)
   ), [state])
@@ -587,7 +546,6 @@ export const useCalendarEvents = (type: SessionType, options={} as HookOptions<C
       updateOne: session.api.calendar_events.updateOne,
     },
     { 
-      socketConnection: 'self',
       ...options,
     },
   )
@@ -625,7 +583,6 @@ export const useEmails = (options={} as HookOptions<Email>) => {
     },
     { 
       ...options,
-      socketConnection: 'self',
     },
   )
 }
@@ -643,7 +600,6 @@ export const useSmsMessages = (options={} as HookOptions<SMSMessage>) => {
     },
     { 
       ...options,
-      socketConnection: 'self',
     },
   )
 }
@@ -661,7 +617,6 @@ export const useNotifications = (options={} as HookOptions<UserNotification>) =>
     },
     { 
       ...options,
-      socketConnection: 'self',
     },
   )
 }
@@ -695,7 +650,6 @@ export const useChatRooms = (type?: SessionType, options={} as HookOptions<ChatR
     },
     { 
       onUpdate, 
-      socketConnection: 'self',
       ...options,
     },
   )
