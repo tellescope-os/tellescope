@@ -97,6 +97,7 @@ import {
   CUDStringValidator,
   listOfRelatedRecordsValidator,
   cancelConditionsValidator,
+  notificationPreferencesValidator,
 } from "@tellescope/validation"
 
 import {
@@ -1310,6 +1311,9 @@ export const schema: SchemaV1 = build_schema({
       hashedPassword: {
         validator: stringValidator,
         readonly: true, // update via separate password reset function
+      },
+      notificationPreferences: {
+        validator: notificationPreferencesValidator,
       },
       avatar: {
         validator: stringValidator100,

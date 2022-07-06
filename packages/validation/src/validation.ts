@@ -77,6 +77,7 @@ import {
   FormSubmitCancellationConditionInfo,
   SetEnduserStatusAutomationAction,
   SetEnduserStatusInfo,
+  NotificationPreference,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -365,7 +366,7 @@ export const listOfObjectsValidator = <T extends object>(i: InputValidation<Requ
   }, { ...o, isObject: true, listOf: true }
 )
 
-export const objectAnyFieldsValidator = <T=string | number>(valueValidator?: EscapeFunction<T>): EscapeBuilder<Indexable<T>> => (o={}) => build_validator(
+export const objectAnyFieldsValidator = <T>(valueValidator?: EscapeFunction<T>): EscapeBuilder<Indexable<T>> => (o={}) => build_validator(
   (object: any) => {
     if (!is_object(object)) { throw new Error("Expected a non-null object by got ${object}") }
 
@@ -1254,3 +1255,8 @@ export const listOfRelatedRecordsValidator = listValidatorEmptyOk(relatedRecordV
 export const searchOptionsValidator = objectValidator<SearchOptions>({
   query: stringValidator100(),
 })
+
+export const notificationPreferenceValidator = objectValidator<NotificationPreference>({
+  email: booleanValidator({ isOptional: true }),
+})
+export const notificationPreferencesValidator = objectAnyFieldsValidator(notificationPreferenceValidator())

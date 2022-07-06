@@ -34,6 +34,7 @@ interface RequestOptions {
 }
 
 const generateBearer = (authToken: string) => `Bearer ${authToken}`
+const generateAPIKeyHeader = (authToken: string) => `API_KEY ${authToken}`
 
 const parseError = (err: any) => {
   if (err.response?.status === 413) return "Please try again with less data or a smaller file."
@@ -45,7 +46,6 @@ const parseError = (err: any) => {
 }
 
 const DEFAULT_AUTHTOKEN_KEY = 'tellescope_authToken'
-const IN_BROWSER = typeof window !== 'undefined' 
 const has_local_storage = () => typeof window !== 'undefined' && !!window.localStorage
 const set_cache = (key: string, authToken: string) => has_local_storage() && (window.localStorage[key] = authToken)
 const access_cache = (key=DEFAULT_AUTHTOKEN_KEY) => has_local_storage() ? window.localStorage[key] : undefined
@@ -96,7 +96,14 @@ export class Session {
       set_cache(this.cacheKey, this.authToken)
       this.authenticate_socket()
     }
-    this.config = { headers: { Authorization: generateBearer(this.authToken ?? '') } } // initialize after authToken
+    this.config = { 
+      headers: {
+        Authorization: (
+          this.apiKey 
+            ? generateAPIKeyHeader(this.apiKey)
+            : generateBearer(this.authToken ?? '')
+        )
+    } } // initialize after authToken
   }
   
   resolve_field = async <T>(p: () => Promise<T>, field: keyof T) => (await p())[field]
@@ -125,7 +132,7 @@ export class Session {
   }
 
   getAuthInfo = (requiresAuth?: boolean) => requiresAuth && (
-    this.apiKey ? { apiKey: this.apiKey }
+    this.apiKey ? { } // included in headers
     : this.servicesSecret ? { 
         servicesSecret: this.servicesSecret,
         sessionInfo: { 

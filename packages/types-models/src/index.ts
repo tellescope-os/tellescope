@@ -101,6 +101,9 @@ export interface UserSession extends Session, User, OrganizationLimits { // User
   wasAutomated: boolean;
 }
 
+export type NotificationPreference = {
+  email?: boolean 
+}
 export type AccountType = "Business"// | "joining org"
 export interface User_readonly extends ClientRecord {
   organization?: string 
@@ -121,6 +124,9 @@ export interface User extends User_required, User_readonly, User_updatesDisabled
   roles?: string[];
   avatar?: string,
   fields?: CustomFields;
+  notificationPreferences?: {
+    [index: string]: NotificationPreference,
+  }
 }
 
 export type Preference = 'email' | 'sms' | 'call' | 'chat'
