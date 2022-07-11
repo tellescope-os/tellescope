@@ -20,7 +20,7 @@ import { schema, CustomActions, extractFields, PublicActions } from '@tellescope
 
 export interface EnduserSessionOptions extends SessionOptions { enduser?: Enduser, businessId: string }
 
-type EnduserAccessibleModels = 'endusers' | "chat_rooms" | 'chats' | 'files' | 'tickets' | 'calendar_events' | 'engagement_events'
+type EnduserAccessibleModels = 'endusers' | 'form_responses' | "chat_rooms" | 'chats' | 'files' | 'tickets' | 'calendar_events' | 'engagement_events'
 
 export const defaultQueries = <N extends keyof ClientModelForName>(
   s: EnduserSession, n: keyof ClientModelForName_required
@@ -80,6 +80,7 @@ const loadDefaultQueries = (s: EnduserSession): { [K in EnduserAccessibleModels]
   engagement_events: defaultQueries(s, 'engagement_events'),
   files: defaultQueries(s, 'files'),
   tickets: defaultQueries(s, 'tickets'),
+  form_responses: defaultQueries(s, 'form_responses'),
 })
 
 
@@ -109,10 +110,8 @@ export class EnduserSession extends Session {
       my_meetings: () => this._GET('/v1/my-meetings')
     }
 
-    this.api.form_responses = { 
-      prepare_form_response: (args) => this._POST(`/v1${schema.form_responses.customActions.prepare_form_response.path}`, args),
-      submit_form_response: (args) => this._PATCH(`/v1${schema.form_responses.customActions.submit_form_response.path}`, args),
-    }
+    this.api.form_responses.prepare_form_response = args => this._POST(`/v1${schema.form_responses.customActions.prepare_form_response.path}`, args)
+    this.api.form_responses.submit_form_response  = args => this._PATCH(`/v1${schema.form_responses.customActions.submit_form_response.path}`, args)
 
     // files have defaultQueries
     this.api.files.prepare_file_upload = a => this._POST(`/v1/prepare-file-upload`, a)

@@ -134,7 +134,7 @@ export const Message = ({
   const session = useResolvedSession()
   const chatUserId = session.userInfo.id
 
-  const [displayInfo] = useChatRoomDisplayInfo(message.roomId, session.type)
+  const [displayInfo] = useChatRoomDisplayInfo(message.roomId)
   const displayInfoLookup = value_is_loaded(displayInfo) ? displayInfo.value : {} as ChatRoomDisplayInfo
 
   // deep copy so that the override of background color doesn't affect other messages
@@ -319,7 +319,7 @@ const ConversationPreview = ({ onClick, selected, room, style, displayInfo, sele
 
 const PreviewWithData = ({ PreviewComponent=ConversationPreview, ...props }: Omit<ConversationPreviewProps, 'displayInfo'> & Pick<SidebarInfo, 'PreviewComponent'>) => {
   const session = useResolvedSession()
-  const [displayInfo] = useChatRoomDisplayInfo(props.room.id, session.type)
+  const [displayInfo] = useChatRoomDisplayInfo(props.room.id)
 
   return (
     <PreviewComponent displayInfo={value_is_loaded(displayInfo) ? displayInfo.value : {} } 
@@ -346,13 +346,12 @@ export const Conversations = ({ rooms, selectedRoom, onRoomSelect, PreviewCompon
 
 
 // deprecated while Conversations relies on useResolvedSession
-export const EndusersConversations = ({ enduserId, ...p } : SidebarInfo & { enduserId: string }) => <Conversations {...p} rooms={useChatRooms('enduser')[0]} />
+export const EndusersConversations = ({ enduserId, ...p } : SidebarInfo & { enduserId: string }) => <Conversations {...p} rooms={useChatRooms()[0]} />
 
 // deprecated while Conversations relies on useResolvedSession
-export const UsersConversations = ({ userId, ...p } : SidebarInfo & { userId: string }) => <Conversations {...p} rooms={useChatRooms('user')[0]}/>
+export const UsersConversations = ({ userId, ...p } : SidebarInfo & { userId: string }) => <Conversations {...p} rooms={useChatRooms()[0]}/>
 
 interface SendMessage_T {
-  type: SessionType,
   roomId: string,
   onNewMessage?: (m: ChatMessage) => void;
   placeholderText?: string;
@@ -366,7 +365,6 @@ interface SendMessage_T {
 }
 export const SendMessage = ({ 
   roomId, 
-  type,
   Icon=SendIcon, 
   onNewMessage, 
   placeholderText="Enter a message", 
@@ -381,7 +379,7 @@ export const SendMessage = ({
   const [disabled, setDisabled] = useState(false)
   const [chatFocused, setChatFocused] = React.useState(false)
   
-  const [, { createElement: createMessage }] = useChats(roomId, type)
+  const [, { createElement: createMessage }] = useChats(roomId)
 
   useEffect(() => {
     if (!chatFocused) return
@@ -438,7 +436,7 @@ interface SplitChat_T {
 }
 export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : SplitChat_T & Styled) => {
   const [selectedRoom, setSelectedRoom] = useState('')
-  const [messages] = useChats(selectedRoom, type)
+  const [messages] = useChats(selectedRoom)
 
   return (
     <Flex row style={style} flex={1}>
@@ -453,15 +451,11 @@ export const SplitChat = ({ session, type, style=defaultSplitChatStyle } : Split
         {selectedRoom && 
           <>
           <Flex row flex={8}>
-            <Messages messages={messages} chatUserId={session.userInfo.id}
-              headerProps={{
-
-              }}
-            />
+            <Messages messages={messages} chatUserId={session.userInfo.id} />
           </Flex>
 
           <Flex row flex={1} style={{ marginLeft: 10, marginRight: 10 }}>
-            <SendMessage type={type} roomId={selectedRoom}/> 
+            <SendMessage roomId={selectedRoom} /> 
           </Flex>
           </>
         }

@@ -5,7 +5,7 @@ import {
   Organization as BaseOrganization,
 } from "@tellescope/types-models"
 
-export type ObjectId = import('bson').ObjectId
+export type ObjectId = import('mongodb').ObjectId
 
 export type ToServerModel<T> = Omit<T, 'id'> & { _id: ObjectId }
 export type ToServerModels<T> = {

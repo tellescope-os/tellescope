@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, createContext } from 'react'
 
-import { TypedUseSelectorHook, createDispatchHook, createSelectorHook, ReactReduxContextValue } from 'react-redux'
-import { createSlice, configureStore, PayloadAction, Slice, createAction } from '@reduxjs/toolkit'
+import { TypedUseSelectorHook, createDispatchHook, createSelectorHook, ReactReduxContextValue, Provider } from 'react-redux'
+import { createSlice, configureStore,  createAction, Action, EnhancedStore, PayloadAction, Slice } from '@reduxjs/toolkit'
  
 import {
   APIError,
@@ -22,9 +22,21 @@ import {
   Email,
   SMSMessage,
   UserNotification,
+  Enduser,
+  Ticket,
+  Meeting,
+  Note,
+  File,
+  Template,
+  Form,
+  FormResponse,
+  Journey,
+  User,
+  AutomationStep,
 } from "@tellescope/types-client"
 
 import {
+  useEnduserSession,
   useResolvedSession, 
   useSession,
 } from "./index"
@@ -191,6 +203,18 @@ const engagementEventsSlice = createSliceForList<EngagementEvent, 'engagement_ev
 const emailsSlice = createSliceForList<Email, 'email'>('email')
 const smsMessagesSlice = createSliceForList<SMSMessage, 'sms_messages'>('sms_messages')
 const userNotifcationsSlice = createSliceForList<UserNotification, 'user_notifications'>('user_notifications')
+const endusersSlice = createSliceForList<Enduser, 'endusers'>('endusers')
+const ticketsSlice = createSliceForList<Ticket, 'tickets'>('tickets')
+const meetingsSlice = createSliceForList<Meeting, 'meetings'>('meetings')
+const filesSlice = createSliceForList<File, 'files'>('files')
+const notesSlice = createSliceForList<Note, 'notes'>('notes')
+const templatesSlice = createSliceForList<Template, 'templates'>('templates')
+const formsSlice = createSliceForList<Form, 'forms'>('forms')
+const formResponsesSlice = createSliceForList<FormResponse, 'form_response'>('form_response')
+const journeysSlice = createSliceForList<Journey, 'journeys'>('journeys')
+const usersSlice = createSliceForList<User, 'users'>('users')
+const automationStepsSlice = createSliceForList<AutomationStep, 'automations_steps'>('automations_steps')
+const usersDisplaySlice = createSliceForList<UserDisplayInfo, 'users'>('users')
 
 export const sharedConfig = {
   reducer: { 
@@ -202,6 +226,18 @@ export const sharedConfig = {
     emails: emailsSlice.reducer,
     sms_messages: smsMessagesSlice.reducer,
     user_notifications: userNotifcationsSlice.reducer,
+    endusers: endusersSlice.reducer,
+    tickets: ticketsSlice.reducer,
+    meetings: meetingsSlice.reducer,
+    files: filesSlice.reducer,
+    notes: notesSlice.reducer,
+    templates: templatesSlice.reducer,
+    forms: formsSlice.reducer,
+    form_responses: formResponsesSlice.reducer,
+    journeys: journeysSlice.reducer,
+    users: usersSlice.reducer,
+    users_display: usersDisplaySlice.reducer,
+    automation_steps: automationStepsSlice.reducer,
   },
 }
 
@@ -223,6 +259,37 @@ export const useResetState = () => {
 
 const useTypedSelector = createTellescopeSelector() as any as TypedUseSelectorHook<RootState> 
 const useTellescopeDispatch = createDispatchHook(TellescopeStoreContext) 
+
+export const UserProvider = (props: { children: React.ReactNode }) => (
+  <WithFetchContext>
+  <Provider store={_store} context={TellescopeStoreContext}>
+    {props.children}
+  </Provider>
+  </WithFetchContext>
+)
+
+export const ExtendedUserProvider = <A,B extends Action<any>>(props: { children: React.ReactNode, store: EnhancedStore<A,B> }) => (
+  <WithFetchContext>
+  <Provider context={TellescopeStoreContext} store={props.store}>
+    {props.children}
+  </Provider>
+  </WithFetchContext>
+)
+
+export const EnduserProvider = (props: { children: React.ReactNode }) => (
+  <WithFetchContext>
+  <Provider store={_store} context={TellescopeStoreContext}>
+    {props.children}
+  </Provider>
+  </WithFetchContext>
+)
+export const ExtendedEnduserProvider = <A,B extends Action<any>>(props: { children: React.ReactNode, store: EnhancedStore<A,B> }) => (
+  <WithFetchContext>
+  <Provider store={props.store} context={TellescopeStoreContext}>
+    {props.children}
+  </Provider>
+  </WithFetchContext>
+)
 
 export type AddOptions = {
   addTo?: 'start' | 'end',
@@ -257,6 +324,7 @@ export interface ListUpdateMethods <T, ADD> extends LoadMoreFunctions {
   removeElement: (id: string) => Promise<void>,
   removeLocalElements: (ids: string[]) => void,
   reload: () => void;
+  filtered: (filter: (value: T) => boolean) => LoadedData<T[]>;
 }
 export type ListStateReturnType <T extends { id: string | number }, ADD=Partial<T>> = [LoadedData<T[]>, ListUpdateMethods<T, ADD>]
 
@@ -286,7 +354,6 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   }
 
   const loadFilter = options?.loadFilter
-  const returnFilter = options?.returnFilter
 
   const dispatch = useTellescopeDispatch()
   const { didFetch, setFetched } = useContext(FetchContext)
@@ -404,6 +471,16 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
     return matches
   }, [state])
 
+  const filtered: ListUpdateMethods<T, ADD>['filtered'] = useCallback(filter => {
+    if (value_is_loaded(state)) {
+      return {
+        status: state.status,
+        value: state.value.filter(filter)
+      }
+    } 
+    return state
+  }, [state])
+
   const load = useCallback((force: boolean) => {
     if (!loadQuery) return
     if (options?.dontFetch) return
@@ -491,29 +568,26 @@ export const useListStateHook = <T extends { id: string | number }, ADD extends 
   const doneLoading = useCallback((key="id") => (
     didFetch(key + modelName + DONE_LOADING_TOKEN)
   ), [state])
-
+  
   return [
-    returnFilter && state.status === LoadingStatus.Loaded 
-      ? { ...state, value: state.value.filter(returnFilter) } 
-      : state, 
+    state,
     {
       addLocalElement, addLocalElements, replaceLocalElement, modifyLocalElements, searchLocalElements,
       createElement, createElements, updateElement, updateLocalElement, updateLocalElements, findById, removeElement, removeLocalElements,
-      reload, loadMore, doneLoading,
+      reload, loadMore, doneLoading, filtered,
     }
   ]
 }
 
 export type HookOptions<T> = {
   loadFilter?: Partial<T>,
-  returnFilter?: (t: T) => boolean,
   refetchInMS?: number,
   dontFetch?: boolean,
   addTo?: AddOptions['addTo'],
 }
 
-export const useChatRoomDisplayInfo = (roomId: string, type: SessionType, options={} as HookOptions<ChatRoomDisplayInfo>) => {
-  const session = useResolvedSession(type)
+export const useChatRoomDisplayInfo = (roomId: string, options={} as HookOptions<ChatRoomDisplayInfo>) => {
+  const session = useResolvedSession()
   const state = useTypedSelector(s => s.chatRoomDisplayInfo)
   const [lookup] = useListStateHook(
     'chat-room-display-info', state, session, chatRoomDisplayInfoslice,
@@ -621,8 +695,8 @@ export const useNotifications = (options={} as HookOptions<UserNotification>) =>
   )
 }
 
-export const useChatRooms = (type?: SessionType, options={} as HookOptions<ChatRoom>) => {
-  const session = useResolvedSession(type)
+export const useChatRooms = (options={} as HookOptions<ChatRoom>) => {
+  const session = useResolvedSession()
   const dispatch = useTellescopeDispatch()
   const rooms = useTypedSelector(s => s.chat_rooms)
 
@@ -655,10 +729,10 @@ export const useChatRooms = (type?: SessionType, options={} as HookOptions<ChatR
   )
 }
 
-export const useChats = (roomId?: string, type?: SessionType, options={} as HookOptions<ChatMessage>) => {
-  const session = useResolvedSession(type)
+export const useChats = (roomId?: string, options={} as HookOptions<ChatMessage>) => {
+  const session = useResolvedSession()
   const state = useTypedSelector(s => s.chats)
-  const [_, { updateLocalElement: updateLocalChatRoom }] = useChatRooms(type)  
+  const [_, { updateLocalElement: updateLocalChatRoom }] = useChatRooms()  
 
   // don't rely on socket update for new messages
   const onAdd = useCallback((ms: ChatMessage[]) => {
@@ -683,12 +757,196 @@ export const useChats = (roomId?: string, type?: SessionType, options={} as Hook
     {
       ...options,
       loadFilter: { ...options.loadFilter, roomId },
-      returnFilter: v => (options.returnFilter ? options.returnFilter(v) : true)
-                      && (roomId ? v.roomId === roomId : true),
       // returnFilter: v => (options.returnFilter ?? (v => true))(v) && v.roomId === roomId,
       onAdd,
     }
   ) 
 
+  if (roomId) {
+    return [toReturn[1].filtered(c => c.roomId === roomId), toReturn[1]] as typeof toReturn
+  }
+  
   return toReturn
+}
+
+export const useEndusers = (options={} as HookOptions<Enduser>) => {
+  const session = useSession()
+  return useListStateHook(
+    'endusers', 
+    useTypedSelector(s => s.endusers), 
+    session, 
+    endusersSlice, 
+    { 
+      loadQuery: session.api.endusers.getSome,
+      findOne: session.api.endusers.getOne,
+      addOne: session.api.endusers.createOne,
+      addSome: session.api.endusers.createSome,
+      deleteOne: session.api.endusers.deleteOne,
+      updateOne: session.api.endusers.updateOne,
+     },
+    {...options}
+  )
+}
+export const useTickets = (options={} as HookOptions<Ticket>) => {
+  const session = useSession()
+  return useListStateHook(
+    'tickets', useTypedSelector(s => s.tickets), session, ticketsSlice, 
+    { 
+      loadQuery: session.api.tickets.getSome,
+      findOne: session.api.tickets.getOne,
+      addOne: session.api.tickets.createOne,
+      addSome: session.api.tickets.createSome,
+      deleteOne: session.api.tickets.deleteOne,
+      updateOne: session.api.tickets.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useMeetings = (options={} as HookOptions<Meeting>) => {
+  const session = useSession()
+  return useListStateHook(
+    'meetings', useTypedSelector(s => s.meetings), session, meetingsSlice, 
+    { 
+      loadQuery: session.api.meetings.my_meetings,
+      findOne: session.api.meetings.getOne,
+      addOne: session.api.meetings.createOne,
+      addSome: session.api.meetings.createSome,
+      deleteOne: session.api.meetings.deleteOne,
+      updateOne: session.api.meetings.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useFiles = (options={} as HookOptions<File>) => {
+  const session = useSession()
+  return useListStateHook(
+    'files', useTypedSelector(s => s.files), session, filesSlice, 
+    { 
+      loadQuery: session.api.files.getSome,
+      findOne: session.api.files.getOne,
+      deleteOne: session.api.files.deleteOne,
+      updateOne: session.api.files.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useJourneys = (options={} as HookOptions<Journey>) => {
+  const session = useSession()
+  return useListStateHook(
+    'journeys', useTypedSelector(s => s.journeys), session, journeysSlice, 
+    { 
+      loadQuery: session.api.journeys.getSome,
+      findOne: session.api.journeys.getOne,
+      addOne: session.api.journeys.createOne,
+      addSome: session.api.journeys.createSome,
+      deleteOne: session.api.journeys.deleteOne,
+      updateOne: session.api.journeys.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useUsers = (options={} as HookOptions<User>) => {
+  const session = useSession()
+  return useListStateHook(
+    'users', useTypedSelector(s => s.users), session, usersSlice, 
+    { 
+      loadQuery: session.api.users.getSome,
+      findOne: session.api.users.getOne,
+      addOne: session.api.users.createOne,
+      addSome: session.api.users.createSome,
+      deleteOne: session.api.users.deleteOne,
+      updateOne: session.api.users.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useAutomationSteps = (options={} as HookOptions<AutomationStep>) => {
+  const session = useSession()
+  return useListStateHook(
+    'automation_steps', useTypedSelector(s => s.automation_steps), session, automationStepsSlice, 
+    { 
+      loadQuery: session.api.automation_steps.getSome,
+      findOne: session.api.automation_steps.getOne,
+      addOne: session.api.automation_steps.createOne,
+      addSome: session.api.automation_steps.createSome,
+      deleteOne: session.api.automation_steps.deleteOne,
+      updateOne: session.api.automation_steps.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useNotes = (options={} as HookOptions<Note>) => {
+  const session = useSession()
+  return useListStateHook(
+    'notes', useTypedSelector(s => s.notes), session, notesSlice, 
+    { 
+      loadQuery: session.api.notes.getSome,
+      findOne: session.api.notes.getOne,
+      addOne: session.api.notes.createOne,
+      addSome: session.api.notes.createSome,
+      deleteOne: session.api.notes.deleteOne,
+      updateOne: session.api.notes.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useTemplates = (options={} as HookOptions<Template>) => {
+  const session = useSession()
+  return useListStateHook(
+    'templates', useTypedSelector(s => s.templates), session, templatesSlice, 
+    { 
+      loadQuery: session.api.templates.getSome,
+      findOne: session.api.templates.getOne,
+      addOne: session.api.templates.createOne,
+      addSome: session.api.templates.createSome,
+      deleteOne: session.api.templates.deleteOne,
+      updateOne: session.api.templates.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useForms = (options={} as HookOptions<Form>) => {
+  const session = useSession()
+  return useListStateHook(
+    'forms', useTypedSelector(s => s.forms), session, formsSlice, 
+    { 
+      loadQuery: session.api.forms.getSome,
+      findOne: session.api.forms.getOne,
+      addOne: session.api.forms.createOne,
+      addSome: session.api.forms.createSome,
+      deleteOne: session.api.forms.deleteOne,
+      updateOne: session.api.forms.updateOne,
+    }, 
+    {...options}
+  )
+}
+
+export const useFormResponses = (options={} as HookOptions<FormResponse>) => {
+  const session = useResolvedSession()
+  return useListStateHook(
+    'forms_responses', useTypedSelector(s => s.form_responses), session, formResponsesSlice, 
+    { 
+      loadQuery: session.api.form_responses.getSome,
+      findOne: session.api.form_responses.getOne,
+      addOne: session.api.form_responses.createOne,
+      addSome: session.api.form_responses.createSome,
+      deleteOne: session.api.form_responses.deleteOne,
+      updateOne: session.api.form_responses.updateOne,
+    }, 
+    {
+      ...options,
+    }
+  ) 
+}
+
+export const useUserDisplayInfo = (options={} as HookOptions<UserDisplayInfo>) => {
+  const session = useEnduserSession()  
+  const state = useTypedSelector(s => s.users_display)
+  return useListStateHook(
+    'users', state, session, usersDisplaySlice, 
+    { 
+      loadQuery: session.api.users.display_info,
+    }, 
+    { ...options }
+  )
 }
