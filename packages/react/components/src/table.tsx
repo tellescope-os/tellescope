@@ -194,6 +194,12 @@ export const usePagination = <T,>({ items, pageSize=DEFAULT_PAGE_SIZE, initialPa
     return mapped
   }, [items, count, selectedPage, numPages, pageSize])
 
+  useEffect(() => {
+    if (selectedPage >= numPages) {
+      goToPage(0)
+    }
+  }, [goToPage, selectedPage, numPages])
+
   return {
     selectedPage,
     numPages,
