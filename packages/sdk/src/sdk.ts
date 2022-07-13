@@ -103,6 +103,12 @@ const loadDefaultQueries = (s: Session): { [K in keyof ClientModelForName] : API
   webhooks: defaultQueries(s, 'webhooks'),
   user_logs: defaultQueries(s, 'user_logs'),
   user_notifications: defaultQueries(s, 'user_notifications'),
+  enduser_observations: defaultQueries(s, 'enduser_observations'),
+  forum_posts: defaultQueries(s, 'forum_posts'),
+  forums: defaultQueries(s, 'forums'),
+  managed_content_records: defaultQueries(s, 'managed_content_records'),
+  post_comments: defaultQueries(s, 'post_comments'),
+  post_likes: defaultQueries(s, 'post_likes'),
 })
 
 type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
@@ -166,7 +172,15 @@ type Queries = { [K in keyof ClientModelForName]: APIQuery<K> } & {
     send_user_email_notification: (args: extractFields<CustomActions['user_notifications']['send_user_email_notification']['parameters']>) => 
       Promise<extractFields<CustomActions['user_notifications']['send_user_email_notification']['returns']>>,
 
-  }
+  },
+  post_likes: {
+    create: (args: extractFields<CustomActions['post_likes']['create']['parameters']>) => (
+      Promise<extractFields<CustomActions['post_likes']['create']['returns']>>
+    ),
+    unlike_post: (args: extractFields<CustomActions['post_likes']['unlike_post']['parameters']>) => (
+      Promise<extractFields<CustomActions['post_likes']['unlike_post']['returns']>>
+    ),
+  },
 }
 
 export class Session extends SessionManager {
@@ -188,32 +202,35 @@ export class Session extends SessionManager {
     queries.endusers.is_authenticated = ({id, authToken}) => this._GET(`/v1/enduser-is-authenticated`, { id, authToken })
     queries.endusers.generate_auth_token = args => this._GET(`/v1/generate-enduser-auth-token`, args)
 
-    queries.users.display_names = () => this._GET<{}, { fname: string, lname: string, id: string }[]>(`/v1/user-display-names`),
+    queries.users.display_names = () => this._GET<{}, { fname: string, lname: string, id: string }[]>(`/v1/user-display-names`)
     
-    queries.users.request_password_reset = (args) => this._POST(`/v1${schema.users.publicActions.request_password_reset.path}`, args),
-    queries.users.reset_password = (args) => this._POST(`/v1${schema.users.publicActions.reset_password.path}`, args),
+    queries.users.request_password_reset = (args) => this._POST(`/v1${schema.users.publicActions.request_password_reset.path}`, args)
+    queries.users.reset_password = (args) => this._POST(`/v1${schema.users.publicActions.reset_password.path}`, args)
 
-    queries.form_responses.prepare_form_response = (args) => this._POST(`/v1${schema.form_responses.customActions.prepare_form_response.path}`, args),
-    queries.form_responses.submit_form_response = (args) => this._PATCH(`/v1${schema.form_responses.customActions.submit_form_response.path}`, args),
+    queries.form_responses.prepare_form_response = (args) => this._POST(`/v1${schema.form_responses.customActions.prepare_form_response.path}`, args)
+    queries.form_responses.submit_form_response = (args) => this._PATCH(`/v1${schema.form_responses.customActions.submit_form_response.path}`, args)
 
-    queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args),
-    queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a),
-    queries.chat_rooms.join_room = a => this._POST('/v1/join-chat-room', a),
-    queries.chat_rooms.display_info = a => this._GET(`/v1${schema.chat_rooms.customActions.display_info.path}`, a),
+    queries.files.prepare_file_upload = (args) => this._POST(`/v1/prepare-file-upload`, args)
+    queries.files.file_download_URL = a => this._GET('/v1/file-download-URL', a)
+    queries.chat_rooms.join_room = a => this._POST('/v1/join-chat-room', a)
+    queries.chat_rooms.display_info = a => this._GET(`/v1${schema.chat_rooms.customActions.display_info.path}`, a)
 
     queries.meetings.start_meeting = a => this._POST('/v1/start-meeting', a)
     queries.meetings.end_meeting = a => this._POST('/v1/end-meeting', a)
     queries.meetings.add_attendees_to_meeting = a => this._POST('/v1/add-attendees-to-meeting', a)
     queries.meetings.attendee_info = a => this._GET('/v1/attendee-info', a)
     queries.meetings.my_meetings = () => this._GET('/v1/my-meetings')
-    queries.meetings.send_invite = a => this._POST(`/v1${schema.meetings.customActions.send_invite.path}`, a),
+    queries.meetings.send_invite = a => this._POST(`/v1${schema.meetings.customActions.send_invite.path}`, a)
 
     queries.webhooks.configure = a => this._POST('/v1/configure-webhooks', a)
     queries.webhooks.update = a => this._PATCH('/v1/update-webhooks', a)
-    queries.webhooks.send_automation_webhook = a => this._POST(`/v1${schema.webhooks.customActions.send_automation_webhook.path}`, a),
-    queries.webhooks.get_configuration = a => this._GET(`/v1${schema.webhooks.customActions.get_configuration.path}`, a),
+    queries.webhooks.send_automation_webhook = a => this._POST(`/v1${schema.webhooks.customActions.send_automation_webhook.path}`, a)
+    queries.webhooks.get_configuration = a => this._GET(`/v1${schema.webhooks.customActions.get_configuration.path}`, a)
 
     queries.user_notifications.send_user_email_notification = a => this._POST(`/v1${schema.user_notifications.customActions.send_user_email_notification.path}`, a),
+
+    queries.post_likes.create = args => this._POST(`/v1${schema.post_likes.customActions.create.path}`, args)
+    queries.post_likes.unlike_post = args => this._POST(`/v1${schema.post_likes.customActions.unlike_post.path}`, args)
 
     this.api = queries
   }

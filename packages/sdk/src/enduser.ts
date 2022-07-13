@@ -20,7 +20,22 @@ import { schema, CustomActions, extractFields, PublicActions } from '@tellescope
 
 export interface EnduserSessionOptions extends SessionOptions { enduser?: Enduser, businessId: string }
 
-type EnduserAccessibleModels = 'endusers' | 'form_responses' | "chat_rooms" | 'chats' | 'files' | 'tickets' | 'calendar_events' | 'engagement_events'
+type EnduserAccessibleModels = (
+    'endusers' 
+  | 'form_responses' 
+  | "chat_rooms" 
+  | 'chats' 
+  | 'files' 
+  | 'tickets' 
+  | 'calendar_events' 
+  | 'engagement_events'
+  | "enduser_observations"
+  | "forum_posts"
+  | "forums"
+  | "managed_content_records"
+  | "post_comments"
+  | "post_likes"
+)
 
 export const defaultQueries = <N extends keyof ClientModelForName>(
   s: EnduserSession, n: keyof ClientModelForName_required
@@ -68,7 +83,15 @@ type EnduserQueries = { [K in EnduserAccessibleModels]: APIQuery<K> } & {
   chat_rooms: {
     display_info: (args: extractFields<CustomActions['chat_rooms']['display_info']['parameters']>) => 
                     Promise<extractFields<CustomActions['chat_rooms']['display_info']['returns']>>,
-  }
+  },
+  post_likes: {
+    create: (args: extractFields<CustomActions['post_likes']['create']['parameters']>) => (
+      Promise<extractFields<CustomActions['post_likes']['create']['returns']>>
+    ),
+    unlike_post: (args: extractFields<CustomActions['post_likes']['unlike_post']['parameters']>) => (
+      Promise<extractFields<CustomActions['post_likes']['unlike_post']['returns']>>
+    ),
+  },
 }
 
 
@@ -81,6 +104,12 @@ const loadDefaultQueries = (s: EnduserSession): { [K in EnduserAccessibleModels]
   files: defaultQueries(s, 'files'),
   tickets: defaultQueries(s, 'tickets'),
   form_responses: defaultQueries(s, 'form_responses'),
+  enduser_observations: defaultQueries(s, 'enduser_observations'),
+  forum_posts: defaultQueries(s, 'forum_posts'),
+  forums: defaultQueries(s, 'forums'),
+  managed_content_records: defaultQueries(s, 'managed_content_records'),
+  post_comments: defaultQueries(s, 'post_comments'),
+  post_likes: defaultQueries(s, 'post_likes'),
 })
 
 
@@ -116,6 +145,9 @@ export class EnduserSession extends Session {
     // files have defaultQueries
     this.api.files.prepare_file_upload = a => this._POST(`/v1/prepare-file-upload`, a)
     this.api.files.file_download_URL = a => this._GET('/v1/file-download-URL', a)
+
+    this.api.post_likes.createOne = args => this._POST(`/v1${schema.post_likes.customActions.create.path}`, args)
+    this.api.post_likes.unlike_post = args => this._POST(`/v1${schema.post_likes.customActions.unlike_post.path}`, args)
 
     // if (this.authToken) this.refresh_session()
   }

@@ -394,6 +394,7 @@ export interface Meeting extends Meeting_readonly, Meeting_required, Meeting_upd
   attendees: Attendee[],
   meetingInfo: { Meeting: MeetingInfo },
   status: MeetingStatus,
+  publicRead?: boolean,
   endedAt?: Date,
 }
 
@@ -497,10 +498,12 @@ export interface CalendarEvent_required {
 export interface CalendarEvent_updatesDisabled {}
 export interface CalendarEvent extends CalendarEvent_readonly, CalendarEvent_required, CalendarEvent_updatesDisabled {
   attendees: UserIdentity[],
+  publicRead?: boolean,
   chatRoomId?: string,
   description?: string,
   fields?: Indexable<string | CustomField>,
   reminders?: CalendarEventReminder[],
+  displayImage?: string,
 }
 
 export type WebhookRecord = {
@@ -646,6 +649,102 @@ export interface UserNotification extends UserNotification_readonly, UserNotific
   relatedRecords?: RelatedRecord[],
 }
 
+export type ObservationValue = {
+  value: number,
+  unit: string,
+}
+// see https://build.fhir.org/valueset-observation-status.html
+export type ObservationStatusCode = (
+    'registered'  
+  | 'preliminary' 
+  | 'final' // recording is done
+  | 'amended' 
+  | 'corrected' 
+  | 'cancelled' 
+  | 'entered-in-error' 
+  | 'unknown'
+)
+export type ObservationCategory = 'vital-signs'
+
+export interface EnduserObservation_readonly extends ClientRecord {}
+export interface EnduserObservation_required {
+  status: ObservationStatusCode,
+  category: ObservationCategory,
+  enduserId: string,
+  value: ObservationValue,
+}
+export interface EnduserObservation_updatesDisabled {}
+export interface EnduserObservation extends EnduserObservation_readonly, EnduserObservation_required, EnduserObservation_updatesDisabled {
+  code?: string,
+  type?: string,
+  source?: string, // who generated this (e.g. self-reported vs lab work)
+}
+
+// export type ManagedContentRecordType = 'post'
+export interface ManagedContentRecord_readonly extends ClientRecord {}
+export interface ManagedContentRecord_required {
+  title: string,
+  textContent: string,
+  htmlContent: string,
+}
+export interface ManagedContentRecord_updatesDisabled {}
+export interface ManagedContentRecord extends ManagedContentRecord_readonly, ManagedContentRecord_required, ManagedContentRecord_updatesDisabled {
+  // type?: ManagedContentRecordType,
+  slug?: string,
+  description?: string,
+  tags?: string[],
+  files?: string[],
+  editorState?: string
+  mode?: MessageTemplateMode,
+}
+
+export interface Forum_readonly extends ClientRecord {}
+export interface Forum_required {
+  title: string,
+}
+export interface Forum_updatesDisabled {}
+export interface Forum extends Forum_readonly, Forum_required, Forum_updatesDisabled {
+  description?: string,
+  publicRead?: boolean,
+}
+
+export interface ForumPost_readonly extends ClientRecord {
+  numLikes: number,
+  numComments: number,
+}
+export interface ForumPost_required {
+  forumId: string,
+  textContent: string,
+  htmlContent: string,
+  editorState?: string
+}
+export interface ForumPost_updatesDisabled {}
+export interface ForumPost extends ForumPost_readonly, ForumPost_required, ForumPost_updatesDisabled {
+  description?: string,
+}
+
+export interface PostLike_readonly extends ClientRecord {}
+export interface PostLike_required {
+  forumId: string,
+  postId: string,
+}
+export interface PostLike_updatesDisabled {}
+export interface PostLike extends PostLike_readonly, PostLike_required, PostLike_updatesDisabled {}
+
+export interface PostComment_readonly extends ClientRecord {}
+export interface PostComment_required {
+  forumId: string,
+  postId: string,
+  textContent: string,
+  htmlContent: string,
+  editorState?: string
+}
+export interface PostComment_updatesDisabled {}
+export interface PostComment extends PostComment_readonly, PostComment_required, PostComment_updatesDisabled {
+  replyTo?: string,
+  attachments?: string[],
+}
+
 export type AutomatedActionStatus = 'active' | 'finished' | 'cancelled' | 'error'
 export interface AutomatedAction_readonly extends ClientRecord {}
 export interface AutomatedAction_required {
@@ -711,6 +810,12 @@ export type ModelForName_required = {
   user_logs: UserLog_required;
   user_notifications: UserNotification_required;
   enduser_status_updates: EnduserStatusUpdate_required;
+  enduser_observations: EnduserObservation_required;
+  managed_content_records: ManagedContentRecord_required;
+  forums: Forum_required;
+  forum_posts: ForumPost_required;
+  post_likes: PostLike_required;
+  post_comments: PostComment_required;
 }
 export type ClientModel_required = ModelForName_required[keyof ModelForName_required]
 
@@ -740,6 +845,12 @@ export interface ModelForName_readonly {
   user_logs: UserLog_readonly;
   user_notifications: UserNotification_readonly;
   enduser_status_updates: EnduserStatusUpdate_readonly;
+  enduser_observations: EnduserObservation_readonly;
+  managed_content_records: ManagedContentRecord_readonly;
+  forums: Forum_readonly;
+  forum_posts: ForumPost_readonly;
+  post_likes: PostLike_readonly;
+  post_comments: PostComment_readonly;
 }
 export type ClientModel_readonly = ModelForName_readonly[keyof ModelForName_readonly]
 
@@ -769,6 +880,12 @@ export interface ModelForName_updatesDisabled {
   user_logs: UserLog_updatesDisabled;
   user_notifications: UserNotification_updatesDisabled;
   enduser_status_updates: EnduserStatusUpdate_updatesDisabled;
+  enduser_observations: EnduserObservation_updatesDisabled;
+  managed_content_records: ManagedContentRecord_updatesDisabled;
+  forums: Forum_updatesDisabled;
+  forum_posts: ForumPost_updatesDisabled;
+  post_likes: PostLike_updatesDisabled;
+  post_comments: PostComment_updatesDisabled;
 }
 export type ClientModel_updatesDisabled = ModelForName_updatesDisabled[keyof ModelForName_updatesDisabled]
 
@@ -798,6 +915,12 @@ export interface ModelForName extends ModelForName_required, ModelForName_readon
   user_logs: UserLog;
   user_notifications: UserNotification;
   enduser_status_updates: EnduserStatusUpdate;
+  enduser_observations: EnduserObservation;
+  managed_content_records: ManagedContentRecord;
+  forums: Forum;
+  forum_posts: ForumPost;
+  post_likes: PostLike;
+  post_comments: PostComment;
 }
 export type ModelName = keyof ModelForName
 export type Model = ModelForName[keyof ModelForName]
@@ -837,6 +960,12 @@ export const modelNameChecker: { [K in ModelName] : true } = {
   webhooks: true, 
   user_logs: true,
   user_notifications: true,
+  enduser_observations: true,
+  managed_content_records: true,
+  forums: true,
+  forum_posts: true,
+  post_likes: true,
+  post_comments: true,
 }
 
 export const isModelName = (s: string): s is ModelName => modelNameChecker[s as ModelName]

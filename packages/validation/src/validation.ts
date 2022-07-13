@@ -78,6 +78,9 @@ import {
   SetEnduserStatusAutomationAction,
   SetEnduserStatusInfo,
   NotificationPreference,
+  ObservationCategory,
+  ObservationStatusCode,
+  ObservationValue,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -1260,3 +1263,23 @@ export const notificationPreferenceValidator = objectValidator<NotificationPrefe
   email: booleanValidator({ isOptional: true }),
 })
 export const notificationPreferencesValidator = objectAnyFieldsValidator(notificationPreferenceValidator())
+
+export const FHIRObservationCategoryValidator = exactMatchValidator<ObservationCategory>(['vital-signs'])
+
+const _FHIR_OBSERVATION_STATUS_CODES: { [K in ObservationStatusCode]: any } = {
+  "entered-in-error": '',
+  amended : '',
+  cancelled: '',
+  corrected: '',
+  final: '',
+  preliminary: '',
+  registered: '',
+  unknown: '',
+}
+export const FHIR_OBSERVATION_STATUS_CODES = Object.keys(_FHIR_OBSERVATION_STATUS_CODES) as ObservationStatusCode[]
+export const FHIRObservationStatusCodeValidator = exactMatchValidator<ObservationStatusCode>(FHIR_OBSERVATION_STATUS_CODES)
+
+export const FHIRObservationValueValidator = objectValidator<ObservationValue>({
+  unit: stringValidator(),
+  value: numberValidator(),
+})

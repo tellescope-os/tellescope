@@ -431,6 +431,7 @@ const validateReturnType = <N extends ModelName, T=ClientModelForName[N]>(fs: Mo
 
 let defaultEnduser = undefined as Enduser | undefined
 const run_generated_tests = async <N extends ModelName>({ queries, model, name, returns } : GeneratedTest<N>) => {
+  if (name === 'post_likes') return // all custom
   if (!defaultEnduser) defaultEnduser = await sdk.api.endusers.createOne({ email: 'default@tellescope.com', phone: "5555555555"  })
 
   const { instance, updates, filter } = instanceForModel(model) 
@@ -456,9 +457,10 @@ const run_generated_tests = async <N extends ModelName>({ queries, model, name, 
     await async_test(
       `create-${singularName} (missing a required field)`,
       () => queries.createOne({} as any), 
-      { shouldError: true, onError: e => e.message.endsWith('is required') },
+      { shouldError: true, onError: e => e.message.endsWith('is required') || e.message.includes('Value not provided') },
     )
   }
+  
   await async_test(
     `create-${singularName}`, 
     () => queries.createOne(instance), 
@@ -1341,6 +1343,8 @@ const users_tests = async () => {
 }
 
 const calendar_events_tests = async () => {
+  log_header("Calendar Events")
+
   const { id } = await sdk.api.endusers.createOne({ email })
   const { authToken, enduser } = await sdk.api.endusers.generate_auth_token({ id })
   const enduserSDK = new EnduserSession({ host, authToken, enduser, businessId: sdk.userInfo.businessId })
@@ -1351,6 +1355,9 @@ const calendar_events_tests = async () => {
   const eventWithEnduser = await sdk.api.calendar_events.createOne({ 
     title: "Event with Enduser", durationInMinutes: 30, startTimeInMS: Date.now(), attendees: [{ id, type: 'enduser' }]
   })
+  const publicEvent = await sdk.api.calendar_events.createOne({ 
+    title: "Event", durationInMinutes: 30, startTimeInMS: Date.now(), publicRead: true,
+  })
 
   await async_test(
     `user can access own event`,
@@ -1358,9 +1365,20 @@ const calendar_events_tests = async () => {
     { onResult: e => e && e.id === event.id }
   ) 
   await async_test(
-    `user can access own events`,
+    `user can access public event`,
+    () => sdk.api.calendar_events.getOne(publicEvent.id),
+    { onResult: e => e && e.id === publicEvent.id }
+  ) 
+  // TODO: implement support for publicRead for users, 
+  // await async_test(
+  //   `non-creator, non-admin user can access public event`,
+  //   () => sdkNonAdmin.api.calendar_events.getOne(publicEvent.id),
+  //   { onResult: e => e && e.id === event.id }
+  // ) 
+  await async_test(
+    `user can access own events and public events`,
     () => sdk.api.calendar_events.getSome(),
-    { onResult: es => es && es.length === 2 }
+    { onResult: es => es && es.length === 3 }
   ) 
   await async_test(
     `user can access own event with enduser attendee`,
@@ -1379,12 +1397,32 @@ const calendar_events_tests = async () => {
     { onResult: e => e && e.id === eventWithEnduser.id }
   ) 
   await async_test(
-    `enduser can access own events`,
+    `enduser can access public event`,
+    () => enduserSDK.api.calendar_events.getOne(publicEvent.id),
+    { onResult: e => e && e.id === publicEvent.id }
+  ) 
+  await async_test(
+    `enduser can access own events and public events`,
     () => enduserSDK.api.calendar_events.getSome(),
-    { onResult: es => es && es.length === 1 }
+    { onResult: es => es && es.length === 2 }
+  ) 
+  await async_test(
+    `enduser cannot update publicEvent `,
+    () => enduserSDK.api.calendar_events.updateOne(publicEvent.id, { title: "CHANGED "}),
+    handleAnyError
+  ) 
+  await async_test(
+    `enduser cannot delete publicEvent`,
+    () => enduserSDK.api.calendar_events.deleteOne(publicEvent.id),
+    handleAnyError
   ) 
 
-  await sdk.api.endusers.deleteOne(enduser.id)
+  await Promise.all([
+    sdk.api.endusers.deleteOne(enduser.id),
+    sdk.api.calendar_events.deleteOne(event.id),
+    sdk.api.calendar_events.deleteOne(eventWithEnduser.id),
+    sdk.api.calendar_events.deleteOne(publicEvent.id),
+  ])
 }
 
 const automation_events_tests = async () => {
@@ -1436,6 +1474,13 @@ const form_response_tests = async () => {
 export const meetings_tests = async () => {
   log_header("Meetings")
 
+  const enduser = await sdk.api.endusers.createOne({ email })
+  await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
+  await enduserSDK.authenticate(email, password).catch(console.error) 
+
+  const privateMeeting = await sdk.api.meetings.start_meeting({ })
+  const publicMeeting = await sdk.api.meetings.start_meeting({ publicRead: true })
+
   await async_test(
     `Admin can get meetings`,
     sdk.api.meetings.getSome,
@@ -1446,6 +1491,23 @@ export const meetings_tests = async () => {
     sdkNonAdmin.api.meetings.getSome,
     { shouldError: true, onError: e => e.message === "Admin access only" },
   ) 
+
+  await async_test(
+    `Enduser can access public meeting, not private meeting`,
+    enduserSDK.api.meetings.my_meetings,
+    { onResult: ms => ms.length === 1 && !!ms.find(m => m.id === publicMeeting.id) }
+  )
+
+  await Promise.all([
+    sdk.api.meetings.end_meeting({ id: publicMeeting.id }),
+    sdk.api.meetings.end_meeting({ id: privateMeeting.id }),
+    sdk.api.endusers.deleteOne(enduser.id),
+  ])
+
+  // await Promise.all([
+  //   sdk.api.meetings.deleteOne(publicMeeting.id),
+  //   sdk.api.meetings.deleteOne(privateMeeting.id),
+  // ])
 }
 
 const search_tests = async () => {
@@ -1533,7 +1595,7 @@ const role_based_access_tests = async () => {
 
   const chatRoom = await sdk.api.chat_rooms.createOne({ enduserIds: [e.id ]})
   const chatMessage = await sdk.api.chats.createOne({ roomId: chatRoom.id, message: 'test chat access' })
-  const chatMessage2 = await sdk.api.chats.createOne({ roomId: chatRoom.id, message: 'test chat access 2' })
+  await sdk.api.chats.createOne({ roomId: chatRoom.id, message: 'test chat access 2' })
 
   // unassigned to enduser access tests
   await async_test(
@@ -1683,6 +1745,121 @@ const status_update_tests = async () => {
   ])
 }
 
+const community_tests = async () => {
+  log_header("Community")
+
+  const enduser = await sdk.api.endusers.createOne({ email })
+  await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
+  await enduserSDK.authenticate(email, password).catch(console.error) 
+
+  const forum = await sdk.api.forums.createOne({ title: 'test', publicRead: true })
+  const privateForum = await sdk.api.forums.createOne({ title: 'test', publicRead: false })
+
+  await async_test(
+    `enduser access forum`, () => enduserSDK.api.forums.getOne(forum.id), { onResult: f => f.id === forum.id } 
+  )  
+  await async_test(`enduser access privateForum error`, () => enduserSDK.api.forums.getOne(privateForum.id), handleAnyError)  
+
+  const enduserPost = await enduserSDK.api.forum_posts.createOne({ forumId: forum.id, htmlContent: 'enduser', textContent: 'enduser' })
+  assert(!!enduserPost, 'enduser post failed', 'enduser post successful')
+  const userPost = await sdk.api.forum_posts.createOne({ forumId: forum.id, htmlContent: 'user', textContent: 'user' })
+  assert(!!userPost, 'user post failed', 'user post successful')
+
+  assert(enduserPost.numComments === 0 && enduserPost.numLikes === 0, 'counts not initialized', 'counts initialized at 0')
+
+  await async_test(
+    `enduser post private errors`, 
+    () => enduserSDK.api.forum_posts.createOne({ forumId: privateForum.id, htmlContent: 'enduser', textContent: 'enduser' }), 
+    handleAnyError
+  )  
+
+  const enduserSelfComment = await enduserSDK.api.post_comments.createOne({ forumId: forum.id, postId: enduserPost.id, htmlContent: 'enduser', textContent: 'enduser' })
+  const userComment = await sdk.api.post_comments.createOne({ forumId: forum.id, postId: enduserPost.id, htmlContent: 'user', textContent: 'user' })
+  assert(!!enduserSelfComment, 'enduser comment failed', 'enduser comment successful')
+  assert(!!userComment, 'user comment failed', 'user comment successful')
+
+  await enduserSDK.api.post_likes.createOne({ forumId: forum.id, postId: enduserPost.id })
+  await async_test(
+    `double-like not allowed`, 
+    () => enduserSDK.api.post_likes.createOne({ forumId: forum.id, postId: enduserPost.id }),
+    handleAnyError
+  )  
+
+  await wait(undefined, 50)
+  await async_test(
+    `post and like counts on create`, 
+    () => sdk.api.forum_posts.getOne(enduserPost.id), 
+    { onResult: p => p.numComments === 2 && p.numLikes === 1}
+  )  
+
+  await enduserSDK.api.post_likes.unlike_post({ postId: enduserPost.id, forumId: enduserPost.forumId })
+  await wait(undefined, 50)
+  await async_test(
+    `post and like counts after unlike`, 
+    () => sdk.api.forum_posts.getOne(enduserPost.id), 
+    { onResult: p => p.numComments === 2 && p.numLikes === 0 }
+  )  
+
+
+  const userSelfPost = await sdk.api.forum_posts.createOne({ forumId: privateForum.id, htmlContent: 'user', textContent: 'user' })
+  assert(!!userSelfPost, 'user private post failed', 'user private post successful')
+
+  const userSelfPostComment = await sdk.api.post_comments.createOne({ forumId: privateForum.id, postId: userSelfPost.id, htmlContent: 'user', textContent: 'user' })
+  assert(!!userSelfPostComment, 'user private post comment failed', 'user private post comment successful')
+
+  await async_test(
+    `enduser comment private errors`, 
+    () => enduserSDK.api.post_comments.createOne({ forumId: privateForum.id, postId: userSelfPost.id, htmlContent: 'enduser', textContent: 'enduser' }), 
+    handleAnyError
+  )  
+  await async_test(
+    'enduser cannot access private post by id',
+    () => enduserSDK.api.forum_posts.getOne(userSelfPost.id),
+    handleAnyError,
+  )
+  await async_test(
+    'enduser cannot access private post by filter',
+    () => enduserSDK.api.forum_posts.getOne({ forumId: privateForum.id }),
+    handleAnyError,
+  )
+  await async_test(
+    'enduser cannot access private comment by id',
+    () => enduserSDK.api.post_comments.getOne(userSelfPostComment.id),
+    handleAnyError,
+  )
+  await async_test(
+    'enduser cannot access private comment by filter (forum id)',
+    () => enduserSDK.api.post_comments.getOne({ forumId: privateForum.id }),
+    handleAnyError,
+  )
+  await async_test(
+    'enduser cannot access private comment by filter (post id)',
+    () => enduserSDK.api.post_comments.getOne({ postId: userSelfPost.id }),
+    handleAnyError,
+  )
+  await async_test(
+    'enduser cannot access private comment by filter (forum and post id)',
+    () => enduserSDK.api.post_comments.getOne({ forumId: privateForum.id, postId: userSelfPost.id }),
+    handleAnyError,
+  )
+  await async_test(
+    'enduser cannot access private posts',
+    () => enduserSDK.api.forum_posts.getSome({ filter: { forumId: privateForum.id }}),
+    { onResult: posts => posts.length === 0 },
+  )
+  await async_test(
+    'enduser cannot access private comments',
+    () => enduserSDK.api.post_comments.getSome({ filter: { forumId: privateForum.id }}),
+    { onResult: comments => comments.length === 0 },
+  )
+  
+  await Promise.all([
+    await sdk.api.endusers.deleteOne(enduser.id),
+    await sdk.api.forums.deleteOne(forum.id),
+    await sdk.api.forums.deleteOne(privateForum.id),
+  ])
+}
+
 const NO_TEST = () => {}
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
@@ -1710,6 +1887,12 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
   enduser_status_updates: status_update_tests,
   user_logs: NO_TEST,
   user_notifications: notifications_tests,
+  enduser_observations: NO_TEST,
+  forum_posts: NO_TEST,
+  forums: community_tests,
+  managed_content_records: NO_TEST,
+  post_comments: NO_TEST,
+  post_likes: NO_TEST,
 };
 
 (async () => {

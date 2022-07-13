@@ -14,6 +14,7 @@ export type ClientModelForName = ToClientModels<models.ModelForName>
 
 export type CalendarEvent = ClientModelForName['calendar_events']
 export type Enduser = ClientModelForName['endusers']
+export type EnduserObservation = ClientModelForName['enduser_observations']
 export type EnduserStatusUpdate = ClientModelForName['enduser_status_updates']
 export type EngagementEvent = ClientModelForName['engagement_events']
 export type ChatRoom = ClientModelForName['chat_rooms']
@@ -23,6 +24,7 @@ export type File = ClientModelForName['files']
 export type Form = ClientModelForName['forms']
 export type FormResponse = ClientModelForName['form_responses']
 export type Journey = ClientModelForName['journeys']
+export type ManagedContentRecord = ClientModelForName['managed_content_records']
 export type SMSMessage = ClientModelForName['sms_messages']
 export type Task = ClientModelForName['tasks']
 export type Template = ClientModelForName['templates']
@@ -37,6 +39,10 @@ export type User = ClientModelForName['users']
 export type UserLog = ClientModelForName['user_logs']
 export type UserNotification = ClientModelForName['user_notifications']
 
+export type Forum = ClientModelForName['forums']
+export type ForumPost = ClientModelForName['forum_posts']
+export type PostComment = ClientModelForName['post_comments']
+export type PostLike = ClientModelForName['post_likes']
 
 export interface UserDisplayInfo extends models.UserActivityInfo { 
   id: string,

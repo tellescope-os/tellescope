@@ -98,6 +98,9 @@ import {
   listOfRelatedRecordsValidator,
   cancelConditionsValidator,
   notificationPreferencesValidator,
+  FHIRObservationCategoryValidator,
+  FHIRObservationStatusCodeValidator,
+  FHIRObservationValueValidator,
 } from "@tellescope/validation"
 
 import {
@@ -247,7 +250,11 @@ const sideEffects = {
   updateEnduserStatus: {
     name: "updateEnduserStatus",
     description: "Updates the journeys[journeyId] field in an enduser to reflect a new status update"
-  }
+  },
+  updatePostCommentCount: {
+    name: "updatePostCommentCount",
+    description: "Updates the comment count of a post"
+  },
 }
 export type SideEffectNames = keyof typeof sideEffects
 
@@ -309,7 +316,7 @@ export type CustomActions = {
     display_info: CustomAction<{ id: string }, { id: string, display_info: { [index: string]: UserDisplayInfo } }>,
   },
   meetings: {
-    start_meeting: CustomAction<{ attendees?: UserIdentity[] }, { id: string, meeting: { Meeting: MeetingInfo }, host: Attendee }>, 
+    start_meeting: CustomAction<{ attendees?: UserIdentity[], publicRead?: boolean }, { id: string, meeting: { Meeting: MeetingInfo }, host: Attendee }>, 
     send_invite: CustomAction<{ meetingId: string, enduserId: string }, { }>, 
     end_meeting: CustomAction<{ id: string }, { }>, 
     add_attendees_to_meeting: CustomAction<{ id: string, attendees: UserIdentity[] }, { }>, 
@@ -325,6 +332,10 @@ export type CustomActions = {
   },
   user_notifications: {
     send_user_email_notification: CustomAction<{ userId: string, message: string, subject?: string }, { }>,
+  },
+  post_likes: { 
+    create: CustomAction<{ postId: string, forumId: string }, { }>,
+    unlike_post: CustomAction<{ postId: string, forumId: string }, { }>,
   }
 } 
 
@@ -1530,6 +1541,7 @@ export const schema: SchemaV1 = build_schema({
         description: "Generates an video meeting room",
         parameters: { 
           attendees: { validator: listOfUserIndentitiesValidator },
+          publicRead: { validator: booleanValidator },
         },
         returns: { 
           id: { validator: mongoIdStringValidator, required: true },
@@ -1606,6 +1618,7 @@ export const schema: SchemaV1 = build_schema({
         validator: meetingInfoValidator,
         readonly: true
       },
+      publicRead: { validator: booleanValidator }, 
       endedAt: { validator: dateValidator },
     }
   },
@@ -1914,6 +1927,8 @@ export const schema: SchemaV1 = build_schema({
         validator: listOfCalendarEventRemindersValidator,
         initializer: () => [],
       },
+      publicRead: { validator: booleanValidator }, 
+      displayImage: { validator: stringValidator }, 
       fields: { validator: fieldsValidator }, 
     }
   },
@@ -2173,6 +2188,293 @@ export const schema: SchemaV1 = build_schema({
       read: { validator: booleanValidator },
       relatedRecords: { validator: listOfRelatedRecordsValidator },
     }
+  },
+  enduser_observations: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { create: {}, createMany: {}, read: {}, readMany: {} },
+    fields: {
+      ...BuiltInFields, 
+      category: {
+        required: true,
+        validator: FHIRObservationCategoryValidator,
+        examples: ['vital-signs'],
+      },
+      status: {
+        required: true,
+        validator: FHIRObservationStatusCodeValidator,
+        examples: ['final'],
+      },
+      value: {
+        required: true,
+        validator: FHIRObservationValueValidator,
+        examples: [{
+          unit: 'mmol',
+          value: 8,
+        }],
+      },
+      enduserId: {
+        required: true,
+        validator: mongoIdStringValidator,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['endusers'],
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      code: { validator: stringValidator },
+      source: { validator: stringValidator },
+      type: { validator: stringValidator },
+    }
+  },
+  managed_content_records: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { create: {}, createMany: {}, read: {}, readMany: {} },
+    fields: {
+      ...BuiltInFields, 
+      slug: {
+        validator: stringValidator250,
+      },
+      title: {
+        validator: stringValidator100,
+        required: true,
+        examples: ["Template Name"],
+      },
+      description: {
+        validator: stringValidator5000,
+        examples: ["Template Subject"],
+      },
+      textContent: {
+        validator: stringValidator25000,
+        required: true,
+        examples: ["This is the template message......"],
+      },
+      htmlContent: {
+        validator: stringValidator25000,
+        examples: ["This is the template message......"],
+      },
+      editorState: {
+        validator: stringValidator25000,
+        examples: ["This is the template message......"],
+      },
+      mode: { validator: messageTemplateModeValidator, },
+      files: { validator: listOfStringsValidator },
+      tags: { validator: listOfStringsValidator },
+    }
+  },
+  forums: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { read: {}, readMany: {} },
+    fields: {
+      ...BuiltInFields, 
+      title: {
+        validator: stringValidator100,
+        required: true,
+        examples: ["Template Name"],
+      },
+      description: {
+        validator: stringValidator5000,
+        examples: ["Template Subject"],
+      },
+      publicRead: { validator: booleanValidator }
+    },
+  },
+  forum_posts: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+      access: [{ type: 'dependency', foreignModel: 'forums', foreignField: '_id', accessField: 'forumId' }]
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { create: {}, read: {}, readMany: {} },
+    fields: {
+      ...BuiltInFields, 
+      forumId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['forums'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      numComments: { 
+        validator: nonNegNumberValidator,
+        initializer: () => 0,
+      },
+      numLikes: { 
+        validator: nonNegNumberValidator,
+        initializer: () => 0,
+      },
+      textContent: {
+        validator: stringValidator25000,
+        required: true,
+        examples: ["This is the template message......"],
+      },
+      htmlContent: {
+        validator: stringValidator25000,
+        examples: ["This is the template message......"],
+      },
+      editorState: {
+        validator: stringValidator25000,
+        examples: ["This is the template message......"],
+      },
+    },
+  },
+  post_comments: {
+    info: {
+      sideEffects: {
+        create: [sideEffects.updatePostCommentCount],
+        update: [sideEffects.updatePostCommentCount],
+      }
+    },
+    constraints: {
+      unique: [], 
+      relationship: [],
+      access: [{ type: 'dependency', foreignModel: 'forums', foreignField: '_id', accessField: 'forumId' }]
+    },
+    defaultActions: DEFAULT_OPERATIONS,
+    customActions: { },
+    enduserActions: { create: {}, read: {}, readMany: {} }, // IF ADDING DELETE, make sure it's restricted on publicAccess to just the enduser
+    fields: {
+      ...BuiltInFields, 
+      forumId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['forums'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      postId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['forum_posts'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      replyTo: {
+        validator: mongoIdStringValidator,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['post_comments'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'nop',
+        }]
+      },
+      // numComments: { 
+      //   validator: nonNegNumberValidator,
+      //   initializer: () => 0,
+      // },
+      // numLikes: { 
+      //   validator: nonNegNumberValidator,
+      //   initializer: () => 0,
+      // },
+      attachments: { validator: listOfStringsValidator },
+      textContent: {
+        validator: stringValidator25000,
+        required: true,
+        examples: ["This is the template message......"],
+      },
+      htmlContent: {
+        validator: stringValidator25000,
+        examples: ["This is the template message......"],
+      },
+      editorState: {
+        validator: stringValidator25000,
+        examples: ["This is the template message......"],
+      },
+    },
+  },
+  post_likes: {
+    info: {},
+    constraints: {
+      unique: [], 
+      relationship: [],
+      access: [{ type: 'dependency', foreignModel: 'forums', foreignField: '_id', accessField: 'forumId' }]
+    },
+    defaultActions: { read: {}, readMany: {}, delete: {} }, // create is custom
+    customActions: { 
+      create: {
+        op: "custom", access: 'create', method: "post",
+        name: 'Like Forum Post',
+        path: '/post-like', // follows default format
+        description: "Likes a post",
+        parameters: { 
+          postId: { validator: mongoIdStringValidator, required: true },
+          forumId: { validator: mongoIdStringValidator, required: true },
+        },
+        returns: { } //authToken: { validator: stringValidator5000 } },
+      },
+      unlike_post: {
+        op: "custom", access: 'update', method: "post",
+        name: 'Unlike Forum Post',
+        path: '/unlike-forum-post',
+        description: "Removes a like for a given forum post",
+        parameters: { 
+          postId: { validator: mongoIdStringValidator, required: true },
+          forumId: { validator: mongoIdStringValidator, required: true },
+        },
+        returns: { } //authToken: { validator: stringValidator5000 } },
+      },
+    },
+    enduserActions: { create: {}, unlike_post: {} },
+    fields: {
+      ...BuiltInFields, 
+      forumId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['forums'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+      postId: {
+        validator: mongoIdStringValidator,
+        required: true,
+        examples: [PLACEHOLDER_ID],
+        dependencies: [{
+          dependsOn: ['forum_posts'], 
+          dependencyField: '_id',
+          relationship: 'foreignKey',
+          onDependencyDelete: 'delete',
+        }]
+      },
+    },
   },
 })
 

@@ -255,7 +255,7 @@ const access_tests = async () => {
     'non-admin got message from user and enduser',
   )
 
-
+  console.log('cleaning up')
   await Promise.all([
     await user1.api.endusers.deleteOne(unassignedEnduser.id),
     await user1.api.endusers.deleteOne(assignedEnduser.id),

@@ -33,6 +33,12 @@ import {
   Journey,
   User,
   AutomationStep,
+  EnduserObservation,
+  Forum,
+  ForumPost,
+  ManagedContentRecord,
+  PostComment,
+  PostLike,
 } from "@tellescope/types-client"
 
 import {
@@ -216,6 +222,13 @@ const usersSlice = createSliceForList<User, 'users'>('users')
 const automationStepsSlice = createSliceForList<AutomationStep, 'automations_steps'>('automations_steps')
 const usersDisplaySlice = createSliceForList<UserDisplayInfo, 'users'>('users')
 
+const enduserObservationsSlice = createSliceForList<EnduserObservation, 'enduser_observations'>('enduser_observations')
+const forumsSlice = createSliceForList<Forum, 'forums'>('forums')
+const forumPostsSlice = createSliceForList<ForumPost, 'forum_posts'>('forum_posts')
+const managedContentRecoredsSlice = createSliceForList<ManagedContentRecord, 'managed_content_records'>('managed_content_records')
+const postCommentsSlice = createSliceForList<PostComment, 'post_comments'>('post_comments')
+const postLikesSlice = createSliceForList<PostLike, 'post_likes'>('post_likes')
+
 export const sharedConfig = {
   reducer: { 
     chat_rooms: chatRoomsSlice.reducer,
@@ -238,6 +251,12 @@ export const sharedConfig = {
     users: usersSlice.reducer,
     users_display: usersDisplaySlice.reducer,
     automation_steps: automationStepsSlice.reducer,
+    enduser_observations: enduserObservationsSlice.reducer,
+    forum_posts: forumPostsSlice.reducer,
+    forums: forumsSlice.reducer,
+    managed_content_records: managedContentRecoredsSlice.reducer,
+    post_comments: postCommentsSlice.reducer,
+    post_likes: postLikesSlice.reducer,
   },
 }
 
@@ -948,5 +967,98 @@ export const useUserDisplayInfo = (options={} as HookOptions<UserDisplayInfo>) =
       loadQuery: session.api.users.display_info,
     }, 
     { ...options }
+  )
+}
+
+export const useEnduserObservations = (options={} as HookOptions<EnduserObservation>) => {
+  const session = useResolvedSession()
+  return useListStateHook(
+    'enduser_observations', useTypedSelector(s => s.enduser_observations), session, enduserObservationsSlice, 
+    { 
+      loadQuery: session.api.enduser_observations.getSome,
+      findOne: session.api.enduser_observations.getOne,
+      addOne: session.api.enduser_observations.createOne,
+      addSome: session.api.enduser_observations.createSome,
+      deleteOne: session.api.enduser_observations.deleteOne,
+      updateOne: session.api.enduser_observations.updateOne,
+    }, 
+    {...options}
+  )
+}
+
+export const useManagedContentRecords = (options={} as HookOptions<ManagedContentRecord>) => {
+  const session = useResolvedSession()
+  return useListStateHook(
+    'managed_content_records', useTypedSelector(s => s.managed_content_records), session, managedContentRecoredsSlice, 
+    { 
+      loadQuery: session.api.managed_content_records.getSome,
+      findOne: session.api.managed_content_records.getOne,
+      addOne: session.api.managed_content_records.createOne,
+      addSome: session.api.managed_content_records.createSome,
+      deleteOne: session.api.managed_content_records.deleteOne,
+      updateOne: session.api.managed_content_records.updateOne,
+    }, 
+    {...options}
+  )
+}
+
+export const useForums = (options={} as HookOptions<Forum>) => {
+  const session = useResolvedSession()
+  return useListStateHook(
+    'forums', useTypedSelector(s => s.forums), session, forumsSlice, 
+    { 
+      loadQuery: session.api.forums.getSome,
+      findOne: session.api.forums.getOne,
+      addOne: session.api.forums.createOne,
+      addSome: session.api.forums.createSome,
+      deleteOne: session.api.forums.deleteOne,
+      updateOne: session.api.forums.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const useForumPosts = (options={} as HookOptions<ForumPost>) => {
+  const session = useResolvedSession()
+  return useListStateHook(
+    'forum_posts', useTypedSelector(s => s.forum_posts), session, forumPostsSlice, 
+    { 
+      loadQuery: session.api.forum_posts.getSome,
+      findOne: session.api.forum_posts.getOne,
+      addOne: session.api.forum_posts.createOne,
+      addSome: session.api.forum_posts.createSome,
+      deleteOne: session.api.forum_posts.deleteOne,
+      updateOne: session.api.forum_posts.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const usePostComments = (options={} as HookOptions<PostComment>) => {
+  const session = useResolvedSession()
+  return useListStateHook(
+    'post_comments', useTypedSelector(s => s.post_comments), session, postCommentsSlice, 
+    { 
+      loadQuery: session.api.post_comments.getSome,
+      findOne: session.api.post_comments.getOne,
+      addOne: session.api.post_comments.createOne,
+      addSome: session.api.post_comments.createSome,
+      deleteOne: session.api.post_comments.deleteOne,
+      updateOne: session.api.post_comments.updateOne,
+    }, 
+    {...options}
+  )
+}
+export const usePostLikes = (options={} as HookOptions<PostLike>) => {
+  const session = useResolvedSession()
+  return useListStateHook(
+    'post_likes', useTypedSelector(s => s.post_comments), session, postLikesSlice, 
+    { 
+      loadQuery: session.type === 'user' ? session.api.post_likes.getSome : undefined,
+      findOne: session.api.post_likes.getOne,
+      addOne: session.api.post_likes.createOne,
+      addSome: session.api.post_likes.createSome,
+      deleteOne: session.api.post_likes.deleteOne,
+      updateOne: session.api.post_likes.updateOne,
+    }, 
+    {...options}
   )
 }
