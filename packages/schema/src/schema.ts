@@ -101,6 +101,7 @@ import {
   FHIRObservationCategoryValidator,
   FHIRObservationStatusCodeValidator,
   FHIRObservationValueValidator,
+  userIdentityValidator,
 } from "@tellescope/validation"
 
 import {
@@ -2247,9 +2248,7 @@ export const schema: SchemaV1 = build_schema({
     enduserActions: { create: {}, createMany: {}, read: {}, readMany: {} },
     fields: {
       ...BuiltInFields, 
-      slug: {
-        validator: stringValidator250,
-      },
+      slug: { validator: stringValidator250 },
       title: {
         validator: stringValidator100,
         required: true,
@@ -2280,7 +2279,7 @@ export const schema: SchemaV1 = build_schema({
   forums: {
     info: {},
     constraints: {
-      unique: [], 
+      unique: ['title'], 
       relationship: [],
     },
     defaultActions: DEFAULT_OPERATIONS,
@@ -2297,7 +2296,8 @@ export const schema: SchemaV1 = build_schema({
         validator: stringValidator5000,
         examples: ["Template Subject"],
       },
-      publicRead: { validator: booleanValidator }
+      publicRead: { validator: booleanValidator },
+      slug: { validator: stringValidator250 },
     },
   },
   forum_posts: {
@@ -2323,6 +2323,10 @@ export const schema: SchemaV1 = build_schema({
           onDependencyDelete: 'delete',
         }]
       },
+      postedBy: {
+        validator: userIdentityValidator,
+        initializer: (_, s) => ({ type: s.type, id: s.id })
+      },
       numComments: { 
         validator: nonNegNumberValidator,
         initializer: () => 0,
@@ -2344,6 +2348,7 @@ export const schema: SchemaV1 = build_schema({
         validator: stringValidator25000,
         examples: ["This is the template message......"],
       },
+      slug: { validator: stringValidator250 },
     },
   },
   post_comments: {
@@ -2394,6 +2399,10 @@ export const schema: SchemaV1 = build_schema({
           relationship: 'foreignKey',
           onDependencyDelete: 'nop',
         }]
+      },
+      postedBy: {
+        validator: userIdentityValidator,
+        initializer: (_, s) => ({ type: s.type, id: s.id }),
       },
       // numComments: { 
       //   validator: nonNegNumberValidator,
@@ -2454,6 +2463,22 @@ export const schema: SchemaV1 = build_schema({
     enduserActions: { create: {}, unlike_post: {} },
     fields: {
       ...BuiltInFields, 
+      // creator: {
+      //   ...BuiltInFields.creator,
+      //   dependencies: [{
+      //       dependsOn: ['endusers'], 
+      //       dependencyField: '_id',
+      //       relationship: 'foreignKey',
+      //       onDependencyDelete: 'delete',
+      //     },
+      //     {
+      //       dependsOn: ['users'], 
+      //       dependencyField: '_id',
+      //       relationship: 'foreignKey',
+      //       onDependencyDelete: 'delete',
+      //     }
+      //   ],
+      // },
       forumId: {
         validator: mongoIdStringValidator,
         required: true,

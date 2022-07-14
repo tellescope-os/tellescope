@@ -706,6 +706,7 @@ export interface Forum_required {
 }
 export interface Forum_updatesDisabled {}
 export interface Forum extends Forum_readonly, Forum_required, Forum_updatesDisabled {
+  slug?: string,
   description?: string,
   publicRead?: boolean,
 }
@@ -722,6 +723,8 @@ export interface ForumPost_required {
 }
 export interface ForumPost_updatesDisabled {}
 export interface ForumPost extends ForumPost_readonly, ForumPost_required, ForumPost_updatesDisabled {
+  postedBy: UserIdentity,
+  slug?: string,
   description?: string,
 }
 
@@ -743,6 +746,7 @@ export interface PostComment_required {
 }
 export interface PostComment_updatesDisabled {}
 export interface PostComment extends PostComment_readonly, PostComment_required, PostComment_updatesDisabled {
+  postedBy: UserIdentity,
   replyTo?: string,
   attachments?: string[],
 }
