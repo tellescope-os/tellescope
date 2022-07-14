@@ -789,7 +789,7 @@ export const useChats = (roomId?: string, options={} as HookOptions<ChatMessage>
 }
 
 export const useEndusers = (options={} as HookOptions<Enduser>) => {
-  const session = useSession()
+  const session = useResolvedSession()
   return useListStateHook(
     'endusers', 
     useTypedSelector(s => s.endusers), 
@@ -807,7 +807,7 @@ export const useEndusers = (options={} as HookOptions<Enduser>) => {
   )
 }
 export const useTickets = (options={} as HookOptions<Ticket>) => {
-  const session = useSession()
+  const session = useResolvedSession()
   return useListStateHook(
     'tickets', useTypedSelector(s => s.tickets), session, ticketsSlice, 
     { 
@@ -837,7 +837,7 @@ export const useMeetings = (options={} as HookOptions<Meeting>) => {
   )
 }
 export const useFiles = (options={} as HookOptions<File>) => {
-  const session = useSession()
+  const session = useResolvedSession()
   return useListStateHook(
     'files', useTypedSelector(s => s.files), session, filesSlice, 
     { 

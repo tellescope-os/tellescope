@@ -1753,7 +1753,7 @@ const community_tests = async () => {
   await enduserSDK.authenticate(email, password).catch(console.error) 
 
   const forum = await sdk.api.forums.createOne({ title: 'test', publicRead: true })
-  const privateForum = await sdk.api.forums.createOne({ title: 'test', publicRead: false })
+  const privateForum = await sdk.api.forums.createOne({ title: 'test 2', publicRead: false })
 
   await async_test(
     `enduser access forum`, () => enduserSDK.api.forums.getOne(forum.id), { onResult: f => f.id === forum.id } 
@@ -1860,6 +1860,35 @@ const community_tests = async () => {
   ])
 }
 
+const enduser_redaction_tests = async () => {
+  log_header("Enduser Redaction")
+
+  const enduser = await sdk.api.endusers.createOne({ email })
+  const enduserOther = await sdk.api.endusers.createOne({ email: 'otherenduser@tellescope.com' })
+  await sdk.api.endusers.set_password({ id: enduser.id, password }).catch(console.error)
+  await enduserSDK.authenticate(email, password).catch(console.error)  
+
+  const endusers = await enduserSDK.api.endusers.getSome()
+  assert(endusers.length > 0, "enduser can't fetch others", "enduser get others successful")
+
+  const redactedFields = (
+    Object.keys(schema.endusers.fields)
+    .filter(f => schema.endusers.fields[f as keyof typeof schema.endusers.fields]?.redactions?.includes('enduser'))
+  )
+  assert(redactedFields.length > 0, 'no redacted fields', 'redacted fields exists')
+
+  assert(
+    endusers.find(e => redactedFields.filter(f => !!e[f as keyof typeof e]).length > 0) === undefined,
+    'got redacted data',
+    'data correctly redacted',
+  )
+
+  await Promise.all([
+    sdk.api.endusers.deleteOne(enduser.id),
+    sdk.api.endusers.deleteOne(enduserOther.id),
+  ])
+}
+
 const NO_TEST = () => {}
 const tests: { [K in keyof ClientModelForName]: () => void } = {
   chats: chat_tests,
@@ -1914,6 +1943,7 @@ const tests: { [K in keyof ClientModelForName]: () => void } = {
     await generateEnduserAuthTests()
     await enduser_session_tests()
     await role_based_access_tests()
+    await enduser_redaction_tests()
   } catch(err) {
     console.error("Failed during custom test")
     console.error(err)

@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/sdk",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Code for interacting with the Tellescope API",
   "main": "./lib/cjs/sdk.js",
   "module": "./lib/esm/sdk.js",
@@ -33,7 +33,7 @@
   "homepage": "https://github.com/tellescope-os/tellescope#readme",
   "dependencies": {
     "@tellescope/constants": "^1.1.2",
-    "@tellescope/schema": "^1.1.2",
+    "@tellescope/schema": "^1.1.3",
     "@tellescope/testing": "^1.0.0",
     "@tellescope/types-client": "^1.1.2",
     "@tellescope/types-models": "^1.1.2",

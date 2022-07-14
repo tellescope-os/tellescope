@@ -1,6 +1,6 @@
 {
   "name": "nativetests-video-chat",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -12,8 +12,8 @@
   "dependencies": {
     "@react-navigation/native": "^6.0.6",
     "@react-navigation/stack": "^6.0.11",
-    "@tellescope/chat": "^1.1.2",
-    "@tellescope/react-components": "^1.1.2",
+    "@tellescope/chat": "^1.1.3",
+    "@tellescope/react-components": "^1.1.3",
     "babel-plugin-module-resolver": "^4.1.0",
     "react": "17.0.2",
     "react-native": "0.66.1",

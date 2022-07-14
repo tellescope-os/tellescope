@@ -155,6 +155,10 @@ export type Dependency <T=DatabaseRecord> = {
   },
 }
 
+export type RedactionReason = (
+  'enduser' // endusers can't access this field
+)
+
 export type ModelFieldInfo <T, R> = {
   validator: EscapeBuilder<R>,
   readonly?:  boolean,
@@ -163,6 +167,7 @@ export type ModelFieldInfo <T, R> = {
   examples?:  JSONType[],
   initializer?: Initializer<Partial<T>, R>, // should include the required fields of T, not just partial
   dependencies?: Dependency<Partial<T>>[],
+  redactions?: RedactionReason[],
 }
 
 export type ModelFields<T> = {
@@ -400,7 +405,10 @@ export const schema: SchemaV1 = build_schema({
       ]
     },
     defaultActions: DEFAULT_OPERATIONS,
-    enduserActions: { logout: {}, refresh_session: {}, update: {}, current_session_info: {} },
+    enduserActions: { 
+      read: {}, readMany: {},
+      logout: {}, refresh_session: {}, update: {}, current_session_info: {},  
+    },
     fields: {
       ...BuiltInFields,   
       externalId: {
@@ -410,24 +418,29 @@ export const schema: SchemaV1 = build_schema({
       email: { 
         validator: emailValidator,
         examples: ['test@tellescope.com'],
+        redactions: ['enduser'],
       },
       emailConsent: { 
         validator: booleanValidator,
         examples: BOOLEAN_EXAMPLES,
-        initializer: e => !!e.email // set by default on create when provided
+        initializer: e => !!e.email, // set by default on create when provided
+        redactions: ['enduser'],
       },
       phone: { 
         validator: phoneValidator,
         examples: ['+14155555555'],
+        redactions: ['enduser'],
       },
       phoneConsent: { 
         validator: booleanValidator,
         examples: BOOLEAN_EXAMPLES,
-        initializer: e => !!e.phone // set by default on create when provided
+        initializer: e => !!e.phone, // set by default on create when provided
+        redactions: ['enduser'],
       },
       hashedPassword: {
         validator: stringValidator100,
         readonly: true,
+        redactions: ['enduser'], // todo: add more redactions
       },
       fname: { 
         validator: nameValidator,
@@ -437,9 +450,11 @@ export const schema: SchemaV1 = build_schema({
       },
       dateOfBirth: { 
         validator: dateValidator,
+        redactions: ['enduser'],
       },
       journeys: { 
         validator: journeysValidator,
+        redactions: ['enduser'],
         dependencies: [
           {
             dependsOn: ['journeys'],
@@ -455,18 +470,23 @@ export const schema: SchemaV1 = build_schema({
         ]
       },
       tags: { 
+        redactions: ['enduser'],
         validator: listOfStringsValidatorEmptyOk,
       },
       fields: {
+        redactions: ['enduser'],
         validator: fieldsValidator,
       },
       preference: { 
+        redactions: ['enduser'],
         validator: preferenceValidator,
       },
       assignedTo: { 
+        redactions: ['enduser'],
         validator: listOfStringsValidatorEmptyOk,
       },
       unread: { 
+        redactions: ['enduser'],
         validator: booleanValidator,
       },
       lastActive: { 
@@ -476,6 +496,7 @@ export const schema: SchemaV1 = build_schema({
         validator: dateValidator,
       },
       lastCommunication: { 
+        redactions: ['enduser'],
         validator: dateValidator,
       },
       avatar: {
