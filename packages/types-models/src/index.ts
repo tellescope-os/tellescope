@@ -671,13 +671,15 @@ export interface EnduserObservation_required {
   status: ObservationStatusCode,
   category: ObservationCategory,
   enduserId: string,
-  value: ObservationValue,
+  measurement: ObservationValue,
 }
 export interface EnduserObservation_updatesDisabled {}
 export interface EnduserObservation extends EnduserObservation_readonly, EnduserObservation_required, EnduserObservation_updatesDisabled {
+  recordedAt?: Date,
   code?: string,
   type?: string,
   source?: string, // who generated this (e.g. self-reported vs lab work)
+  notes?: string,
 }
 
 // export type ManagedContentRecordType = 'post'

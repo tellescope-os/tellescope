@@ -2210,7 +2210,7 @@ export const schema: SchemaV1 = build_schema({
         validator: FHIRObservationStatusCodeValidator,
         examples: ['final'],
       },
-      value: {
+      measurement: {
         required: true,
         validator: FHIRObservationValueValidator,
         examples: [{
@@ -2232,6 +2232,8 @@ export const schema: SchemaV1 = build_schema({
       code: { validator: stringValidator },
       source: { validator: stringValidator },
       type: { validator: stringValidator },
+      notes: { validator: stringValidator },
+      recordedAt: { validator: dateValidator },
     }
   },
   managed_content_records: {
