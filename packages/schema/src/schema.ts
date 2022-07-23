@@ -34,6 +34,7 @@ import {
   UserDisplayInfo,
   Enduser,
   Journey,
+  FormResponse,
 } from "@tellescope/types-client"
 
 import {
@@ -296,7 +297,7 @@ export type CustomActions = {
   },
   form_responses: {
     prepare_form_response: CustomAction<{ formId: string, enduserId: string, automationStepId?: string }, { accessCode: string, url: string }>,
-    submit_form_response: CustomAction<{ accessCode: string, responses: FormResponseValue  }, { }>,
+    submit_form_response: CustomAction<{ accessCode: string, responses: FormResponseValue  }, { formResponse: FormResponse }>,
   },
   journeys: {
     update_state: CustomAction<{ updates: Partial<JourneyState>, id: string, name: string }, { updated: Journey }>,
@@ -910,12 +911,12 @@ export const schema: SchemaV1 = build_schema({
         examples: ["Email Subject"],
       },
       textContent: {
-        validator: stringValidator,
+        validator: stringValidator25000,
         required: true,
         examples: ["Hi there, this is Sebastian"],
       },
       HTMLContent: {
-        validator: stringValidator,
+        validator: stringValidator25000,
       },
       timestamp: {
         validator: dateValidator,
@@ -995,8 +996,9 @@ export const schema: SchemaV1 = build_schema({
             if (logOnly === true) return
 
             const e = deps[enduserId ?? ''] as Enduser
-            if (!e?.phone) return "Missing phone"
-            if (!e?.phoneConsent) return "Missing phone consent"
+            if (!e) return // not in cache, permit by default, likely during an update
+            if (!e.phone) return "Missing phone"
+            if (!e.phoneConsent) return "Missing phone consent"
           }
         }
       ],
@@ -1744,7 +1746,9 @@ export const schema: SchemaV1 = build_schema({
           accessCode: { validator: stringValidator250, required: true },
           responses: { validator: formResponsesValidator, required: true },
         },
-        returns: {},
+        returns: {
+          formResponse: 'form response' as any,
+        },
       }
     },
     enduserActions: { prepare_form_response: {}, submit_form_response: {} },

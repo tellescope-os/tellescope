@@ -1773,10 +1773,36 @@ const community_tests = async () => {
     handleAnyError
   )  
 
+  await async_test(
+    `enduser can access single post for forumId`, 
+    () => enduserSDK.api.forum_posts.getOne({ forumId: forum.id }), 
+    passOnAnyResult,
+  )
+  await async_test(
+    `enduser can access self post by id`, 
+    () => enduserSDK.api.forum_posts.getOne(enduserPost.id), 
+    passOnAnyResult,
+  )
+  await async_test(
+    `enduser can access other post by id`, 
+    () => enduserSDK.api.forum_posts.getOne(userPost.id), 
+    passOnAnyResult,
+  )
+  await async_test(
+    `enduser can access posts`, 
+    () => enduserSDK.api.forum_posts.getSome({ filter: { forumId: forum.id } }), 
+    { onResult: r => r.length === 2 }
+  )  
+  
   const enduserSelfComment = await enduserSDK.api.post_comments.createOne({ forumId: forum.id, postId: enduserPost.id, htmlContent: 'enduser', textContent: 'enduser' })
   const userComment = await sdk.api.post_comments.createOne({ forumId: forum.id, postId: enduserPost.id, htmlContent: 'user', textContent: 'user' })
   assert(!!enduserSelfComment, 'enduser comment failed', 'enduser comment successful')
   assert(!!userComment, 'user comment failed', 'user comment successful')
+  await async_test(
+    `enduser can access post comments`, 
+    () => enduserSDK.api.post_comments.getSome({ filter: { forumId: forum.id, postId: enduserPost.id  } }), 
+    { onResult: r => r.length === 2 }
+  )
 
   await enduserSDK.api.post_likes.createOne({ forumId: forum.id, postId: enduserPost.id })
   await async_test(
@@ -1845,12 +1871,14 @@ const community_tests = async () => {
   await async_test(
     'enduser cannot access private posts',
     () => enduserSDK.api.forum_posts.getSome({ filter: { forumId: privateForum.id }}),
-    { onResult: posts => posts.length === 0 },
+    handleAnyError,
+    // { onResult: posts => posts.length === 0 },
   )
   await async_test(
     'enduser cannot access private comments',
     () => enduserSDK.api.post_comments.getSome({ filter: { forumId: privateForum.id }}),
-    { onResult: comments => comments.length === 0 },
+    handleAnyError,
+    // { onResult: comments => comments.length === 0 },
   )
   
   await Promise.all([

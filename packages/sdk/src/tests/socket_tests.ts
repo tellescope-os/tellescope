@@ -23,7 +23,7 @@ export const get_sha256 = (s='') => createHash('sha256').update(s).digest('hex')
 
 const VERBOSE = true
 
-const AWAIT_SOCKET_DURATION = 250 // 25ms was generally passing for Redis, 1000ms should be upper limit of performance
+const AWAIT_SOCKET_DURATION = 300 // 25ms was generally passing for Redis, 1000ms should be upper limit of performance
 
 const host = process.env.TEST_URL || 'http://localhost:8080'
 const [email, password] = [process.env.TEST_EMAIL, process.env.TEST_PASSWORD]
@@ -140,7 +140,7 @@ const access_tests = async () => {
 
   await user1.api.endusers.set_password({ id: unassignedEnduser.id, password: 'enduserPassword!' })
   await enduserSDK.authenticate(unassignedEnduser.email as string, 'enduserPassword!')
-  await enduserSDK.authenticate_socket()
+  await enduserSDK.connectSocket()
 
   enduserSDK.handle_events({  
     'created-chat_rooms': rs => enduserEvents.push(...rs),
@@ -161,8 +161,8 @@ const access_tests = async () => {
     && !!user1Events.find(e => e.id === roomUnassignedWithUser.id)
     && !!user1Events.find(e => e.id === roomAssigned.id) 
     ),
-    'enduser did not get chat rooms',
-    'enduser got chat rooms',
+    'user did not get chat rooms',
+    'user got chat rooms',
   )
   assert((
       !nonAdminEvents.find(e => e.id === roomUnassigned.id) // shouldn't get as non-admin
@@ -178,7 +178,7 @@ const access_tests = async () => {
     && !!enduserEvents.find(e => e.id === roomUnassignedWithUser.id)
     && !enduserEvents.find(e => e.id === roomAssigned.id)
     ),
-    'enduser did not get chat rooms',
+    `enduser did not get chat rooms: ${JSON.stringify(enduserEvents, null, 2)}`,
     'enduser got chat rooms',
   )
 

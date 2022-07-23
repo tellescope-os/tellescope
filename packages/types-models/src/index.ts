@@ -411,7 +411,7 @@ export interface Note extends Note_readonly, Note_required, Note_updatesDisabled
   fields?: Indexable<string | CustomField>,
 }
 
-export type FormFieldType = 'string' | 'number' | 'email' | 'phoneNumber' | "multiple_choice" | "file" | "signature"
+export type FormFieldType = 'string' | 'number' | 'email' | 'phone' | "multiple_choice" | "file" | "signature"
 export interface MultipleChoiceOptions {
   choices: string[];
   radio?: boolean; // absent indicates not radio

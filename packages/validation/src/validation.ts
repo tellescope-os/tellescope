@@ -690,7 +690,11 @@ export const FORM_FIELD_VALIDATORS_BY_TYPE: { [K in FormFieldType]: (value?: For
   'string': stringValidator({ maxLength: 5000, emptyStringOk: true, errorMessage: "Response must not exceed 5000 characters" }),
   'number': numberValidator({ errorMessage: "Response must be a number" }),
   'email': emailValidator(),
-  'phoneNumber': phoneValidator(),
+
+  // @ts-ignore -- backwards compatibility with old field name for email
+  'userEmail': emailValidator(), 
+  'phone': phoneValidator(),
+  'phoneNumber': phoneValidator(), // backwards compatibility with old field name for phone
   'file': (fileInfo: FileResponse | undefined, _, isOptional) => {
     if (isOptional && (!fileInfo || object_is_empty(fileInfo))) { 
       return { type: 'file', secureName: null }
