@@ -32,7 +32,7 @@ export interface WithAnySession {
 
 interface SessionContext_T {
   session: UserSession,
-  logout: () => void,
+  logout: () => Promise<void>,
   // setSession: React.Dispatch<React.SetStateAction<Session>>
   updateUserInfo: (updates: Parameters<Session['api']['users']['updateOne']>[1]) => Promise<void>,
   updateLocalSessionInfo: (u: Partial<User>, authToken?: string) => void
@@ -42,8 +42,8 @@ export const WithSession = (p : { children: React.ReactNode, sessionOptions?: Us
   const [session, setSession] = useState(() => new Session(p.sessionOptions))
 
   const logout = () => {
-    session.logout().then(console.error)
     setSession(s => new Session(p.sessionOptions))
+    return session.logout()
   }
 
   const updateLocalSessionInfo: SessionContext_T['updateLocalSessionInfo'] = (u, a) => setSession(s => new Session({ 
@@ -75,7 +75,7 @@ export const useSessionContext = () => useContext(SessionContext)
 
 interface EnduserSessionContext_T {
   enduserSession: EnduserSession,
-  logout: () => void,
+  logout: () => Promise<void>,
   // setEnduserSession: React.Dispatch<React.SetStateAction<EnduserSession>>
   updateUserInfo: (updates: Parameters<EnduserSession['api']['endusers']['updateOne']>[1]) => Promise<void>,
   updateLocalSessionInfo: (u: Partial<Enduser>, authToken?: string) => void
@@ -195,10 +195,9 @@ export const Logout = ({ onLogout, children } : {
   children?: React.ReactNode, 
   onLogout?: () => void 
 }) => {
-  const { session, updateLocalSessionInfo } = useContext(SessionContext) ?? {}
-  const { enduserSession, updateLocalSessionInfo: updateLocalEnduserSessionInfo } = useContext(EnduserSessionContext) ?? {}
+  const { session, updateLocalSessionInfo, logout: logoutUser } = useContext(SessionContext) ?? {}
+  const { enduserSession, updateLocalSessionInfo: updateLocalEnduserSessionInfo, logout: logoutEnduser } = useContext(EnduserSessionContext) ?? {}
   const loggedOut = useRef(false)
-
 
   useEffect(() => {
     if (loggedOut.current) return
@@ -209,8 +208,8 @@ export const Logout = ({ onLogout, children } : {
     
     s.logout()
     .finally(() => {
-      if (session) { updateLocalSessionInfo({}, '')}
-      else { updateLocalEnduserSessionInfo({}, '') }
+      if (session) { logoutUser().catch(console.error) }
+      else { logoutEnduser().catch(console.error) }
       onLogout?.()
     })
   }, [session, enduserSession, updateLocalSessionInfo, updateLocalEnduserSessionInfo, loggedOut])

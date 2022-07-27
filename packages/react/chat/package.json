@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/chat",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -34,8 +34,8 @@
     "@mui/icons-material": "^5.0.1",
     "@mui/material": "^5.0.2",
     "@tellescope/constants": "^1.1.4",
-    "@tellescope/react-components": "^1.1.4",
-    "@tellescope/sdk": "^1.1.4",
+    "@tellescope/react-components": "^1.1.5",
+    "@tellescope/sdk": "^1.1.5",
     "@tellescope/types-client": "^1.1.4",
     "@tellescope/types-models": "^1.1.4",
     "@tellescope/types-utilities": "^1.0.0",

@@ -1,6 +1,6 @@
 {
   "name": "@tellescope/schema",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Schema definition for Tellescope models",
   "main": "./lib/cjs/schema.js",
   "module": "./lib/esm/schema.js",

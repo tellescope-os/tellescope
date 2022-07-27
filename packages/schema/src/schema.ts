@@ -297,7 +297,7 @@ export type CustomActions = {
   },
   form_responses: {
     prepare_form_response: CustomAction<{ formId: string, enduserId: string, automationStepId?: string }, { accessCode: string, url: string }>,
-    submit_form_response: CustomAction<{ accessCode: string, responses: FormResponseValue  }, { formResponse: FormResponse }>,
+    submit_form_response: CustomAction<{ accessCode: string, responses: FormResponseValue, automationStepId?: string  }, { formResponse: FormResponse }>,
   },
   journeys: {
     update_state: CustomAction<{ updates: Partial<JourneyState>, id: string, name: string }, { updated: Journey }>,
@@ -1745,6 +1745,7 @@ export const schema: SchemaV1 = build_schema({
         parameters: { 
           accessCode: { validator: stringValidator250, required: true },
           responses: { validator: formResponsesValidator, required: true },
+          automationStepId: { validator: mongoIdStringValidator },
         },
         returns: {
           formResponse: 'form response' as any,
