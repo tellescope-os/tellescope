@@ -1425,9 +1425,192 @@ const calendar_events_tests = async () => {
   ])
 }
 
+const formEventTests = async () => {
+  log_header("Form Events")
+
+  const enduser = await sdk.api.endusers.createOne({ email: 'deletemeee@tellescope.com' })
+  const journey = await sdk.api.journeys.createOne({ title: 'test journey '})
+  const form = await sdk.api.forms.createOne({
+    title: 'test form',
+    fields: [{ title: 'question', type: 'string' }],
+  })
+
+  const triggerStep = await sdk.api.automation_steps.createOne({
+    journeyId: journey.id,
+    event: { type: 'onJourneyStart', info: { } },
+    // in practice, this would send a form, so that the next step(s) could handle the response
+    // but we don't want to send emails in testing, and can still attach this Id to a form response to test a trigger
+    action: {
+      type: 'setEnduserStatus', 
+      info: { status: 'placeholder' },
+    },
+  })
+  await sdk.api.automation_steps.createOne({
+    journeyId: journey.id,
+    event: { 
+      type: 'formResponse', 
+      info: { automationStepId: triggerStep.id } 
+    },
+    action: {
+      type: 'setEnduserStatus',
+      info: { status: 'placeholder' },
+    },
+  })
+
+  const { accessCode: acNoStep } = await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })
+  const { accessCode: acStep } = await sdk.api.form_responses.prepare_form_response({ formId: form.id, enduserId: enduser.id })
+
+  await sdk.api.form_responses.submit_form_response({ accessCode: acNoStep, responses: ['answer'] })
+  await sdk.api.form_responses.submit_form_response({ accessCode: acStep, automationStepId: triggerStep.id, responses: ['answer'] })
+  await wait(undefined, 250) // allow background creation with generous pause
+
+  await async_test(
+    `Without automation stepId, form response handler is not triggered`,
+    () => sdk.api.automated_actions.getSome(),
+    { onResult: steps => steps.length === 1 /* NOT 2 or more */ }
+  )  
+
+  await Promise.all([
+    sdk.api.forms.deleteOne(form.id),
+    sdk.api.journeys.deleteOne(journey.id),
+    sdk.api.endusers.deleteOne(enduser.id)
+  ])
+}
+
+const ticketEventTests = async () => {
+  log_header("Ticket Events")
+
+  const testCloseReasons = ['Yes', 'No', 'Maybe']
+
+  const enduser = await sdk.api.endusers.createOne({ email: 'deletemeee@tellescope.com' })
+  const enduserWithTeam = await sdk.api.endusers.createOne({ email: 'deleteme2@tellescope.com', assignedTo: [sdkNonAdmin.userInfo.id] })
+
+  const journey = await sdk.api.journeys.createOne({ title: 'test journey with completion options'})
+  const nullJourney = await sdk.api.journeys.createOne({ title: 'test journey null'})
+
+  const root = await sdk.api.automation_steps.createOne({
+    journeyId: journey.id,
+    event: { type: 'onJourneyStart', info: { } },
+    action: {
+      type: 'createTicket', 
+      info: { 
+        title: 'close reasons tests',
+        assignmentStrategy: {
+          type: 'care-team-random', 
+          info: {},
+        },
+        closeReasons: testCloseReasons,
+        defaultAssignee: sdk.userInfo.id,
+      },
+    },
+  })
+  const nullRoot = await sdk.api.automation_steps.createOne({
+    journeyId: nullJourney.id,
+    event: { type: 'onJourneyStart', info: { } },
+    action: {
+      type: 'createTicket', 
+      info: { 
+        title: 'null test',
+        assignmentStrategy: {
+          type: 'care-team-random', 
+          info: {},
+        },
+        closeReasons: [],
+        defaultAssignee: sdk.userInfo.id,
+      },
+    },
+  })
+
+  const createStep = (journeyId: string, automationStepId: string, closedForReason?: string ) => (
+    sdk.api.automation_steps.createOne({
+      journeyId,
+      event: { type: 'ticketCompleted', info: { automationStepId, closedForReason, } },
+      action: { type: 'setEnduserStatus', info: { status: closedForReason ?? 'Null' }, },
+    })
+  )
+  await createStep(nullJourney.id, nullRoot.id)
+  await createStep(nullJourney.id, nullRoot.id, testCloseReasons[0])
+  await createStep(nullJourney.id, nullRoot.id, testCloseReasons[1])
+  await createStep(nullJourney.id, nullRoot.id, testCloseReasons[2])
+
+  await createStep(journey.id, root.id)
+  await createStep(journey.id, root.id, testCloseReasons[0])
+  await createStep(journey.id, root.id, testCloseReasons[1])
+  await createStep(journey.id, root.id, testCloseReasons[2])
+
+  await sdk.api.endusers.updateOne(enduser.id, { journeys: { [journey.id]: 'Added' }})
+  await sdk.api.endusers.updateOne(enduserWithTeam.id, { journeys: { [nullJourney.id]: 'Added (Null)' }})
+  await wait(undefined, 2000) // wait for tickets to be automatically created
+
+  await async_test(
+    `Tickets automatically created`,
+    () => sdk.api.tickets.getSome(),
+    { onResult: tickets => tickets?.length === 2 }
+  )  
+
+  await async_test(
+    `Ticket for enduser, default assignment, testCloseReasons`,
+    () => sdk.api.tickets.getSome({ filter: { enduserId: enduser.id }}),
+    { onResult: tickets => (
+        tickets.length === 1 
+      && tickets[0].closeReasons?.length === 3
+      && tickets[0].owner === sdk.userInfo.id
+    )}
+  )  
+  const ticket = await sdk.api.tickets.getOne({ enduserId: enduser.id })
+  await async_test(
+    `Ticket for enduser, care team assignment, no reasons`,
+    () => sdk.api.tickets.getSome({ filter: { enduserId: enduserWithTeam.id }}),
+    { onResult: tickets => tickets.length === 1 
+      && tickets[0].closeReasons?.length === 0
+      && tickets[0].owner === sdkNonAdmin.userInfo.id
+    }
+  )  
+  const ticketNull = await sdk.api.tickets.getOne({ enduserId: enduserWithTeam.id })
+
+  await sdk.api.tickets.updateOne(ticket.id, { closedForReason: 'Maybe', closedAt: new Date() })
+  await sdk.api.tickets.updateOne(ticketNull.id, { closedAt: new Date() })
+  await wait(undefined, 250) // wait for actions to be automatically created
+
+  await async_test(
+    `Automated actions for handle ticket created`,
+    () => sdk.api.automated_actions.getSome(),
+    { onResult: (
+        actions => actions?.length === 4 // ticket creations + ticket completions = 2 + 2
+    && (
+      !!actions.find(a => 
+        a.event.type === 'ticketCompleted' 
+        && a.enduserId === enduser.id 
+        && a.action.type === 'setEnduserStatus' 
+        && a.action.info.status === 'Maybe' // maybe branch
+      )
+    )
+    && (
+      !!actions.find(a => 
+        a.event.type === 'ticketCompleted' 
+        && a.enduserId === enduserWithTeam.id 
+        && a.action.type === 'setEnduserStatus' 
+        && a.action.info.status === 'Null' // null branch when completed without closedForReason
+      )
+    )
+    )}
+  )  
+
+  await Promise.all([
+    sdk.api.journeys.deleteOne(journey.id),
+    sdk.api.journeys.deleteOne(nullJourney.id),
+    sdk.api.endusers.deleteOne(enduser.id),
+    sdk.api.endusers.deleteOne(enduserWithTeam.id),
+    sdk.api.tickets.deleteOne(ticket.id),
+    sdk.api.tickets.deleteOne(ticketNull.id),
+  ])
+}
+
 const automation_events_tests = async () => {
   log_header("Automation Events")
-  console.warn("Need new test coverage for automation stemps")
+  await formEventTests()
+  await ticketEventTests()
+
 }
 
 const form_response_tests = async () => {

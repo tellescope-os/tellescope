@@ -81,6 +81,11 @@ import {
   ObservationCategory,
   ObservationStatusCode,
   ObservationValue,
+  TicketCompletedAutomationEvent,
+  CreateTicketActionInfo,
+  CreateTicketAssignmentStrategy,
+  CreateTicketAssignmentStrategyType,
+  TicketCompletedEventInfo,
 } from "@tellescope/types-models"
 import {
   UserDisplayInfo,
@@ -459,6 +464,15 @@ export const mongoIdValidator: EscapeBuilder<ObjectId> = (o={}) => build_validat
 ) 
 export const mongoIdStringValidator: EscapeBuilder<string> = (o={}) => build_validator(
   escapeMongoId, { ...optionsWithDefaults(o), maxLength: 100, listOf: false } 
+) 
+
+export const nullValidator: EscapeBuilder<null> = (o={}) => build_validator(
+  v => {
+    if (v !== null) throw Error('Expecting null')
+
+    return v
+  }, 
+  { ...o, listOf: false }
 ) 
 
 export const mongoIdRequired = mongoIdValidator()
@@ -1120,6 +1134,7 @@ const _AUTOMATION_EVENTS: { [K in AutomationEventType]: any } = {
   afterAction: '',
   onJourneyStart: '',
   formUnsubmitted: '',
+  ticketCompleted: '',
 }
 export const AUTOMATION_EVENTS = Object.keys(_AUTOMATION_EVENTS) as AutomationEventType[]
 export const automationEventTypeValidator = exactMatchValidator<AutomationEventType>(AUTOMATION_EVENTS)
@@ -1200,6 +1215,13 @@ export const automationEventValidator = orValidator<{ [K in AutomationEventType]
     type: exactMatchValidator(['onJourneyStart'])(),
     info: objectValidator<{}>({ }, { emptyOk: true })(),
   })(),
+  ticketCompleted: objectValidator<TicketCompletedAutomationEvent>({
+    type: exactMatchValidator(['ticketCompleted'])(),
+    info: objectValidator<TicketCompletedEventInfo>({ 
+      automationStepId: mongoIdStringRequired, 
+      closedForReason: stringValidator({ isOptional: true }),
+    }, { emptyOk: false })(),
+  })(),
 })
 
 export const automationConditionValidator = orValidator<{ [K in AutomationConditionType]: AutomationCondition & { type: K } } >({
@@ -1229,7 +1251,17 @@ export const automationActionValidator = orValidator<{ [K in AutomationActionTyp
   })(),
   createTicket: objectValidator<CreateTicketAutomationAction>({
     type: exactMatchValidator(['createTicket'])(),
-    info: objectValidator<AutomationForTemplate>({ templateId: mongoIdStringValidator() }, { emptyOk: false })(),
+    info: objectValidator<CreateTicketActionInfo>({ 
+      title: stringValidator({ isOptional: false }),
+      assignmentStrategy: orValidator<{ [K in CreateTicketAssignmentStrategyType ]: CreateTicketAssignmentStrategy & { type: K } }>({
+        'care-team-random': objectValidator<CreateTicketAssignmentStrategy>({ 
+          type: exactMatchValidator<CreateTicketAssignmentStrategyType>(['care-team-random'])(),
+          info: objectValidator<object>({}, { emptyOk: true })(),
+        })()
+      })(), 
+      closeReasons: listOfStringsValidator({ isOptional: true, emptyListOk: true }),
+      defaultAssignee: mongoIdStringRequired,
+    }, { emptyOk: false })(),
   })(),
   sendNotification: objectValidator<SendNotificationAutomationAction>({
     type: exactMatchValidator(['sendNotification'])(),

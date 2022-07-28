@@ -367,6 +367,9 @@ export interface Ticket_updatesDisabled {}
 export interface Ticket extends Ticket_readonly, Ticket_required, Ticket_updatesDisabled {
   enduserId?: string;
   closedAt?: Date;
+  closedForReason?: string;
+  closeReasons?: string[];
+  automationStepId?: string;
   dueDateInMS?: number;
   message?: string;
   type?: string;
@@ -526,6 +529,8 @@ export type AutomationEventType = "enterState" | "leaveState" // deprecated
   | 'afterAction'
   | "formResponse"
   | "formUnsubmitted"
+  | "ticketCompleted"
+
 interface AutomationEventBuilder <T extends AutomationEventType, V extends object> {
   type: T,
   info: V,
@@ -564,10 +569,15 @@ export type AfterActionEventInfo = {
   unit: UnitOfTime, // for displaying in editor
   cancelConditions?: CancelCondition[]
 }
+export type TicketCompletedEventInfo = {
+  automationStepId: string,
+  closedForReason?: string, // null for default option
+}
 export interface FormUnsubmittedEventInfo extends AfterActionEventInfo {}
 export type AfterActionAutomationEvent = AutomationEventBuilder<'afterAction', AfterActionEventInfo> 
 export type FormUnsubmittedEvent = AutomationEventBuilder<'formUnsubmitted', FormUnsubmittedEventInfo> 
 export type OnJourneyStartAutomationEvent = AutomationEventBuilder<'onJourneyStart', {}> 
+export type TicketCompletedAutomationEvent = AutomationEventBuilder<'ticketCompleted', TicketCompletedEventInfo>
 
 export type AutomationEvent = EnterStateAutomationEvent // deprecated
   | LeaveStateAutomationEvent // depreacted
@@ -575,6 +585,7 @@ export type AutomationEvent = EnterStateAutomationEvent // deprecated
   | AfterActionAutomationEvent
   | OnJourneyStartAutomationEvent
   | FormUnsubmittedEvent
+  | TicketCompletedAutomationEvent
 
 export type AutomationEventForType = {
   "enterState": EnterStateAutomationEvent // depreacted 
@@ -583,6 +594,7 @@ export type AutomationEventForType = {
   'afterAction': AfterActionAutomationEvent 
   "formResponse":  FormResponseAutomationEvent
   'formUnsubmitted': FormUnsubmittedEvent
+  'ticketCompleted': TicketCompletedAutomationEvent
 }
 
 export type SetEnduserStatusInfo = { status: string }
@@ -591,13 +603,26 @@ interface AutomationActionBuilder <T extends AutomationActionType, V extends obj
   type: T,
   info: V,
 }
+
+export type CreateTicketAssignmentStrategyType = 'care-team-random'
+export type CreateTicketAssignmentStrategy = {
+  type: CreateTicketAssignmentStrategyType,
+  info: object
+}
+export type CreateTicketActionInfo = {
+  title: string,
+  assignmentStrategy: CreateTicketAssignmentStrategy, // add or options with new types for CreateTicketAssignmentStrategy
+  defaultAssignee: string,
+  closeReasons?: string[],
+}
+
 export type SendNotificationAutomationAction = AutomationActionBuilder<'sendNotification', AutomationForNotification>
 export type SendEmailAutomationAction = AutomationActionBuilder<'sendEmail', AutomationForMessage>
 export type SendSMSAutomationAction = AutomationActionBuilder<'sendSMS', AutomationForMessage>
 export type SendFormAutomationAction = AutomationActionBuilder<'sendForm', AutomationForFormRequest>
 export type SetEnduserStatusAutomationAction = AutomationActionBuilder<'setEnduserStatus', SetEnduserStatusInfo>
 export type UpdateStateForJourneyAutomationAction = AutomationActionBuilder<'updateStateForJourney', AutomationForJourneyAndState>
-export type CreateTicketAutomationAction = AutomationActionBuilder<'createTicket', AutomationForTemplate>
+export type CreateTicketAutomationAction = AutomationActionBuilder<'createTicket', CreateTicketActionInfo>
 export type AddToSequenceAutomationAction = AutomationActionBuilder<'addToSequence', AutomationForAutomation> // depreacted
 export type RemoveFromSequenceAutomationAction = AutomationActionBuilder<'removeFromSequence', AutomationForAutomation> // deprecated
 export type SendWebhookAutomationAction = AutomationActionBuilder<'sendWebhook', AutomationForWebhook>

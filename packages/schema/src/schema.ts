@@ -262,6 +262,10 @@ const sideEffects = {
     name: "updatePostCommentCount",
     description: "Updates the comment count of a post"
   },
+  handleTicketClosed: {
+    name: "handleTicketClosed",
+    description: "Handles automated actions based on a closed ticket",
+  },
 }
 export type SideEffectNames = keyof typeof sideEffects
 
@@ -1485,7 +1489,11 @@ export const schema: SchemaV1 = build_schema({
     },
   },
   tickets: {
-    info: {},
+    info: {
+      sideEffects: {
+        update: [sideEffects.handleTicketClosed],
+      }
+    },
     constraints: {
       unique: [], 
       relationship: [
@@ -1520,6 +1528,15 @@ export const schema: SchemaV1 = build_schema({
           relationship: 'foreignKey',
           onDependencyDelete: 'setNull',
         }]
+      },
+      automationStepId: {
+        validator: mongoIdStringValidator,
+      },
+      closedForReason: {
+        validator: stringValidator,
+      },
+      closeReasons: {
+        validator: listOfStringsValidatorEmptyOk,
       },
       chatRoomId: {
         validator: mongoIdStringValidator,
